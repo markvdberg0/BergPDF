@@ -76,3 +76,4 @@ on that OS (with notes), nothing in `FEATURE_MATRIX.md` may be marked “Verifie
 * [ ] **Save As Optimized / Convert to PDF/A**: native save picker, a 100 MB+ file, cancel behaviour.
 * [ ] **Translate → Save as PDF/text** pickers; non-Latin target languages (the PDF replaces characters
       outside Latin/Greek/Cyrillic with "?" and says so).
+- [ ] Windows installer: `packaging/windows/bergpdf.iss` builds with Inno Setup, installs per user, Start-menu entry and uninstall work, "Open with" lists BergPDF, the icon shows, SmartScreen behaviour noted (unsigned)

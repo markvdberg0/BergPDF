@@ -70,6 +70,9 @@ jars (see docs/EVIDENCE.md for how they were fetched) and `BERG_REQUIRE_VERAPDF=
   The trained weights come from a CC BY-SA 4.0 dataset and the model repository has no licence file, so whether
   you may **redistribute** them (option 2, or even hosting them yourself) is **unverified** and is the owner's
   decision. Option 1 does not redistribute anything; the user fetches the files from their author.
+* **Windows installer.** `packaging/windows/bergpdf.iss` is an Inno Setup script for the `cargo xtask dist` folder
+  (`winget install --id JRSoftware.InnoSetup`, then `ISCC.exe packaging\windows\bergpdf.iss /DAppVersion=0.1.0`).
+  Unsigned and not yet tried on Windows.
 * **Windows packaging.** `cargo xtask dist` links the C runtime statically on Windows/MSVC (no Visual C++
   redistributable needed) and the exe carries the BergPDF icon and version info. It is **not** an installer and
   **not** code-signed, so Windows SmartScreen will warn on first start. None of this has been run on Windows yet.
