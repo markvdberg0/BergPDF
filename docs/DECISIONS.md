@@ -49,10 +49,11 @@ Each measurement carries `/Measure` (RL) so other viewers can interpret it, and 
 **text** because PDF reals are f32 in the library (found by a failing test: 10.000008 instead
 of 10). The scale registry lives in a private catalog entry `/BergScales`.
 
-## D-009 — Redaction, OCR and signatures are separate gates and are *not* offered
+## D-009 — Redaction stays gated; OCR and signing were opened on request
 A visible black box is not redaction. Until true content removal can be shown by an
 independent extractor on adversarial fixtures, no UI or command claims redaction. OCR and
-signing need engine/licence/key-handling decisions of their own.
+signing were originally gated; the owner asked for both (2026-10-05) and they are now implemented
+under D-014 and D-015.
 
 ## D-010 — Bundled font for new text and form appearances: DejaVu Sans / Bold (subset-embedded)
 Chosen for broad Latin/Greek/Cyrillic coverage and a permissive licence; copied from the Debian
@@ -77,3 +78,27 @@ built-in rasteriser for the window icon; `cargo xtask icons` writes PNG/ICO/ICNS
 `assets/icons`. “BergPDF” has **not** been cleared as a product name (trademark search pending).
 Internal private PDF keys were renamed with the product (`/BergMeasure`, `/BergScales`); no files
 using the old names were ever released.
+
+## D-014 — Digital signatures: PKCS#7 detached, pure-Rust crypto, integrity-only checking
+Signing = append a revision with a signature field, patch `/ByteRange` and the reserved `/Contents`
+space in the serialised bytes, embed a CMS blob built with RustCrypto (`pdf-sign`). Input is a
+PKCS#12 file the user picks; RSA and ECDSA P-256 with SHA-256. Chosen over OS key stores and
+hardware tokens because those are platform-specific and could not be tested here. We verify our own
+output with two independent tools (poppler `pdfsig`, OpenSSL). Checking a signature reports only
+what BergPDF can establish (bytes unchanged, signature maths valid, file extended or not); it never
+says "trusted". Signing clears the undo history. A handwritten signature is a separate, clearly
+labelled picture (ink annotation). Known advisory on `rsa` accepted with a written reason.
+
+## D-015 — OCR: `ocrs` on CPU, models fetched on demand, invisible text layer
+Pure-Rust engine (no C++/Tesseract), 300 dpi render → detect → recognise → map boxes to user space →
+render-mode-3 text with the bundled font (stretched to the word box with `Tz`) so search/copy work
+and the page looks identical. Models are *not* in the repo or binary: the trained weights come from
+a CC BY-SA 4.0 dataset and their redistribution terms are unverified; offline use is preserved by
+an explicit, checksum-verified `cargo xtask fetch-ocr-models`. Known limits: ASCII alphabet (Dutch
+accents are lost), no handwriting, no rotated text. Pages that already have text are skipped unless
+the user insists, so OCR is never layered twice by accident.
+
+## D-016 — Pictures open as PDFs
+A PNG/JPEG becomes a one-page document sized to A4's long side with its own aspect ratio, pixels
+embedded unchanged, EXIF rotation applied via `/Rotate`. The document is "new" (dirty, no path) so
+Save asks for a PDF name. Other formats are not supported rather than half-supported.

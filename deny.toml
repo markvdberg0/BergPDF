@@ -11,6 +11,7 @@ version = 2
 yanked = "deny"
 # Each ignore needs a reason and a follow-up (see docs/DEPENDENCIES.md "Advisories").
 ignore = [
+    { id = "RUSTSEC-2023-0071", reason = "rsa 0.9 (Marvin timing side channel, no fixed release). Used only by pdf-sign to create RSA signatures locally, on the user's own machine, on request; there is no network service or other oracle an attacker could time (the advisory's scenario). Re-evaluate when RustCrypto/RSA ships a fix; see docs/DEPENDENCIES.md." },
     { id = "RUSTSEC-2026-0192", reason = "ttf-parser is unmaintained (no known vulnerability). Used by pdf-engine for glyph-availability checks and, transitively, by winit/egui. Migration to skrifa/read-fonts is tracked in docs/PLAN.md remaining work." },
 ]
 

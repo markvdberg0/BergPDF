@@ -87,3 +87,11 @@ pub fn pick_open_images() -> Vec<PathBuf> {
         .pick_files()
         .unwrap_or_default()
 }
+
+/// Ask for a certificate file (PKCS#12) used to sign documents.
+pub fn pick_certificate() -> Option<PathBuf> {
+    rfd::FileDialog::new()
+        .set_title("Choose your signing certificate")
+        .add_filter("Certificate with private key (PKCS#12)", &["p12", "pfx"])
+        .pick_file()
+}

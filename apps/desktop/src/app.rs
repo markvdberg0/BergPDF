@@ -59,6 +59,9 @@ impl App {
             dialog_next: None,
             last_title: String::new(),
             exports: Vec::new(),
+            sign_return: None,
+            ocr_job: None,
+            handwriting: App::load_handwriting(),
         };
         app.dark_filter_applied = app.prefs.dark_page_filter;
         if !app.prefs.first_run_done {
@@ -294,6 +297,7 @@ impl eframe::App for App {
         self.handle_drops_and_pending(ctx);
         self.handle_worker_results(ctx);
         self.poll_exports(ctx);
+        self.poll_ocr(ctx);
         let cmds = if self.dialog.is_none()
             || matches!(self.dialog, Some(Dialog::Shortcuts { capture: None, .. }))
         {

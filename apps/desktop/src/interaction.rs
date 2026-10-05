@@ -457,6 +457,8 @@ impl App {
                 self.content_tool(response, vc, pos, tool)
             }
             Tool::FillForm => self.form_click(response, vc, pos),
+            Tool::PlaceSignature => self.place_signature_tool(response, vc, pos),
+            Tool::SignArea => self.sign_area_tool(response, vc, pos),
             Tool::MeasureDistance
             | Tool::MeasurePerimeter
             | Tool::MeasureArea
@@ -898,6 +900,7 @@ impl App {
                 _ => CursorIcon::Default,
             },
             Tool::EditText | Tool::FillForm => CursorIcon::PointingHand,
+            Tool::PlaceSignature => CursorIcon::Crosshair,
             Tool::AddText => CursorIcon::Text,
             Tool::AddImage => CursorIcon::Crosshair,
             _ => CursorIcon::Crosshair,
@@ -1008,7 +1011,11 @@ impl App {
                 let st = Stroke::new(1.5, accent);
                 let sp: Vec<Pos2> = points.iter().map(|p| vc.pdf_to_screen(i, *p)).collect();
                 match tool {
-                    Tool::Rectangle | Tool::Ellipse | Tool::FreeText | Tool::Stamp
+                    Tool::Rectangle
+                    | Tool::Ellipse
+                    | Tool::FreeText
+                    | Tool::Stamp
+                    | Tool::SignArea
                         if sp.len() >= 2 =>
                     {
                         let r = Rect::from_two_pos(sp[0], sp[sp.len() - 1]);

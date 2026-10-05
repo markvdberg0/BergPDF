@@ -1,6 +1,8 @@
 [workspace]
 resolver = "3"
 members = [
+    "crates/pdf-ocr",
+    "crates/pdf-sign",
     "apps/desktop",
     "crates/brand",
     "crates/editor-core",
@@ -10,6 +12,8 @@ members = [
     "xtask",
 ]
 default-members = [
+    "crates/pdf-ocr",
+    "crates/pdf-sign",
     "apps/desktop",
     "crates/brand",
     "crates/editor-core",
@@ -41,6 +45,8 @@ editor-core = { path = "crates/editor-core" }
 platform = { path = "crates/platform" }
 test-support = { path = "crates/test-support" }
 brand = { path = "crates/brand" }
+pdf-sign = { path = "crates/pdf-sign" }
+pdf-ocr = { path = "crates/pdf-ocr" }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
@@ -56,8 +62,13 @@ lto = "thin"
 codegen-units = 4
 debug = "line-tables-only"
 
+[profile.dev]
+# Smaller target directory; backtraces keep file/line information.
+debug = "line-tables-only"
+
 [profile.dev.package."*"]
 opt-level = 2
+debug = false
 
 # Distribution builds (`cargo xtask dist`): same optimisation as release, symbols stripped.
 [profile.dist]

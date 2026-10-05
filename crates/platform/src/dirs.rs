@@ -20,6 +20,11 @@ pub fn data_dir() -> PathBuf {
     base(Kind::Data).join(APP)
 }
 
+/// Directory where the OCR model files are expected (`BERG_OCR_MODELS` overrides it in the app).
+pub fn ocr_models_dir() -> PathBuf {
+    data_dir().join("ocr-models")
+}
+
 /// Directory for disposable caches.
 pub fn cache_dir() -> PathBuf {
     base(Kind::Cache).join(APP)

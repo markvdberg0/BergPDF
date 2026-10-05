@@ -1,0 +1,19 @@
+[package]
+name = "pdf-ocr"
+description = "Offline text recognition (OCR) for page images, built on the pure-Rust ocrs/rten engine"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+ocrs = "0.13"
+rten = "0.26"
+thiserror.workspace = true
+
+[lints]
+workspace = true
+
+[dev-dependencies]
+png = "0.18"

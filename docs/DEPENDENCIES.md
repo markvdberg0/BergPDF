@@ -22,7 +22,12 @@ a legal notice bundle. This file covers what a human has to look at.
 | serde, toml | 1 / 0.9 | preferences file | |
 | thiserror, tracing, tracing-subscriber | | errors, logging (local stderr only) | |
 | proptest, tempfile, png | | tests | dev-dependencies |
-| serde_json | 1 | xtask licence report | tooling only |
+| cms 0.2, x509-cert 0.2, der 0.7, spki 0.7 | | build the PKCS#7/CMS signature | RustCrypto "formats"; `cms` 0.2 is the stable line |
+| rsa 0.9, p256 0.13, sha2 0.10, pkcs8 0.10 | | RSA/ECDSA signing, SHA-256 | **rsa 0.9 has RUSTSEC-2023-0071 (Marvin), no fixed release** — see below |
+| p12-keystore 0.3 | | read PKCS#12 (.p12/.pfx) incl. legacy 3DES | pulls pre-release `cms 0.3.0-pre`, `pkcs12 0.2.0-pre`, `x509-parser`, newer `der`/`sha2` (duplicate versions of RustCrypto crates in the tree) |
+| ocrs 0.13, rten 0.26 | | offline OCR (text detection + recognition on CPU) | pure Rust; **models are separate files, not bundled** |
+| serde_json, png, sha2 | | xtask (licence report, icons, model checksum) | tooling only |
+| curl (external program) | | `cargo xtask fetch-ocr-models` only | not used by the application |
 
 ## Items needing attention before any distribution
 
@@ -46,12 +51,30 @@ a legal notice bundle. This file covers what a human has to look at.
    only. The project builds with no C/C++ compiler requirement for first-party code; some
    transitive crates (platform bindings) are `-sys` style FFI wrappers.
 6. **Advisories.** `cargo deny check` (v0.20.2) was run in the authoring sandbox against the
-   live advisory database: advisories, bans, licenses and sources pass **with one documented
-   ignore** — RUSTSEC-2026-0192: `ttf-parser` 0.25.1 is *unmaintained* (no known vulnerability).
+   live advisory database: advisories, bans, licenses and sources pass **with two documented
+   ignores** (the second is RUSTSEC-2023-0071 for `rsa`, see below) — RUSTSEC-2026-0192: `ttf-parser` 0.25.1 is *unmaintained* (no known vulnerability).
    It is used directly by `pdf-engine` (glyph availability in bundled **and document-embedded**
    fonts) and transitively by winit/egui, so removing our own use reduces but does not eliminate
    it. Follow-up: migrate `fontembed`/`textfont` to `skrifa`/`read-fonts` (already in the tree
    via hayro). `cargo audit` was not run separately (cargo-deny covers the same database).
+
+## Signing and OCR specifics (added 2026-10-05)
+
+* **rsa 0.9 / RUSTSEC-2023-0071 (Marvin timing side channel, unpatched).** `cargo deny` ignores it
+  with a written reason: BergPDF signs locally on the user's own machine on request, so there is no
+  network service or other oracle an attacker could time. A local attacker who can already time the
+  process is outside this application's threat model, but the ignore must be revisited when a fixed
+  `rsa` release exists (or the RSA path moved to another implementation).
+* **Crypto provenance.** All signing/verification code is pure Rust (RustCrypto). It has had no
+  external review; correctness is checked against poppler `pdfsig` and OpenSSL on generated files.
+  Key material is held only in memory while signing; the password field is cleared when the dialog
+  closes. Certificates are not trusted or validated by BergPDF.
+* **OCR models** (`text-detection.rten` 2.4 MB, `text-recognition.rten` 9.3 MB; SHA-256 pinned in
+  `xtask/src/ocr_models.rs`) are from https://github.com/robertknight/ocrs-models, trained on HierText
+  (**CC BY-SA 4.0**). The *code* is MIT/Apache-2.0; the licence status of the trained weights has
+  **not** been established (the Hugging Face model card could not be read from the authoring
+  sandbox). They are deliberately not committed or bundled; decide before shipping them.
+* Test certificates in `crates/pdf-sign/tests/fixtures` are throw-away keys published on purpose.
 
 ## Policy
 

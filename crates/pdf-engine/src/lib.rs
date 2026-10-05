@@ -24,6 +24,7 @@ pub mod pageops;
 pub mod render;
 pub mod save;
 pub mod serialize;
+pub mod sign;
 pub mod text;
 pub mod textfont;
 

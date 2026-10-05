@@ -3,7 +3,9 @@
 #![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used, clippy::panic))]
 
 pub mod command;
+pub mod handwriting;
 pub mod jobs;
+pub mod ocr;
 pub mod platform_kind;
 pub mod prefs;
 pub mod search;

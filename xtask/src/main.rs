@@ -4,6 +4,7 @@
 //! * `licenses` — write `docs/THIRD_PARTY_LICENSES.md` from `cargo metadata`
 //! * `fixtures` — write the programmatic fixtures to `target/fixtures`
 //! * `bench`    — release-mode performance measurements (see docs/PERFORMANCE.md)
+//! * `fetch-ocr-models [dir]` — download + verify the OCR models (explicit, opt-in network use)
 //! * `icons`    — regenerate `assets/icons` (PNG, ICO, ICNS) from the vector logo
 //! * `dist`     — release build and an *unsigned* distribution folder (macOS: `.app` bundle)
 //!
@@ -11,6 +12,7 @@
 
 mod bundle;
 mod icons;
+mod ocr_models;
 
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
@@ -157,10 +159,13 @@ fn main() -> ExitCode {
             "target/fixtures",
         ]),
         "bench" => cargo(&["run", "--release", "-p", "pdf-engine", "--example", "bench"]),
+        "fetch-ocr-models" => ocr_models::fetch(std::env::args().nth(2).map(PathBuf::from)),
         "icons" => icons::write_all(&root().join("assets/icons")).map_err(|e| e.to_string()),
         "dist" => dist(),
         _ => {
-            eprintln!("usage: cargo xtask <check|licenses|fixtures|bench|icons|dist>");
+            eprintln!(
+                "usage: cargo xtask <check|licenses|fixtures|bench|icons|fetch-ocr-models [dir]|dist>"
+            );
             return ExitCode::from(2);
         }
     };

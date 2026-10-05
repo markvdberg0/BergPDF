@@ -177,7 +177,7 @@ pub struct PdfDocument {
     touched: BTreeSet<ObjectId>,
     trailer_touched: bool,
     base: Option<BaseInfo>,
-    caps: Capabilities,
+    pub(crate) caps: Capabilities,
 }
 
 impl PdfDocument {
@@ -331,6 +331,12 @@ impl PdfDocument {
     /// Read-only access for engine modules.
     pub fn lopdf(&self) -> &Document {
         &self.doc
+    }
+
+    /// Untracked mutable access (for engine code that must reconcile the in-memory graph with
+    /// bytes it produced itself, e.g. after patching a signature). Changes are not journaled.
+    pub(crate) fn lopdf_mut(&mut self) -> &mut Document {
+        &mut self.doc
     }
 
     // ---- pages -------------------------------------------------------------------

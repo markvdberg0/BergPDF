@@ -1,0 +1,12 @@
+Digital Signature Info of: signed-rsa-aes.pdf
+Signature #1:
+  - Signature Field Name: Signature1
+  - Signer Certificate Common Name: BergPDF Test RSA
+  - Signer full Distinguished Name: C=NL,O=BergPDF Tests,CN=BergPDF Test RSA
+  - Signing Time: Oct 05 2026 09:54:13
+  - Signing Hash Algorithm: SHA-256
+  - Signature Type: adbe.pkcs7.detached
+  - Signed Ranges: [0 - 1162], [33932 - 34337]
+  - Total document signed
+  - Signature Validation: Signature is Valid.
+  - Certificate Validation: Certificate issuer isn't Trusted.

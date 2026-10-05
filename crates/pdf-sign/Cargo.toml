@@ -1,0 +1,23 @@
+[package]
+name = "pdf-sign"
+description = "Detached CMS/PKCS#7 signatures for PDF (PKCS#12 identities, RSA and ECDSA P-256)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+cms = { version = "0.2", features = ["builder"] }
+der = { version = "0.7", features = ["alloc", "oid"] }
+x509-cert = "0.2"
+spki = "0.7"
+rsa = { version = "0.9", features = ["sha2"] }
+p256 = { version = "0.13", features = ["ecdsa", "pkcs8"] }
+pkcs8 = "0.10"
+sha2 = "0.10"
+p12-keystore = "0.3"
+thiserror.workspace = true
+
+[lints]
+workspace = true

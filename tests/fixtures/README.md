@@ -28,3 +28,11 @@ Write them to disk for manual checks: `cargo xtask fixtures` → `target/fixture
 Tests that call poppler (`pdftotext`, `pdftoppm`) skip those assertions when the tool is not
 installed, **unless** `FERRUM_REQUIRE_ORACLES=1` is set (CI sets it on Linux/macOS), in which
 case a missing tool or a mismatch fails the test.
+
+## Signing fixtures
+
+`crates/pdf-sign/tests/fixtures/` holds throw-away PKCS#12 test identities (password `test123`); see the README there. They exist only to test signing and are deliberately public.
+
+## OCR test input
+
+The OCR test builds its own "scan" at run time by rendering page 1 of `report-chromium.pdf` at 300 dpi and wrapping the bitmap in an image-only PDF. It needs the model files (`BERG_OCR_MODELS`).

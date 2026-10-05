@@ -109,7 +109,8 @@ impl Capabilities {
             c.warnings.push(Limitation(
                 "The document contains digital signatures. Saving appends a new revision and \
                  keeps signed bytes intact, but the signature will report that the document \
-                 was modified after signing. Signature validity is not verified by BergPDF."
+                 was modified after signing. Use Sign → Signatures to check whether the signed content \
+                 is unchanged; BergPDF never checks whether a signer's certificate is trusted."
                     .into(),
             ));
         }

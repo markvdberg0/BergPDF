@@ -34,6 +34,13 @@ on that OS (with notes), nothing in `FEATURE_MATRIX.md` may be marked “Verifie
 - [ ] IME composition in text fields (egui limitation — record findings)
 - [ ] Pen/touch (density “Touch/Pen” setting)
 
+## Signing, OCR, pictures
+- [ ] Sign with a real-world .p12 (company certificate): check in Adobe Reader / Foxit / Preview what
+      they say about the signature (expect "not trusted" unless the certificate is installed there)
+- [ ] Sign on Windows with a certificate that has a long chain (signature size limit 16 KB)
+- [ ] OCR on Windows and Apple Silicon: speed, memory (`rten` CPU kernels), models folder location
+- [ ] Open JPEG photos straight from a phone (EXIF rotation) and PNG screenshots
+
 ## Accessibility
 - [ ] Keyboard-only operation of every dialog; focus order
 - [ ] Screen reader exposure (Narrator/NVDA, VoiceOver) — expected gaps with egui, record them

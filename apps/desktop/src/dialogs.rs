@@ -353,6 +353,22 @@ impl App {
                     }
                 }
             }
+            Dialog::Ocr(st) => {
+                keep = self.dialog_ocr(ctx, st);
+            }
+            Dialog::OcrProgress => {
+                keep = self.dialog_ocr_progress(ctx);
+            }
+            Dialog::Sign(st) => {
+                keep = self.dialog_sign(ctx, st);
+            }
+            Dialog::Signatures(list) => {
+                let l = list.clone();
+                keep = self.dialog_signatures(ctx, &l);
+            }
+            Dialog::DrawSignature(st) => {
+                keep = self.dialog_draw_signature(ctx, st);
+            }
             Dialog::Properties(st) => {
                 keep = self.dialog_properties(ctx, st);
             }

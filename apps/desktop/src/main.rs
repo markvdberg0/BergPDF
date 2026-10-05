@@ -12,8 +12,10 @@ mod forms_ui;
 mod icons;
 mod interaction;
 mod measure_ui;
+mod ocr_ui;
 mod pagefilter;
 mod sidebar;
+mod sign_ui;
 mod state;
 mod theme;
 

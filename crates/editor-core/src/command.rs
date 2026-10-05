@@ -80,6 +80,12 @@ pub enum CommandId {
     ToolMeasureAngle,
     ToolCount,
     ToolCalibrate,
+    ToolPlaceSignature,
+    ToolSignArea,
+    SignDocument,
+    OcrDocument,
+    ShowSignatures,
+    DrawSignature,
     ExportMeasurements,
     PageRotateClockwise,
     PageRotateCounterClockwise,
@@ -107,6 +113,7 @@ pub enum Category {
     Content,
     Forms,
     Measure,
+    Sign,
     Organize,
     Help,
 }
@@ -123,6 +130,7 @@ impl Category {
             Category::Content => "Content",
             Category::Forms => "Forms",
             Category::Measure => "Measure",
+            Category::Sign => "Sign",
             Category::Organize => "Organize",
             Category::Help => "Help",
         }
@@ -882,6 +890,54 @@ pub static REGISTRY: &[CommandInfo] = &[
         "Set the drawing scale from a known length",
         C::Measure,
         "scale ratio units set",
+        []
+    ),
+    cmd!(
+        Id::OcrDocument,
+        "Recognize Text (OCR)…",
+        "Make scanned pages searchable by adding an invisible text layer",
+        C::Content,
+        "ocr scan scanned recognise recognize searchable text image",
+        []
+    ),
+    cmd!(
+        Id::SignDocument,
+        "Sign with Certificate…",
+        "Digitally sign the document with a certificate file (.p12 / .pfx)",
+        C::Sign,
+        "digital signature certificate pkcs12 pfx cryptographic",
+        []
+    ),
+    cmd!(
+        Id::ShowSignatures,
+        "Signatures…",
+        "Show the digital signatures in this document and whether they still match",
+        C::Sign,
+        "verify validate check signed certificate",
+        []
+    ),
+    cmd!(
+        Id::DrawSignature,
+        "Draw Signature…",
+        "Draw your handwritten signature once and keep it for reuse",
+        C::Sign,
+        "handwritten sign draw ink autograph",
+        []
+    ),
+    cmd!(
+        Id::ToolPlaceSignature,
+        "Place Signature",
+        "Place your saved handwritten signature on the page (a drawing, not a digital signature)",
+        C::Sign,
+        "handwritten sign stamp initials",
+        []
+    ),
+    cmd!(
+        Id::ToolSignArea,
+        "Choose Signature Area",
+        "Drag the area where a digital signature will be shown",
+        C::Sign,
+        "visible signature box",
         []
     ),
     cmd!(

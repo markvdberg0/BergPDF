@@ -77,7 +77,6 @@ own output.
 | Add text (bundled DejaVu, embedded as subset) / add image (PNG, JPEG) | Implemented | `m3_objects` (rotated/cropped/flipped pages) |
 | Move, resize, replace, delete images | Implemented | `m3_objects` |
 | Reflow of paragraphs, font matching of arbitrary fonts, vector/path editing | Planned | text edits are per text run, not reflowed |
-| OCR | **Unavailable** | needs its own gate: engine, models, licences, language packs |
 
 ## Forms
 
@@ -90,7 +89,7 @@ own output.
 | Page duplicate/extract/merge policy: **Independent / Linked / Flatten** with dialog | Implemented | `m4_forms` (6 tests incl. name collisions, shared radio group, flatten render); GUI dialog |
 | XFA, JavaScript, calculations | Detected, **never executed** | `m4_forms::xfa_and_javascript_are_detected_never_executed` |
 | Form creation / field design | Planned | |
-| Signature fields | Displayed only | **Signing and signature validation are out of scope** (own gate); modified signed documents warn on open |
+| Existing signature fields | Displayed; signed documents warn on open | see the Signing section for what can be checked |
 
 ## Measurement and quantity take-off
 
@@ -108,6 +107,17 @@ own output.
 | Scale detection from title blocks/dimensions, perimeter snapping to geometry | Planned | |
 | `/UserUnit` ≠ 1 | Not handled | results would be wrong; documented limitation |
 
+## Signing, scanned pages
+
+| Feature | Status | Evidence / gaps |
+|---|---|---|
+| **Digital signature** with a certificate file (.p12/.pfx; RSA or ECDSA P-256, SHA-256, `adbe.pkcs7.detached`), invisible or visible with a generated appearance, reason/location/contact; signs pending edits; saved as the signed file immediately | Implemented | `m6_signing` (8 tests): poppler `pdfsig` reports “Signature is Valid / Total document signed”, OpenSSL `cms -verify` accepts, tamper detected; `session::sign_and_save` tests. Legacy 3DES and AES PKCS#12 both load. **The certificate/password picker and save dialog are native dialogs and were not driven headless** |
+| Several signatures on one document; edits after signing keep earlier signatures intact | Implemented | `m6_signing::two_signatures…`, `edits_after_signing…` |
+| **Signature check** (Sign → Signatures, and “Signed” chip): are the signed bytes unchanged, does the signature maths verify, was the file extended after signing | Implemented, **integrity only** | `m6_signing`; never checks certificate trust, expiry, revocation or the signing time (the dialog says so). RSA/P-256 + SHA-256 only; other algorithms show “could not be checked” |
+| Certification (DocMDP) signatures, timestamps (RFC 3161), PAdES-LT/LTA, hardware tokens, OS certificate stores | Planned | not offered |
+| Handwritten signature: draw once (saved locally), place as an ink annotation | Implemented | `handwriting` unit tests; GUI draw + place. **Only a picture** — no legal/cryptographic weight; the UI says so |
+| **OCR** — scanned pages become searchable with an invisible text layer (300 dpi, offline, pure-Rust `ocrs`) | Implemented, **models not bundled** | `editor_core::ocr` test with real models + poppler text/word-box oracle (recall ≥ 80 %, words within 8 pt of where printed, picture unchanged); GUI: scan opened as PDF, OCR run, in-app search finds the text. Latin alphabet, ASCII-only recognition alphabet (accents lost); handwriting/rotated/vertical text poor; models must be fetched (`cargo xtask fetch-ocr-models`) and their licence reviewed |
+
 ## Saving, safety, recovery
 
 | Feature | Status | Evidence |
@@ -118,8 +128,8 @@ own output.
 | Unlimited undo/redo with “clean” tracking | Implemented | `session` tests |
 | Autosave recovery files + startup recovery dialog | Implemented | `platform::recovery` tests; GUI (restore flow) |
 | Crash isolation of the render workers | Partial | worker **threads** with panic containment (`jobs` tests); **not** a separate process |
-| Secure **redaction** | **Unavailable (gated)** | no feature offers it; “black rectangle” annotations are never presented as redaction |
-| Digital signatures (create/validate), encryption | Planned / out of scope | |
+| Secure **redaction** | **Unavailable (gated)** | no feature offers it; “black rectangle” annotations are never presented as redaction. (OCR and signing are now implemented; redaction remains gated.) |
+| Encryption (password-protected PDFs) | Not supported | no decryption |
 
 ## Productivity and platform
 

@@ -186,3 +186,122 @@ pub fn poppler_info_text(bytes: &[u8]) -> Option<String> {
     let out = Command::new("pdfinfo").arg(&p).output().ok()?;
     Some(String::from_utf8_lossy(&out.stdout).into_owned())
 }
+
+/// Output of poppler's `pdfsig` for `bytes` (stdout + stderr), if the tool is installed.
+pub fn poppler_pdfsig(bytes: &[u8]) -> Option<String> {
+    if !have_tool("pdfsig") {
+        return None;
+    }
+    let dir = tempfile::tempdir().ok()?;
+    let p = dir.path().join("in.pdf");
+    std::fs::write(&p, bytes).ok()?;
+    let out = Command::new("pdfsig").arg(&p).output().ok()?;
+    Some(format!(
+        "{}{}",
+        String::from_utf8_lossy(&out.stdout),
+        String::from_utf8_lossy(&out.stderr)
+    ))
+}
+
+/// Verify a detached DER CMS signature over `content` with OpenSSL (`openssl cms -verify
+/// -noverify`: signature maths only). `None` when no suitable OpenSSL (1.1+/3.x) is installed.
+pub fn openssl_cms_verify(cms_der: &[u8], content: &[u8]) -> Option<bool> {
+    let ver = Command::new("openssl").arg("version").output().ok()?;
+    let v = String::from_utf8_lossy(&ver.stdout).to_string();
+    if !v.starts_with("OpenSSL") {
+        return None; // LibreSSL has no `cms` command
+    }
+    let dir = tempfile::tempdir().ok()?;
+    let (sig, data) = (dir.path().join("s.der"), dir.path().join("d.bin"));
+    std::fs::write(&sig, cms_der).ok()?;
+    std::fs::write(&data, content).ok()?;
+    let out = Command::new("openssl")
+        .args([
+            "cms",
+            "-verify",
+            "-binary",
+            "-inform",
+            "DER",
+            "-noverify",
+            "-in",
+        ])
+        .arg(&sig)
+        .arg("-content")
+        .arg(&data)
+        .args(["-out", "/dev/null"])
+        .output()
+        .ok()?;
+    Some(out.status.success())
+}
+
+/// Plain text of one page (1-based) via `pdftotext`, if installed.
+pub fn poppler_text_page(bytes: &[u8], page: usize) -> Option<String> {
+    if !have_tool("pdftotext") {
+        return None;
+    }
+    let dir = tempfile::tempdir().ok()?;
+    let p = dir.path().join("in.pdf");
+    std::fs::write(&p, bytes).ok()?;
+    let out = Command::new("pdftotext")
+        .args([
+            "-f",
+            &page.to_string(),
+            "-l",
+            &page.to_string(),
+            "-enc",
+            "UTF-8",
+        ])
+        .arg(&p)
+        .arg("-")
+        .output()
+        .ok()?;
+    Some(String::from_utf8_lossy(&out.stdout).into_owned())
+}
+
+/// A word with its box in PDF points (top-left origin), from `pdftotext -bbox`.
+#[derive(Clone, Debug)]
+pub struct BBoxWord {
+    /// Word text.
+    pub text: String,
+    /// Left.
+    pub x0: f64,
+    /// Top.
+    pub y0: f64,
+    /// Right.
+    pub x1: f64,
+    /// Bottom.
+    pub y1: f64,
+}
+
+/// Words and boxes of a page (1-based) according to poppler.
+pub fn poppler_bbox(bytes: &[u8], page: usize) -> Option<Vec<BBoxWord>> {
+    if !have_tool("pdftotext") {
+        return None;
+    }
+    let dir = tempfile::tempdir().ok()?;
+    let p = dir.path().join("in.pdf");
+    std::fs::write(&p, bytes).ok()?;
+    let out = Command::new("pdftotext")
+        .args(["-bbox", "-f", &page.to_string(), "-l", &page.to_string()])
+        .arg(&p)
+        .arg("-")
+        .output()
+        .ok()?;
+    let s = String::from_utf8_lossy(&out.stdout);
+    let attr = |line: &str, k: &str| -> Option<f64> {
+        let i = line.find(&format!("{k}=\""))? + k.len() + 2;
+        line[i..].split('"').next()?.parse().ok()
+    };
+    let mut words = Vec::new();
+    for line in s.lines().filter(|l| l.trim_start().starts_with("<word ")) {
+        let text = line.split('>').nth(1)?.split('<').next()?.to_string();
+        words.push(BBoxWord {
+            text,
+            x0: attr(line, "xMin")?,
+            y0: attr(line, "yMin")?,
+            x1: attr(line, "xMax")?,
+            y1: attr(line, "yMax")?,
+        });
+    }
+    Some(words)
+}

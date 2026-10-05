@@ -71,7 +71,11 @@ impl App {
             | C::PageMoveDown
             | C::DocumentMerge => has && can_edit,
             C::PageExtract => has,
-            C::FileProperties | C::FileExportImage => has,
+            C::FileProperties | C::FileExportImage | C::ShowSignatures => has,
+            C::SignDocument => has && can_edit,
+            C::OcrDocument => has && can_edit && self.ocr_job.is_none(),
+            C::DrawSignature => true,
+            C::ToolSignArea => self.sign_return.is_some(),
             C::FormFlatten => {
                 has && can_edit
                     && tab.is_some_and(|t| {
@@ -137,6 +141,10 @@ impl App {
             C::FileSave => self.save_active(),
             C::FileSaveAs => self.save_active_as(),
             C::FileProperties => self.open_properties(),
+            C::SignDocument => self.open_sign_dialog(),
+            C::OcrDocument => self.open_ocr_dialog(),
+            C::ShowSignatures => self.open_signatures(),
+            C::DrawSignature => self.open_draw_signature(),
             C::FileExportImage => self.export_page_image(),
             C::FormFlatten => self.request_flatten(),
             C::FileClose => self.request_close(self.active),
@@ -259,6 +267,10 @@ impl App {
                 tab.ui.polygon_points.clear();
                 tab.ui.pending_region = None;
             }
+        }
+        if self.sign_return.is_some() {
+            self.finish_sign_area(None);
+            return;
         }
         if self.tool != Tool::Select {
             self.set_tool(Tool::Select);

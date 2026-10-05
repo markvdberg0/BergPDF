@@ -53,6 +53,23 @@ on macOS, rlimits/seccomp on Linux) is the intended next step and is **not imple
   and quotes fields (`measure::csv_field`, unit-tested).
 * Form fill and text-add refuse characters they cannot render rather than substituting silently.
 
+## Signing, OCR and pictures (added 2026-10-05)
+
+* **Signing.** Certificate files are read only when the user picks them (rejected above 2 MB), the
+  password lives in the dialog state and is cleared when it closes, nothing is stored or logged. The
+  document is only written after the signature is computed, via the same atomic write+validate path as
+  Save; a failed write leaves the original untouched. Signing clears undo history because the file on
+  disk is the signed state. Signature checking never presents a signature as "trusted".
+* **OCR.** Runs on a background thread over an immutable snapshot (cancellable). Model files are
+  loaded from a user-controlled folder (`BERG_OCR_MODELS` or the data directory) and a malformed model
+  could in principle exercise bugs in the `rten` model loader — they are verified by SHA-256 only when
+  fetched with `cargo xtask fetch-ocr-models`, not on every load. Rendering for OCR is bounded
+  (≤ 16 M pixels per page; 40 M-pixel guard in `pdf-ocr`).
+* **Pictures.** Opened pictures go through the same header-first size limits as inserted images.
+  JPEG data is embedded unchanged; EXIF is read only for the orientation tag (bounds-checked parser).
+* The handwritten-signature file in the config directory is treated as untrusted on load (point
+  and stroke counts and coordinate ranges are clamped).
+
 ## Known weaknesses / not done
 
 * No process isolation (above). No fuzzing of `lopdf`, `hayro` or `content.rs`. No memory
@@ -61,5 +78,6 @@ on macOS, rlimits/seccomp on Linux) is the intended next step and is **not imple
   in the authoring sandbox.
 * Encrypted PDFs are rejected (no decryption), so permissions flags are not honoured/relevant.
 * **Redaction is not offered.** Drawing a black rectangle does not remove text underneath.
-* Signed documents: structure is detected and the user is warned that editing invalidates the
-  signature; signatures are **not validated**.
+* Signed documents: integrity is checked on request (digest + signature maths with the embedded
+  certificate). Certificate trust, validity period, revocation, DocMDP permissions and signing time
+  are **not** evaluated.

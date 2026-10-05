@@ -41,6 +41,8 @@ fn tool_icon(t: Tool) -> Icon {
         Tool::MeasureAngle => Icon::AngleMeasure,
         Tool::Count => Icon::CountMark,
         Tool::Calibrate => Icon::Calibrate,
+        Tool::PlaceSignature => Icon::Signature,
+        Tool::SignArea => Icon::Rect,
     }
 }
 
@@ -55,6 +57,10 @@ pub fn command_icon(c: C) -> Icon {
         C::FileClose => Icon::Close,
         C::ExportMeasurements => Icon::Export,
         C::FileExportImage => Icon::AddImage,
+        C::SignDocument => Icon::Certificate,
+        C::OcrDocument => Icon::Ocr,
+        C::ShowSignatures => Icon::Shield,
+        C::DrawSignature => Icon::Pencil,
         C::FileProperties => Icon::Info,
         C::FormFlatten => Icon::Merge,
         C::EditUndo => Icon::Undo,
@@ -277,6 +283,7 @@ impl App {
             if has_form {
                 v.push((RibbonTab::Forms, "Forms"));
             }
+            v.push((RibbonTab::Sign, "Sign"));
             if !essential || self.tool_is_measure() {
                 v.push((RibbonTab::Measure, "Measure"));
             }
@@ -377,6 +384,14 @@ impl App {
                         ui.label(RichText::new(format!("{n} form field(s). Click a field to fill it.\nScripts and calculations are never run.")).size(11.0).color(s_dim(&self.pal)));
                     });
                 }
+                RibbonTab::Sign => {
+                    self.group(ui, "Digital signature", |s, ui| s.cmds(ui, ctx, &[C::SignDocument, C::ShowSignatures]));
+                    self.group(ui, "Handwritten signature", |s, ui| s.cmds(ui, ctx, &[C::DrawSignature, C::ToolPlaceSignature]));
+                    ui.vertical(|ui| {
+                        ui.add_space(6.0);
+                        ui.label(RichText::new("A digital signature proves the file is unchanged since signing.\nA handwritten signature is only a picture of your signature.").size(11.0).color(s_dim(&self.pal)));
+                    });
+                }
                 RibbonTab::Measure => {
                     self.group(ui, "Scale", |s, ui| s.cmds(ui, ctx, &[C::ToolCalibrate]));
                     self.group(ui, "Measure", |s, ui| s.cmds(ui, ctx, &[C::ToolMeasureDistance, C::ToolMeasurePerimeter, C::ToolMeasureArea, C::ToolMeasureRect, C::ToolMeasureRadius, C::ToolMeasureAngle]));
@@ -397,6 +412,7 @@ impl App {
                 }
                 RibbonTab::Edit => {
                     self.group(ui, "Page content", |s, ui| s.cmds(ui, ctx, &[C::ToolEditText, C::ToolAddText, C::ToolAddImage]));
+                    self.group(ui, "Scanned pages", |s, ui| s.cmds(ui, ctx, &[C::OcrDocument]));
                     self.group(ui, "Selection", |s, ui| s.cmds(ui, ctx, &[C::EditDelete]));
                     ui.vertical(|ui| {
                         ui.add_space(6.0);
@@ -588,6 +604,23 @@ impl App {
                             );
                         }
                     }
+                    if self
+                        .active_tab()
+                        .is_some_and(|t| t.session.doc().capabilities().has_signatures)
+                        && ui
+                            .add(
+                                egui::Label::new(
+                                    RichText::new("Signed").color(self.pal.accent).size(12.0),
+                                )
+                                .sense(Sense::click()),
+                            )
+                            .on_hover_text(
+                                "This document contains digital signatures. Click to check them.",
+                            )
+                            .clicked()
+                    {
+                        self.open_signatures();
+                    }
                     if let Some((txt, ok)) = self.status_scale() {
                         ui.separator();
                         ui.label(
@@ -754,6 +787,11 @@ fn ribbon_label(id: C, title: &'static str) -> &'static str {
         C::ToolMeasureDistance => "Distance",
         C::ToolMeasureRect => "Rectangle",
         C::ExportMeasurements => "Export CSV",
+        C::OcrDocument => "OCR",
+        C::SignDocument => "Sign",
+        C::ShowSignatures => "Signatures",
+        C::DrawSignature => "Draw Signature",
+        C::ToolPlaceSignature => "Place Signature",
         C::ToolFillForm => "Fill Form",
         C::FormFlatten => "Flatten",
         C::FileExportImage => "Export Image",

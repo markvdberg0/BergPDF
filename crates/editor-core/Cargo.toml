@@ -9,6 +9,7 @@ publish.workspace = true
 
 [dependencies]
 pdf-engine.workspace = true
+pdf-ocr.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
 serde = { version = "1", features = ["derive"] }

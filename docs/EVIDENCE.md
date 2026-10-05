@@ -1,5 +1,7 @@
 # Evidence log
 
+> Product name note: this log was started when the product was still called “Ferrum PDF”; it was renamed BergPDF afterwards and names below were updated mechanically. The first sections describe the state at the end of milestone M5; the last section (“After the first review”) covers the additions of 2026-10-05.
+
 Everything here was produced by commands run in the authoring sandbox (Linux x86_64); outputs
 are pasted as printed, not paraphrased. **Nothing here was run on Windows or macOS.**
 
@@ -136,3 +138,60 @@ rectangle tools, text-box dialog, Ctrl+S growing the file incrementally, Edit Te
 Windows and macOS builds or tests; real-GPU rendering; HiDPI; IME; accessibility tooling;
 printing; process isolation (not implemented); fuzzing; long-session memory; native CSV/PNG save dialogs and other native file dialogs headless (PNG export is tested at engine level only); merge-documents flow in the GUI; region-scale drawing
 in the GUI; password-protected PDFs (unsupported).
+
+
+## After the first review (2026-10-05): rename, logo, pictures, signing, OCR
+
+Run with `BERG_REQUIRE_ORACLES=1 BERG_REQUIRE_OCR=1 BERG_OCR_MODELS=<dir> cargo test --workspace` after
+`cargo fmt --check` (clean) and `cargo clippy --workspace --all-targets -- -D warnings` (clean):
+
+```
+Running unittests src/main.rs  =>  test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; in 0.00s
+Running unittests src/lib.rs  =>  test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; in 0.02s
+Running unittests src/lib.rs  =>  test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; in 0.07s
+Running tests/jobs.rs  =>  test results_are_tagged_with_revision_so_stale_ones_can_be_dropped ... ok
+Running tests/jobs.rs  =>  test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; in 1.03s
+Running tests/ocr.rs  =>  test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; in 6.81s
+Running tests/session.rs  =>  test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; in 0.08s
+Running unittests src/lib.rs  =>  test result: ok. 43 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; in 0.01s
+Running tests/m0_roundtrip.rs  =>  test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; in 0.28s
+Running tests/m3_objects.rs  =>  test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; in 0.06s
+Running tests/m3_text_edit.rs  =>  test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; in 0.16s
+Running tests/m4_forms.rs  =>  test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; in 0.12s
+Running tests/m4_measure.rs  =>  test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; in 0.10s
+Running tests/m4_meta_export.rs  =>  test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; in 0.07s
+Running tests/m5_image_docs.rs  =>  test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; in 0.05s
+Running tests/m6_signing.rs  =>  test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; in 0.22s
+Running unittests src/lib.rs  =>  test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; in 0.00s
+Running unittests src/lib.rs  =>  test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; in 0.03s
+Running unittests src/lib.rs  =>  test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; in 0.18s
+Running unittests src/main.rs  =>  test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; in 3.08s
+TOTAL: 150 passed, 0 failed
+cargo deny check  =>  advisories ok, bans ok, licenses ok, sources ok   (two documented advisory ignores)
+```
+
+Independent checks of the new features (all executed, outputs saved under `docs/evidence/`):
+
+* **Signing** — `pdfsig` (poppler 24.02) on files written by BergPDF: `Signature Validation: Signature is
+  Valid.`, `Total document signed`, `Certificate Validation: Certificate issuer isn't Trusted.` (honest:
+  self-signed test certificates) — `evidence/pdfsig-output-rsa.txt`, `…-chain.txt`. OpenSSL
+  `cms -verify` accepts the same signatures; flipping one signed byte makes both our checker and `pdfsig`
+  reject it; RSA, ECDSA P-256, legacy 3DES and chained certificates all verified.
+* **OCR** — real models, scan built by rendering page 1 of the Chromium fixture at 300 dpi:
+  `OCR: 66 words recognised; recall of printed words 0.96 (48/50)`; poppler extracts the text and its word
+  boxes sit within 8 pt of the printed words; the page renders identically (invisible text). About 1 s per
+  A4 page on 4 cores (release build). GUI: image opened as a PDF, OCR run from the dialog, Find located
+  “quick brown” on the scan (`evidence/08-…`). Without models the dialog says where to put them (`13-…`).
+* **Pictures** — PNG/JPEG → PDF: JPEG bytes appear verbatim in the file, EXIF orientation 6 renders the right
+  way up in poppler, oversized/unsupported inputs refused.
+* **UI fixes** — ribbon captions no longer overlap (`11-…`), Esc returns to the Select tool, default zoom is
+  Fit page (preference), logo in the title bar/welcome screen/window icon (`12-…`).
+
+Also found and fixed while doing this: the dev build directory grew to 24 GB with full debug info and
+filled the sandbox disk (`debug = "line-tables-only"` now; 1.8 GB); the first ribbon fix still
+overlapped because centre-aligned galleys are anchored at their centre (caught by a screenshot);
+flatten/sign unit expectations (widgets are annotations too).
+
+Not exercised headless: the native certificate picker and the save dialog of the signing flow (the
+engine and session paths are tested), the native PNG/CSV save dialogs, OCR on Windows/macOS, any
+Windows/macOS behaviour at all.

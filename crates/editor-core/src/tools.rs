@@ -50,6 +50,10 @@ pub enum Tool {
     MeasureAngle,
     /// Place count markers.
     Count,
+    /// Place the saved handwritten signature (a drawing; not a cryptographic signature).
+    PlaceSignature,
+    /// Drag the area where a digital signature will be shown.
+    SignArea,
     /// Calibrate the drawing scale from a known length.
     Calibrate,
 }
@@ -67,6 +71,8 @@ pub enum ToolFamily {
     Form,
     /// Creates measurement annotations or calibrates scales.
     Measure,
+    /// Chooses where a digital signature is shown.
+    Sign,
 }
 
 impl Tool {
@@ -84,6 +90,8 @@ impl Tool {
             | Tool::MeasureAngle
             | Tool::Count
             | Tool::Calibrate => ToolFamily::Measure,
+            Tool::PlaceSignature => ToolFamily::Annotation,
+            Tool::SignArea => ToolFamily::Sign,
             _ => ToolFamily::Annotation,
         }
     }
@@ -120,6 +128,8 @@ impl Tool {
             CommandId::ToolMeasureAngle => Tool::MeasureAngle,
             CommandId::ToolCount => Tool::Count,
             CommandId::ToolCalibrate => Tool::Calibrate,
+            CommandId::ToolPlaceSignature => Tool::PlaceSignature,
+            CommandId::ToolSignArea => Tool::SignArea,
             _ => return None,
         })
     }
@@ -156,6 +166,8 @@ impl Tool {
             Tool::MeasureAngle => CommandId::ToolMeasureAngle,
             Tool::Count => CommandId::ToolCount,
             Tool::Calibrate => CommandId::ToolCalibrate,
+            Tool::PlaceSignature => CommandId::ToolPlaceSignature,
+            Tool::SignArea => CommandId::ToolSignArea,
         }
     }
 
@@ -194,6 +206,10 @@ impl Tool {
             Tool::MeasureAngle => "Click the first arm, the vertex, then the second arm.",
             Tool::Count => "Click each item to count it. Choose the category in the side panel.",
             Tool::Calibrate => "Click two points whose real distance you know.",
+            Tool::PlaceSignature => {
+                "Click where your handwritten signature should go (a drawing, not a digital signature)."
+            }
+            Tool::SignArea => "Drag the rectangle where the digital signature will be shown.",
         }
     }
 }

@@ -41,6 +41,7 @@ pub enum RibbonTab {
     Comment,
     Forms,
     Measure,
+    Sign,
     Organize,
     View,
 }
@@ -98,6 +99,16 @@ pub enum Dialog {
     Properties(Box<PropsState>),
     /// Confirm flattening all form fields.
     ConfirmFlatten { fields: usize },
+    /// Recognise text (OCR) options.
+    Ocr(Box<crate::ocr_ui::OcrDialogState>),
+    /// OCR running.
+    OcrProgress,
+    /// Sign with a certificate.
+    Sign(Box<SignDialogState>),
+    /// Signatures found in the document.
+    Signatures(Vec<pdf_engine::sign::SignatureInfo>),
+    /// Drawing pad for the handwritten signature.
+    DrawSignature(Box<DrawSigState>),
     /// Documents recovered after a crash.
     Recovery(Vec<platform::recovery::RecoveryEntry>),
     /// Fill a text or choice form field.
@@ -252,6 +263,12 @@ pub struct App {
     pub last_title: String,
     /// Page exports running on background threads.
     pub exports: Vec<crate::docops_ui::ExportJob>,
+    /// Sign-dialog state parked while the user drags the signature area on the page.
+    pub sign_return: Option<Box<SignDialogState>>,
+    /// Text recognition running on a background thread.
+    pub ocr_job: Option<crate::ocr_ui::OcrJob>,
+    /// The saved handwritten signature (a drawing).
+    pub handwriting: editor_core::handwriting::HandwrittenSignature,
 }
 
 impl App {
@@ -359,5 +376,26 @@ pub struct PropsState {
     pub file_size: usize,
     pub xmp: bool,
     pub can_edit: bool,
+    pub error: Option<String>,
+}
+
+/// State of the "sign with certificate" dialog.
+#[derive(Clone, Default)]
+pub struct SignDialogState {
+    pub cert_path: Option<std::path::PathBuf>,
+    pub password: String,
+    pub reason: String,
+    pub location: String,
+    pub contact: String,
+    pub visible: bool,
+    pub area: Option<(PageId, Rect)>,
+    pub signer_hint: Option<String>,
+    pub error: Option<String>,
+}
+
+/// State of the signature drawing pad (coordinates relative to the pad).
+#[derive(Default)]
+pub struct DrawSigState {
+    pub strokes: Vec<Vec<[f32; 2]>>,
     pub error: Option<String>,
 }

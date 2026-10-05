@@ -429,7 +429,7 @@ enum AnnotsLoc {
     Missing,
 }
 
-fn append_annot_ref(tx: &mut Tx<'_>, page: ObjectId, annot: ObjectId) -> Result<()> {
+pub(crate) fn append_annot_ref(tx: &mut Tx<'_>, page: ObjectId, annot: ObjectId) -> Result<()> {
     match annots_array_location(tx.doc(), page)? {
         AnnotsLoc::Missing => {
             tx.dict_mut(page)?.set("Annots", vec![reference(annot)]);

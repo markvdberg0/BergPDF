@@ -309,6 +309,13 @@ impl PageContent {
         lx + last.advance
     }
 
+    /// Whether the page shows or hides any text at all (invisible OCR text counts).
+    pub fn has_text(&self) -> bool {
+        self.groups
+            .iter()
+            .any(|g| !self.group_text(g).trim().is_empty())
+    }
+
     /// Editable text runs, in content order.
     pub fn text_runs(&self) -> Vec<TextRunInfo> {
         let mut out = Vec::new();
@@ -1080,4 +1087,88 @@ pub fn operand_numbers(ops: &[Op], name: &str) -> Vec<Vec<f64>> {
         .filter(|o| o.name == name.as_bytes())
         .map(|o| o.operands.iter().filter_map(Operand::num).collect())
         .collect()
+}
+
+/// A recognised word to be added as invisible text: its box in default user space (y up).
+#[derive(Clone, Debug, PartialEq)]
+pub struct OcrWord {
+    /// The text.
+    pub text: String,
+    /// Bounding box in the page's default user space.
+    pub rect: Rect,
+}
+
+/// Whether a page already has text that can be selected/searched (so OCR would duplicate it).
+pub fn page_has_text(doc: &Document, page: PageId) -> bool {
+    PageContent::load(doc, page.0)
+        .map(|pc| pc.has_text())
+        .unwrap_or(false)
+}
+
+/// Add recognised words to pages as **invisible text** (render mode 3) so a scanned page becomes
+/// searchable and its text selectable, without changing how it looks. One subset font is embedded
+/// for the whole call. Characters the bundled font lacks are dropped from a word (the word is
+/// skipped when nothing is left). Returns the number of words written.
+pub fn add_ocr_text_layers(tx: &mut Tx<'_>, pages: &[(PageId, Vec<OcrWord>)]) -> Result<usize> {
+    if pages.iter().all(|(_, w)| w.is_empty()) {
+        return Ok(0);
+    }
+    let mut fb = FontBuilder::new(BundledFace::Sans)?;
+    let em = (fb.ascent_em() - fb.descent_em()).max(0.1);
+    let mut per_page: Vec<(PageId, crate::content::Mat, String)> = Vec::new();
+    let mut total = 0usize;
+    for (page, words) in pages {
+        if words.is_empty() {
+            continue;
+        }
+        let pc = PageContent::load(tx.doc(), page.0)?;
+        let (ctm, _) = pc.end_state();
+        let inv = ctm.inverse().ok_or_else(|| {
+            EngineError::Unsupported("the page ends with a degenerate transform".into())
+        })?;
+        let mut body = String::new();
+        for w in words {
+            let text: String = w
+                .text
+                .chars()
+                .filter(|c| !c.is_control() && fb.glyph_for(*c).is_some())
+                .collect();
+            let r = w.rect.abs();
+            if text.is_empty() || r.width() < 0.5 || r.height() < 0.5 {
+                continue;
+            }
+            let fs = (r.height() / em).clamp(1.0, 300.0);
+            let natural = fb.text_width(&text, fs).max(0.01);
+            let tz = (r.width() / natural * 100.0).clamp(5.0, 2000.0);
+            let baseline = r.y0 - fb.descent_em() * fs; // descent is negative
+            let codes = fb.encode_str(&text)?;
+            body.push_str(&format!(
+                "/BergOcr {} Tf {} Tz 1 0 0 1 {} {} Tm {} Tj\n",
+                fmt_num_prec(fs),
+                fmt_num_prec(tz),
+                fmt_num_prec(r.x0),
+                fmt_num_prec(baseline),
+                pdf_string(&codes, 2)
+            ));
+            total += 1;
+        }
+        if !body.is_empty() {
+            per_page.push((*page, inv, body));
+        }
+    }
+    if per_page.is_empty() {
+        return Ok(0);
+    }
+    let fid = fb.finish(tx)?;
+    let nm = format!("BergOcr{}", fid.0);
+    for (page, inv, body) in per_page {
+        add_resource(tx, page.0, b"Font", &nm, Object::Reference(fid))?;
+        let content = format!(
+            "q\n{} cm\nBT\n3 Tr\n{}ET\nQ\n",
+            inv.operands(),
+            body.replace("/BergOcr ", &format!("/{nm} "))
+        );
+        append_content(tx, page.0, content.as_bytes())?;
+    }
+    Ok(total)
 }

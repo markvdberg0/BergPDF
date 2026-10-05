@@ -208,3 +208,59 @@ fn clean_save_does_not_rewrite_the_file() {
     assert!(r.is_err());
     assert!(!s.is_dirty() && !s.can_undo());
 }
+
+#[test]
+fn sign_and_save_signs_pending_edits_clears_history_and_survives_reopen() {
+    use pdf_engine::sign::{Identity, SignOptions, SignatureStatus, list_signatures};
+    let (_d, path) = tmp_copy();
+    let mut s = DocumentSession::open_path(&path).unwrap();
+    add_rect(&mut s);
+    assert!(s.is_dirty() && s.can_undo());
+    let p12 = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../pdf-sign/tests/fixtures/rsa-aes.p12");
+    let id = Identity::from_pkcs12(&fs::read(p12).unwrap(), "test123").unwrap();
+    s.sign_and_save(&path, &id, &SignOptions::default())
+        .unwrap();
+    assert!(!s.is_dirty(), "the signed file is what is on disk");
+    assert!(
+        !s.can_undo() && !s.can_redo(),
+        "history must not cross a signature"
+    );
+    // Reopen from disk: the edit and a valid signature are both there.
+    let again = DocumentSession::open_path(&path).unwrap();
+    let sigs = list_signatures(again.doc());
+    assert_eq!(sigs.len(), 1);
+    assert_eq!(sigs[0].status, SignatureStatus::IntegrityOk);
+    let page = again.doc().page_ids().unwrap()[0];
+    let markup = annot::read_annotations(again.doc(), page)
+        .into_iter()
+        .filter(|a| a.subtype != "Widget")
+        .count();
+    assert_eq!(
+        markup, 1,
+        "the edit made before signing is part of the signed file"
+    );
+    // Saving again appends and keeps the first signature intact.
+    let mut s = again;
+    add_rect(&mut s);
+    s.save().unwrap();
+    let third = DocumentSession::open_path(&path).unwrap();
+    assert_eq!(
+        list_signatures(third.doc())[0].status,
+        SignatureStatus::IntegrityOk
+    );
+}
+
+#[test]
+fn a_failed_signing_destination_leaves_the_original_untouched() {
+    use pdf_engine::sign::{Identity, SignOptions};
+    let (d, path) = tmp_copy();
+    let before = fs::read(&path).unwrap();
+    let mut s = DocumentSession::open_path(&path).unwrap();
+    let p12 = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../pdf-sign/tests/fixtures/rsa-aes.p12");
+    let id = Identity::from_pkcs12(&fs::read(p12).unwrap(), "test123").unwrap();
+    let bad = d.path().join("no-such-dir/out.pdf");
+    assert!(s.sign_and_save(&bad, &id, &SignOptions::default()).is_err());
+    assert_eq!(fs::read(&path).unwrap(), before);
+}

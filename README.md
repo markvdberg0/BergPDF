@@ -1,7 +1,8 @@
 # BergPDF (working name)
 
 A native, offline desktop PDF editor written in Rust: viewing, annotation, page organisation,
-in-place text/image editing, form filling, and calibrated measurement/count take-off.
+in-place text/image editing, form filling, calibrated measurement/count take-off, digital and
+handwritten signatures, and OCR for scanned pages. Pictures (PNG/JPEG) open as one-page PDFs.
 Windows 11 x86_64 and macOS Apple Silicon are the target platforms.
 
 **Status: development build. Only ever run on Linux so far.** Read `docs/FEATURE_MATRIX.md`
@@ -23,6 +24,8 @@ the native file dialog uses the XDG desktop portal. No C compiler is needed for 
 
 ```
 cargo xtask check      # fmt --check, clippy -D warnings, all tests (the CI gate)
+cargo xtask fetch-ocr-models  # OPTIONAL: download + verify the OCR models (needed for OCR)
+cargo xtask icons      # regenerate the logo icons (PNG/ICO/ICNS) from the vector logo
 cargo xtask fixtures   # write generated fixtures to target/fixtures
 cargo xtask bench      # release-mode performance numbers
 cargo xtask licenses   # regenerate docs/THIRD_PARTY_LICENSES.md
@@ -38,5 +41,6 @@ cargo xtask dist       # release build + UNSIGNED distribution folder (macOS: .a
 * `docs/PLATFORM_CHECKLIST.md` — what a human must verify on Windows and macOS
 * `tests/fixtures/README.md` — where test files come from
 
-Not implemented (deliberately gated or not yet built): secure redaction, OCR, digital
-signatures, password-protected PDFs, printing, installers. Nothing is signed or published.
+Not implemented (deliberately gated or not yet built): secure redaction, password-protected
+PDFs, printing, installers. Digital signatures check integrity only (never certificate trust).
+OCR needs model files that are not included (see above). Nothing is signed or published.

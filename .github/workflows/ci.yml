@@ -40,6 +40,13 @@ jobs:
       - name: macOS oracle tools
         if: runner.os == 'macOS'
         run: brew install poppler
+      - name: OCR models (explicit download, checksum-verified; Linux job is the one that requires them)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          cargo xtask fetch-ocr-models "$RUNNER_TEMP/ocr-models"
+          echo "BERG_OCR_MODELS=$RUNNER_TEMP/ocr-models" >> "$GITHUB_ENV"
+          echo "BERG_REQUIRE_OCR=1" >> "$GITHUB_ENV"
       - name: Format
         run: cargo fmt --all -- --check
       - name: Clippy

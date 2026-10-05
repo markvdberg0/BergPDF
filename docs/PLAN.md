@@ -70,6 +70,15 @@ xtask tooling, performance numbers, security notes, documentation, unsigned pack
 signed/notarised packages, installer, printing, password-protected PDFs, accessibility audit,
 fuzzing campaign, a long-running memory soak test. See “Remaining work”.
 
+## Additions after the first review (2026-10-05)
+
+Requested by the owner after running the first build on an Intel NUC (Ubuntu, `WGPU_BACKEND=gl`):
+rename to BergPDF with a Mont Blanc outline logo; digital signing; default zoom Fit page; Esc leaves
+the current tool; ribbon captions that no longer overlap; pictures open as PDFs; OCR. All are
+implemented (see FEATURE_MATRIX.md, DECISIONS.md D-013…D-016, EVIDENCE.md). Still true: nothing has
+run on Windows or macOS, and the certificate/save pickers of the signing flow and the PNG/CSV export
+dialogs were not driven in the headless sandbox.
+
 ## Quality gate (what “green” means here)
 
 `cargo xtask check` = `cargo fmt --check`, `cargo clippy --workspace --all-targets -D warnings`,
@@ -91,7 +100,9 @@ fuzzing campaign, a long-running memory soak test. See “Remaining work”.
 8. Fuzz `lopdf`/`hayro` entry points and the content-stream scanner; add corpus tests.
 9. Secure redaction behind its own gate (true removal from content streams, images, metadata,
    annotations, bookmarks and incremental-save remnants, with an independent extraction test).
-10. OCR behind its own gate; digital signatures behind their own gate.
+10. Signing follow-ups: RFC 3161 timestamps, PAdES-LT, certification signatures, OS certificate
+    stores / hardware tokens; replace `rsa` when a fixed release exists. OCR follow-ups: accented
+    Latin characters (other models), rotated pages, review model licence and bundle or not.
 
 ## Rules followed about authorisation
 

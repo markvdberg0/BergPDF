@@ -323,6 +323,10 @@ impl DocumentSession {
         } else {
             self.doc.original_bytes().as_ref().clone()
         };
+        self.write_bytes(dest, bytes, check_external)
+    }
+
+    fn write_bytes(&mut self, dest: &Path, bytes: Vec<u8>, check_external: bool) -> Result<()> {
         let pages = self.doc.page_count();
         let stamp = save::write_atomic(
             dest,
@@ -340,6 +344,28 @@ impl DocumentSession {
         self.title = dest
             .file_name()
             .map_or_else(|| self.title.clone(), |n| n.to_string_lossy().into_owned());
+        Ok(())
+    }
+
+    /// Sign the document and save the signed file to `dest` (which becomes the document's path).
+    ///
+    /// Pending edits are part of what is signed. Signing is a milestone: the file on disk is
+    /// the signed bytes and the undo history is cleared (undoing across a signature would
+    /// silently diverge from the signed file).
+    pub fn sign_and_save(
+        &mut self,
+        dest: &Path,
+        identity: &pdf_engine::sign::Identity,
+        opts: &pdf_engine::sign::SignOptions,
+    ) -> Result<()> {
+        let bytes = self.doc.sign(identity, opts)?;
+        let check_external = self.path.as_deref() == Some(dest);
+        self.write_bytes(dest, bytes, check_external)?;
+        self.undo.clear();
+        self.redo.clear();
+        self.state = self.fresh_state();
+        self.saved_state = Some(self.state);
+        self.bump();
         Ok(())
     }
 
