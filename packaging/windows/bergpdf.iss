@@ -20,6 +20,7 @@ DefaultGroupName=BergPDF
 DisableProgramGroupPage=yes
 OutputDir=..\..\dist
 OutputBaseFilename=BergPDF-Setup-{#AppVersion}
+LicenseFile={#SourceDir}\LICENSE
 SetupIconFile={#SourceDir}\bergpdf.ico
 UninstallDisplayIcon={app}\bergpdf.exe
 Compression=lzma2

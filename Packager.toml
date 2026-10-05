@@ -13,7 +13,9 @@ out-dir = "dist/packages"
 binaries-dir = "target/dist"
 binaries = [{ path = "bergpdf", main = true }]
 icons = ["assets/icons/bergpdf.ico", "assets/icons/bergpdf.icns", "assets/icons/bergpdf-256.png"]
+license-file = "LICENSE"
 resources = [
+  { src = "LICENSE", target = "LICENSE" },
   { src = "README.md", target = "README.md" },
   { src = "docs/THIRD_PARTY_LICENSES.md", target = "THIRD_PARTY_LICENSES.md" },
   { src = "docs/DEPENDENCIES.md", target = "DEPENDENCIES.md" },
@@ -29,3 +31,6 @@ role = "editor"
 # Per user, no administrator rights needed.
 installer-mode = "currentUser"
 compression = "lzma"
+# cargo-packager's own template plus one section that offers the OCR model download (see the file).
+# It is a copy of the template of cargo-packager 0.11.8: install exactly that version.
+template = "packaging/windows/installer.nsi"

@@ -1,6 +1,6 @@
 # cargo-deny policy. Run: cargo deny check
-# The project's own licence is undecided (docs/DECISIONS.md D-001); this list governs only what
-# we are willing to depend on. Anything copyleft (GPL/AGPL/LGPL/MPL) as the *only* option is
+# The project itself is GPL-3.0-or-later (docs/DECISIONS.md D-001); this list governs only what
+# we are willing to depend on (everything here is compatible with GPLv3). Anything copyleft (GPL/AGPL/LGPL/MPL) as the *only* option is
 # rejected; dual-licensed crates are accepted via their permissive alternative.
 
 [graph]
@@ -39,7 +39,7 @@ allow = [
 confidence-threshold = 0.9
 
 [licenses.private]
-# First-party crates are `publish = false` and carry LicenseRef-Undecided (D-001).
+# First-party crates are `publish = false` and carry the project licence (GPL-3.0-or-later, D-001).
 ignore = true
 
 [bans]

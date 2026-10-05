@@ -2,12 +2,18 @@
 
 Each entry: decision, why, what would change it. Open decisions are marked **OPEN**.
 
-## D-001 — Project licence — **OPEN (owner’s decision)**
-`Cargo.toml` uses `license = "LicenseRef-Undecided"` and `publish = false`. No licence file has
-been added on purpose: choosing one grants rights and is the repository owner’s call. All
-dependencies are permissive or dual-licensed with a permissive option (`DEPENDENCIES.md`), so
-MIT/Apache-2.0, a proprietary licence, or a copyleft licence are all feasible for the
-application itself. `deny.toml` encodes what dependencies may use.
+## D-001 — Project licence: GNU GPL v3 or later (decided by the owner)
+`LICENSE` is the GPLv3 text, `Cargo.toml` says `GPL-3.0-or-later` ("or later" is the usual default; change it to
+`GPL-3.0-only` if you do not want future GPL versions to apply). Why this works: every dependency is permissive
+(MIT, Apache-2.0, BSD, ISC, Zlib, Unicode, CDLA data licence; `ring` is Apache-2.0 AND ISC), all compatible with
+GPLv3; `deny.toml` keeps any copyleft dependency out. The bundled fonts keep their own licences (OFL, DejaVu).
+Consequences to know: GPLv3 does **not** forbid commercial use or selling copies (the owner first asked for
+private-only use; that is a different, non-open-source licence such as PolyForm Noncommercial); anyone who
+receives a binary is entitled to the corresponding source and the right to change and share it under the GPL;
+distributing a release means keeping that source available (the release tag does that). Contributions from
+others become GPL too; to keep the option of relicensing, collect a contributor agreement before accepting
+pull requests. The OCR model files are separate data under their own terms (D-023), not covered by this licence.
+Not legal advice.
 
 ## D-002 — Rust only at runtime; egui/eframe + wgpu for UI
 Why: one language/toolchain, no webview/Electron attack surface or footprint, GPU-composited
@@ -218,3 +224,11 @@ installer: those formats bring uninstall, upgrade and "Open with" behaviour for 
 been produced and inspected; the NSIS run needs to download its toolchain from GitHub, which the authoring
 sandbox cannot reach. The Inno Setup script stays as an alternative. Signing and notarisation need the owner's
 certificates and are not done.
+
+## D-029 — The Windows installer asks about the OCR models
+The installer (cargo-packager's NSIS template plus one hidden section, `packaging/windows/installer.nsi`, pinned to
+cargo-packager 0.11.8) asks at the end of the installation whether to download the OCR models (≈12 MB, host named in
+the question). If yes it runs `bergpdf --download-ocr-models`, which uses the same verified download as the OCR
+dialog (https only, pinned SHA-256, nothing kept on a mismatch) and exits with a status; a failure only produces a
+message, the installation stays valid. Silent/passive installs skip the question. macOS and Linux packages have no
+installation step to ask in; there the OCR dialog offers the same download.

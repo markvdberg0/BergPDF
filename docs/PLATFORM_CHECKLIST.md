@@ -78,3 +78,4 @@ on that OS (with notes), nothing in `FEATURE_MATRIX.md` may be marked “Verifie
       outside Latin/Greek/Cyrillic with "?" and says so).
 - [ ] Windows installer: `packaging/windows/bergpdf.iss` builds with Inno Setup, installs per user, Start-menu entry and uninstall work, "Open with" lists BergPDF, the icon shows, SmartScreen behaviour noted (unsigned)
 - [ ] cargo-packager: `cargo packager --release -f nsis` on Windows produces an installer that installs per user, starts BergPDF with the icon, lists it under "Open with" for PDF, and uninstalls cleanly; `-f dmg` on macOS (needs signing/notarisation before others can open it without warnings)
+- [ ] Windows installer shows the licence (GPLv3) page, asks about the OCR models at the end, downloads them when answered "Yes" (files appear in the per-user data folder `…\BergPDF\ocr-models`), still finishes when offline or when answered "No"; silent install (`/S`) asks nothing

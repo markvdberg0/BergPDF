@@ -473,6 +473,10 @@ impl App {
                         .size(12.0)
                         .color(self.pal.text_dim),
                     );
+                    ui.add_space(6.0);
+                    ui.label(
+                        "Free software under the GNU General Public License, version 3 or (at your option) any later version. It comes with NO WARRANTY. You may share and change it under those terms; the source code of this version is at https://github.com/markvdberg0/pdf-editor and the licence text is the file LICENSE next to the program.",
+                    );
                     ui.add_space(8.0);
                     ui.label("Offline-first. No account, no telemetry, no network access for core editing.");
                     ui.add_space(6.0);

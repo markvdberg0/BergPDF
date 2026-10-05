@@ -28,9 +28,9 @@ default-members = [
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.92"
-# Final distribution licence is an open decision for the repository owner
-# (see docs/DECISIONS.md D-001). `publish = false` keeps crates private.
-license = "LicenseRef-Undecided"
+# GNU GPL v3 or later, chosen by the repository owner (docs/DECISIONS.md D-001).
+# `publish = false` keeps the crates off crates.io.
+license = "GPL-3.0-or-later"
 publish = false
 
 [workspace.dependencies]

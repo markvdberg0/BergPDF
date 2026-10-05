@@ -37,6 +37,16 @@ fn main() -> eframe::Result {
             tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "warn".into()),
         )
         .init();
+    // Used by the Windows installer: download and verify the OCR models, then exit (no window).
+    if std::env::args_os().any(|a| a == "--download-ocr-models") {
+        return match ocr_ui::download_models_blocking() {
+            Ok(()) => Ok(()),
+            Err(e) => {
+                tracing::warn!("OCR models were not downloaded: {e}");
+                std::process::exit(1)
+            }
+        };
+    }
     let files: Vec<PathBuf> = std::env::args_os()
         .skip(1)
         .map(PathBuf::from)

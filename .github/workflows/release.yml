@@ -42,7 +42,8 @@ jobs:
       - name: Build the program folder (static CRT on Windows)
         run: cargo xtask dist
       - name: Install cargo-packager
-        run: cargo install cargo-packager --locked
+        # Pinned: packaging/windows/installer.nsi is a copy of this version's NSIS template.
+        run: cargo install cargo-packager --version 0.11.8 --locked
       - name: Build the installer
         run: cargo packager --release -f ${{ matrix.format }}
       - uses: actions/upload-artifact@v4
@@ -73,7 +74,8 @@ jobs:
         run: |
           cat > notes.md <<'NOTES'
           Unsigned build. Windows SmartScreen and macOS Gatekeeper will warn on first start.
-          OCR models are not included; BergPDF offers to download them (checksum-verified) the first time you use OCR.
+          Licence: GNU GPL v3 or later. The source code of this version is this repository at the release tag (also attached by GitHub as "Source code").
+          OCR models are not included. The Windows installer asks whether to download them (checksum-verified); otherwise BergPDF offers the download the first time you use OCR.
           Check the SHA-256 sums in `SHA256SUMS.txt` against the downloaded file.
           NOTES
           gh release create "$TAG" assets/* --repo "$GITHUB_REPOSITORY" --draft --title "BergPDF $TAG" --notes-file notes.md

@@ -65,6 +65,45 @@ pub struct ModelDownload {
     cancel: Arc<AtomicBool>,
 }
 
+/// Download both model files into `dir` (verified; files that are already right are kept).
+/// `progress(bytes_so_far, total_known_so_far)` covers both files together.
+fn download_models(
+    dir: &std::path::Path,
+    progress: &dyn Fn(u64, u64),
+    cancel: &AtomicBool,
+) -> Result<(), String> {
+    let mut done_before = 0u64;
+    for (name, sha) in pdf_ocr::MODEL_SOURCES {
+        let dest = dir.join(name);
+        if ai_client::download::file_matches(&dest, sha) {
+            continue;
+        }
+        let base = done_before;
+        let last = std::sync::atomic::AtomicU64::new(0);
+        ai_client::download::fetch_verified(
+            &format!("{}{name}", pdf_ocr::MODEL_BASE_URL),
+            sha,
+            &dest,
+            &|got, tot| {
+                last.store(got, Ordering::Relaxed);
+                // The other file is counted once its size is known.
+                progress(base + got, base + tot.unwrap_or(got));
+            },
+            cancel,
+        )
+        .map_err(|e| e.to_string())?;
+        done_before = base + last.load(Ordering::Relaxed);
+    }
+    // Attribution travels with the files.
+    let _ = std::fs::write(dir.join("NOTICE-OCR.txt"), pdf_ocr::MODEL_NOTICE);
+    Ok(())
+}
+
+/// `bergpdf --download-ocr-models`: used by the Windows installer; no window, exit code says how it went.
+pub fn download_models_blocking() -> Result<(), String> {
+    download_models(&install_dir(), &|_, _| {}, &AtomicBool::new(false))
+}
+
 fn start_model_download() -> ModelDownload {
     let (tx, rx) = mpsc::channel();
     let bytes = Arc::new(std::sync::atomic::AtomicU64::new(0));
@@ -73,32 +112,15 @@ fn start_model_download() -> ModelDownload {
     let (b2, t2, c2) = (bytes.clone(), total.clone(), cancel.clone());
     let dir = install_dir();
     std::thread::spawn(move || {
-        let r = std::panic::catch_unwind(|| -> Result<(), String> {
-            let mut done_before = 0u64;
-            for (name, sha) in pdf_ocr::MODEL_SOURCES {
-                let dest = dir.join(name);
-                if ai_client::download::file_matches(&dest, sha) {
-                    continue;
-                }
-                let base = done_before;
-                ai_client::download::fetch_verified(
-                    &format!("{}{name}", pdf_ocr::MODEL_BASE_URL),
-                    sha,
-                    &dest,
-                    &|got, tot| {
-                        b2.store(base + got, Ordering::Relaxed);
-                        // Total of this file plus what is already done (the other file is
-                        // counted once its size is known).
-                        t2.store(base + tot.unwrap_or(got), Ordering::Relaxed);
-                    },
-                    &c2,
-                )
-                .map_err(|e| e.to_string())?;
-                done_before = b2.load(Ordering::Relaxed);
-            }
-            // Attribution travels with the files.
-            let _ = std::fs::write(dir.join("NOTICE-OCR.txt"), pdf_ocr::MODEL_NOTICE);
-            Ok(())
+        let r = std::panic::catch_unwind(|| {
+            download_models(
+                &dir,
+                &|got, tot| {
+                    b2.store(got, Ordering::Relaxed);
+                    t2.store(tot, Ordering::Relaxed);
+                },
+                &c2,
+            )
         });
         let _ = tx.send(r.unwrap_or_else(|_| Err("The download stopped unexpectedly.".into())));
     });

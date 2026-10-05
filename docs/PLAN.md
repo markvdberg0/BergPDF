@@ -110,7 +110,7 @@ translation have only been run on Linux and against a mock AI server.
 
 1. **Run it on real Windows 11 and macOS arm64** — follow `PLATFORM_CHECKLIST.md`; fix what
    breaks; only then may rows in the feature matrix become “Verified”.
-2. Decide the project licence (`DECISIONS.md` D-001) and clear the product name.
+2. Clear the product name (the project licence is decided: GPL-3.0-or-later, D-001).
 3. Process-isolate rendering/parsing (see `SECURITY.md`): the current design contains panics
    and bounds memory per tile/cache, but a hostile file that exhausts memory or hits a stack
    overflow in a dependency still takes the whole app down.

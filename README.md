@@ -7,7 +7,7 @@ Windows 11 x86_64 and macOS Apple Silicon are the target platforms.
 
 **Status: development build. Only ever run on Linux so far.** Read `docs/FEATURE_MATRIX.md`
 for exactly what exists and what has (not) been verified, and `docs/PLAN.md` for evidence and
-remaining work. Project licence: undecided (`docs/DECISIONS.md` D-001).
+remaining work. Licence: GNU GPL v3 or later (`LICENSE`, `docs/DECISIONS.md` D-001).
 
 ## Build and run
 
@@ -70,8 +70,11 @@ jars (see docs/EVIDENCE.md for how they were fetched) and `BERG_REQUIRE_VERAPDF=
   The trained weights come from a CC BY-SA 4.0 dataset and the model repository has no licence file, so whether
   you may **redistribute** them (option 2, or even hosting them yourself) is **unverified** and is the owner's
   decision. Option 1 does not redistribute anything; the user fetches the files from their author.
+* **OCR models at install time (Windows).** The NSIS installer asks whether to download them; see D-029. It uses a
+  copy of cargo-packager 0.11.8's NSIS template with one added section, so install exactly that version
+  (`cargo install cargo-packager --version 0.11.8 --locked`). Not yet run on Windows.
 * **Installer with cargo-packager.** `Packager.toml` configures [cargo-packager](https://github.com/crabnebula-dev/cargo-packager):
-  `cargo install cargo-packager --locked`, `cargo xtask dist`, then `cargo packager --release -f nsis` on Windows
+  `cargo install cargo-packager --version 0.11.8 --locked`, `cargo xtask dist`, then `cargo packager --release -f nsis` on Windows
   (an NSIS `.exe`, per user, "Open with" entry for PDF, icon, uninstaller; output in `dist/packages`; the tool
   downloads NSIS itself on first use), `-f dmg` on macOS, `-f deb` on Linux. The `.deb` was built and inspected here;
   the Windows and macOS packages were not. Unsigned. Keep `version` in `Packager.toml` equal to the workspace
@@ -79,7 +82,9 @@ jars (see docs/EVIDENCE.md for how they were fetched) and `BERG_REQUIRE_VERAPDF=
 * **GitHub release.** `.github/workflows/release.yml` builds the installers on Windows, macOS and Linux when a tag
   such as `v0.1.0` (equal to the workspace version) is pushed, and attaches them with `SHA256SUMS.txt` to a
   **draft** release; nothing is published until you press "Publish release". Before the first public release
-  decide the project licence (D-001, the licence field is still "undecided"), clear the product name, and read
+  the project is GPL-3.0-or-later: a release is a distribution, so the source for that exact version must be
+  available to everyone who gets the binary (the tag in this repository, which GitHub also offers as a source
+  archive on the release, satisfies that; keep the tag). Clear the product name, and read
   `docs/THIRD_PARTY_LICENSES.md` (an inventory, not the full notices). Not yet run on GitHub.
 * **Windows installer (alternative).** `packaging/windows/bergpdf.iss` is an Inno Setup script for the `cargo xtask dist` folder
   (`winget install --id JRSoftware.InnoSetup`, then `ISCC.exe packaging\windows\bergpdf.iss /DAppVersion=0.1.0`).

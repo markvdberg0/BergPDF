@@ -82,7 +82,7 @@ fn licenses() -> Result<(), String> {
          in the dependency graph for **all** target platforms (including crates only used on\n\
          Windows/macOS/Linux). It is an inventory, **not** a legal notice bundle: before any\n\
          distribution the full licence texts and required copyright notices must be assembled and\n\
-         reviewed (see docs/DEPENDENCIES.md for the components that need special attention).\n\n\
+         reviewed (see docs/DEPENDENCIES.md for the components that need special attention). All of\n         them are compatible with the project's GPL-3.0-or-later licence.\n\n\
          | Crate | Version | Licence (SPDX as declared) | Repository |\n|---|---|---|---|\n",
     );
     for (n, ver, l, r) in &rows {
@@ -157,6 +157,7 @@ fn dist(with_ocr_models: bool) -> Result<(), String> {
         }
     }
     for f in [
+        "LICENSE",
         "README.md",
         "docs/THIRD_PARTY_LICENSES.md",
         "docs/DEPENDENCIES.md",
