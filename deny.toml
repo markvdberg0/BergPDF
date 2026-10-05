@@ -1,0 +1,49 @@
+# cargo-deny policy. Run: cargo deny check
+# The project's own licence is undecided (docs/DECISIONS.md D-001); this list governs only what
+# we are willing to depend on. Anything copyleft (GPL/AGPL/LGPL/MPL) as the *only* option is
+# rejected; dual-licensed crates are accepted via their permissive alternative.
+
+[graph]
+all-features = false
+
+[advisories]
+version = 2
+yanked = "deny"
+# Each ignore needs a reason and a follow-up (see docs/DEPENDENCIES.md "Advisories").
+ignore = [
+    { id = "RUSTSEC-2026-0192", reason = "ttf-parser is unmaintained (no known vulnerability). Used by pdf-engine for glyph-availability checks and, transitively, by winit/egui. Migration to skrifa/read-fonts is tracked in docs/PLAN.md remaining work." },
+]
+
+[licenses]
+version = 2
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Zlib",
+    "Unicode-3.0",
+    "Unlicense",
+    "0BSD",
+    "BSL-1.0",
+    "OFL-1.1",
+    "Ubuntu-font-1.0",
+    "APAFML",
+]
+confidence-threshold = 0.9
+
+[licenses.private]
+# First-party crates are `publish = false` and carry LicenseRef-Undecided (D-001).
+ignore = true
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+allow-wildcard-paths = true
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]

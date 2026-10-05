@@ -1,0 +1,62 @@
+[workspace]
+resolver = "3"
+members = [
+    "apps/desktop",
+    "crates/editor-core",
+    "crates/pdf-engine",
+    "crates/platform",
+    "crates/test-support",
+    "xtask",
+]
+default-members = [
+    "apps/desktop",
+    "crates/editor-core",
+    "crates/pdf-engine",
+    "crates/platform",
+    "crates/test-support",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.92"
+# Final distribution licence is an open decision for the repository owner
+# (see docs/DECISIONS.md D-001). `publish = false` keeps crates private.
+license = "LicenseRef-Undecided"
+publish = false
+
+[workspace.dependencies]
+hayro = { version = "0.8", default-features = false, features = ["embed-fonts", "embed-cmaps", "simd"] }
+lopdf = { version = "0.45", default-features = false }
+pdf-writer = "0.15"
+thiserror = "2"
+tracing = "0.1"
+proptest = "1"
+tempfile = "3"
+
+pdf-engine = { path = "crates/pdf-engine" }
+editor-core = { path = "crates/editor-core" }
+platform = { path = "crates/platform" }
+test-support = { path = "crates/test-support" }
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+unused_must_use = "deny"
+
+[workspace.lints.clippy]
+unwrap_used = "warn"
+expect_used = "warn"
+panic = "warn"
+
+[profile.release]
+lto = "thin"
+codegen-units = 4
+debug = "line-tables-only"
+
+[profile.dev.package."*"]
+opt-level = 2
+
+# Distribution builds (`cargo xtask dist`): same optimisation as release, symbols stripped.
+[profile.dist]
+inherits = "release"
+strip = "symbols"

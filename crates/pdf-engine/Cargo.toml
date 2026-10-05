@@ -1,0 +1,30 @@
+[package]
+name = "pdf-engine"
+description = "PDF parsing, rendering adapter, text extraction, editing and serialization"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+flate2 = { version = "1", default-features = false, features = ["rust_backend"] }
+hayro.workspace = true
+image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
+lopdf.workspace = true
+pdf-base14-metrics = "0.0.2"
+pdfboss-encoding = "2"
+subsetter = "0.2"
+thiserror.workspace = true
+tracing.workspace = true
+ttf-parser = { version = "0.25", default-features = false, features = ["std", "opentype-layout", "glyph-names"] }
+
+[dev-dependencies]
+test-support.workspace = true
+png = "0.18"
+proptest.workspace = true
+tempfile.workspace = true
+pdf-writer.workspace = true
+
+[lints]
+workspace = true

@@ -1,0 +1,16 @@
+[package]
+name = "test-support"
+description = "Shared test helpers (fixtures, bitmap diffs, independent-tool oracles)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+pdf-writer.workspace = true
+png = "0.18"
+tempfile.workspace = true
+
+[lints]
+workspace = true

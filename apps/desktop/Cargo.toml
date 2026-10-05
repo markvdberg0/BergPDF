@@ -1,0 +1,27 @@
+[package]
+name = "ferrum-pdf"
+description = "Ferrum PDF desktop application"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "ferrum-pdf"
+path = "src/main.rs"
+
+[dependencies]
+pdf-engine.workspace = true
+editor-core.workspace = true
+platform.workspace = true
+eframe = "0.36"
+egui = "0.36"
+tracing.workspace = true
+tracing-subscriber = { version = "0.3", default-features = false, features = ["fmt", "env-filter"] }
+
+[dev-dependencies]
+test-support.workspace = true
+
+[lints]
+workspace = true

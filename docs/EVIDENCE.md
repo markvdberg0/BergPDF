@@ -1,0 +1,138 @@
+# Evidence log
+
+Everything here was produced by commands run in the authoring sandbox (Linux x86_64); outputs
+are pasted as printed, not paraphrased. **Nothing here was run on Windows or macOS.**
+
+## Environment
+
+- date: 2026-10-05T06:17:25Z
+- rustc: rustc 1.97.0 (2d8144b78 2026-07-07)  cargo: cargo 1.97.0 (c980f4866 2026-06-30)
+- uname: Linux 6.18.44-fc-v70 x86_64
+- pdftotext: pdftotext version 24.02.0
+- GUI checks: Xvfb 1600×1000, Mesa lavapipe (software Vulkan), `xdotool`, ImageMagick `import`.
+  The window was given X focus explicitly before typing (a test-harness requirement, not an
+  application behaviour).
+
+## Quality gate — `FERRUM_REQUIRE_ORACLES=1 cargo xtask check`
+
+(= `cargo fmt --all -- --check`, `cargo clippy --workspace --all-targets -- -D warnings`,
+`cargo test --workspace`; with oracles *required*, so a missing poppler would have failed.)
+
+```
+Running unittests src/lib.rs  =>  test result: ok. 19 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; in 0.07s
+Running tests/jobs.rs  =>  test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; in 1.03s
+Running tests/session.rs  =>  test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; in 0.33s
+Running unittests src/main.rs  =>  test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; in 0.00s
+Running unittests src/lib.rs  =>  test result: ok. 43 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; in 0.01s
+Running tests/m0_roundtrip.rs  =>  test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; in 0.31s
+Running tests/m3_objects.rs  =>  test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; in 0.08s
+Running tests/m3_text_edit.rs  =>  test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; in 0.19s
+Running tests/m4_forms.rs  =>  test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; in 0.09s
+Running tests/m4_measure.rs  =>  test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; in 0.11s
+Running tests/m4_meta_export.rs  =>  test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; in 0.10s
+Running unittests src/lib.rs  =>  test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; in 0.21s
+Running unittests src/lib.rs  =>  test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; in 0.00s
+Running unittests src/main.rs  =>  test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; in 0.00s
+Doc-tests editor_core  =>  test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; in 0.00s
+Doc-tests pdf_engine  =>  test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; in 0.00s
+Doc-tests platform  =>  test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; in 0.00s
+Doc-tests test_support  =>  test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; in 0.00s
+xtask check exit code: 0
+```
+
+Total: 123 tests passed, 0 failed (19 editor-core unit, 4 jobs, 7 session, 3 desktop, 43
+pdf-engine unit, 4 m0_roundtrip, 6 m3_objects, 10 m3_text_edit, 11 m4_forms, 6 m4_measure,
+2 m4_meta_export, 7 platform, 1 xtask).
+
+Bugs the gate/GUI testing caught and that were fixed before this log (so the history is not
+rosy): thumbnails requested before the worker pool existed stayed “in flight” forever; a
+per-frame window-title command caused a 250 % CPU repaint loop; sliders/checkboxes were
+invisible in the custom theme; “Save As” to the same path wrongly ran the external-modification
+check; PDF reals are f32 so a stored scale gave 10.000008 instead of 10 (now stored as text);
+the first `cargo xtask check` after adding tooling failed `fmt` and `clippy` on the new files; flattening a form first dropped the value of a combo box that had no stored appearance (now generated before baking).
+
+## Supply chain — `cargo deny check` (cargo-deny 0.20.2, live advisory DB)
+
+```
+advisories ok, bans ok, licenses ok, sources ok
+```
+
+Passes with **one documented ignore**: RUSTSEC-2026-0192 (`ttf-parser` 0.25.1 unmaintained).
+See `DEPENDENCIES.md`. Before adding that ignore, the check failed on: `LicenseRef-Undecided`
+for first-party crates (now `licenses.private.ignore`), path-dependency wildcards, and this
+advisory. Duplicate-version warnings (windows-sys, skrifa, …) remain as warnings.
+
+## Packaging smoke test — `cargo xtask dist` (run before the properties/export/flatten additions; the final gate above was re-run after them)
+
+```
+    Finished `dist` profile [optimized + debuginfo] target(s) in 7m 27s
+unsigned distribution folder: /home/user/pdf-editor/dist/ferrum-pdf-0.1.0-linux-x86_64
+(not signed, not notarised, not an installer — see docs/PLATFORM_CHECKLIST.md)
+      4250  DEPENDENCIES.md
+      2012  README.md
+     43297  THIRD_PARTY_LICENSES.md
+  33621120  ferrum-pdf
+```
+
+The stripped Linux binary was launched (screenshot `evidence/01-launch-release-binary.png`),
+opened `tests/fixtures/report-chromium.pdf`, and after settling used 0.0 % CPU
+(`top -b -n 3 -d 3`) with 190 MB RSS under the *software* GPU. The macOS `.app` layout generator
+is unit-tested (`xtask::bundle`), but no bundle has ever been launched on a Mac.
+
+## Performance — `cargo xtask bench` (release)
+
+```
+
+== report-chromium.pdf (3 pages, embedded fonts) (41.2 KB)
+open + parse                                                     0.8 ms   (peak RSS 5 MB)
+page list                                                        0.0 ms   (peak RSS 5 MB)
+hayro load + render page 1 @ 1.0x (fit-width-like)              10.2 ms   (peak RSS 13 MB)
+TOTAL time to first rendered page                               11.3 ms
+
+== 1000-page text document (2950.4 KB)
+open + parse                                                    18.1 ms   (peak RSS 18 MB)
+page list                                                        3.1 ms   (peak RSS 18 MB)
+hayro load + render page 1 @ 1.0x (fit-width-like)              21.9 ms   (peak RSS 27 MB)
+TOTAL time to first rendered page                               49.5 ms
+
+== A0 page, 60 000 vector shapes (6544.2 KB)
+open + parse                                                    11.1 ms   (peak RSS 30 MB)
+page list                                                        0.0 ms   (peak RSS 30 MB)
+hayro load + render page 1 @ 1.0x (fit-width-like)             739.5 ms   (peak RSS 152 MB)
+TOTAL time to first rendered page                              757.3 ms
+
+== 1000-page document operations
+page ids (walk page tree)                                        1.2 ms   (peak RSS 152 MB)
+render page 500 thumbnail (0.2x)                                 6.6 ms   (peak RSS 152 MB)
+render 50 thumbnails (0.2x) in one session                     137.0 ms   (peak RSS 152 MB)
+search 'quick' across all 1000 pages (text extraction)         819.8 ms   (peak RSS 152 MB)
+add one annotation (transaction)                                 0.2 ms   (peak RSS 152 MB)
+incremental snapshot after the edit                              1.1 ms   (peak RSS 152 MB)
+incremental save size                                            800 bytes appended to a 3021246 byte original
+delete 500 pages (one transaction)                               2.3 ms   (peak RSS 152 MB)
+
+```
+
+Interpretation and caveats: `PERFORMANCE.md`.
+
+## GUI checks actually performed (screenshots in `docs/evidence/`)
+
+| # | What was done | What was observed |
+|---|---|---|
+| 01 | Launched the release binary with a real Chromium-made PDF | Window, ribbon, thumbnails and page rendered; no warnings other than X11/DRI3 messages from the software stack |
+| 02 | Clicked the “name” field of `form_rich.pdf`, typed text, OK; clicked the checkbox and the second radio button | Value drawn in the field (embedded-font appearance), checkbox and radio marks drawn; document became dirty; undo arrow enabled |
+| 03 | Duplicate Pages on a page with fields | Form-policy dialog with Independent / Linked / Flatten explained; Continue produced a 3rd page whose fields are independent |
+| 04 | Calibrated page 2 (200.2 pt ↔ 20 m), measured a distance (12.87 m), a polygon area (36.15 m²) and two count markers | Labels drawn, side panel lists measurements and totals, status bar showed the scale |
+| 05 | Saved from the app (Ctrl+S), rendered the saved file with **poppler** (`pdftoppm`) | Field values, marks, measurement labels and count markers all present in the independent render |
+| 06 | Created stale recovery files, started the app | “Recover unsaved work?” dialog; “Restore as new tab” opened the recovered document (including unsaved page-2 measurements) as a dirty tab and wrote a fresh recovery file |
+| 07 | Document properties (set title and author), then Flatten Form Fields via the palette, confirm, Ctrl+S; inspected the saved file with poppler `pdfinfo`/`pdftotext` | `pdfinfo`: `Title: Quarterly forms`, `Author: Mark vd Berg`, `Form: none`; page text now contains the field value as page content; field tint and Forms tab gone; combo value “Red” (which had no stored appearance) baked in |
+
+Earlier (pre-compaction) GUI checks, not re-screenshotted here: palette (Ctrl+K), highlight and
+rectangle tools, text-box dialog, Ctrl+S growing the file incrementally, Edit Text changing
+`ALPHA-7731` → `ALPHA-1377` in the Chromium document, and the missing-glyph guidance panel.
+
+## Not run / not proven
+
+Windows and macOS builds or tests; real-GPU rendering; HiDPI; IME; accessibility tooling;
+printing; process isolation (not implemented); fuzzing; long-session memory; native CSV/PNG save dialogs and other native file dialogs headless (PNG export is tested at engine level only); merge-documents flow in the GUI; region-scale drawing
+in the GUI; password-protected PDFs (unsupported).

@@ -1,0 +1,65 @@
+# Quality gate on the three first-class build targets. Nothing here publishes or uploads a
+# release; artefacts are short-lived workflow artefacts of *unsigned* development builds.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: "-D warnings"
+
+jobs:
+  gate:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: windows-x86_64 (msvc), os: windows-latest }
+          - { name: macos-aarch64, os: macos-14 }
+          - { name: linux-x86_64, os: ubuntu-latest }
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned toolchain
+        run: rustup show
+      - uses: Swatinem/rust-cache@v2
+      - name: Require independent oracles on runners where they are installed
+        if: runner.os != 'Windows'
+        shell: bash
+        run: echo "FERRUM_REQUIRE_ORACLES=1" >> "$GITHUB_ENV"
+      - name: Linux system packages (headless render checks use poppler as an oracle)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y poppler-utils
+      - name: macOS oracle tools
+        if: runner.os == 'macOS'
+        run: brew install poppler
+      - name: Format
+        run: cargo fmt --all -- --check
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: Tests
+        run: cargo test --workspace
+      - name: Release build
+        run: cargo build --release -p ferrum-pdf
+      - name: Unsigned distribution folder
+        run: cargo xtask dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ferrum-pdf-dev-${{ matrix.os }}
+          path: dist/
+          retention-days: 7
+
+  supply-chain:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          command: check
