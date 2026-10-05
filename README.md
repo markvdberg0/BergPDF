@@ -1,98 +1,117 @@
-# BergPDF (working name)
+<p align="center">
+  <img src="assets/icons/bergpdf-256.png" alt="BergPDF" width="96">
+</p>
 
-A native, offline desktop PDF editor written in Rust: viewing, annotation, page organisation,
-in-place text/image editing, form filling, calibrated measurement/count take-off, digital and
-handwritten signatures, and OCR for scanned pages. Pictures (PNG/JPEG) open as one-page PDFs.
-Windows 11 x86_64 and macOS Apple Silicon are the target platforms.
+<h1 align="center">BergPDF</h1>
+<p align="center"><b>A fast, private PDF editor for your desktop.</b><br>
+Edit, annotate, sign, measure, fill in forms and make scans searchable. Offline, no account, no tracking.</p>
 
-**Status: development build. Only ever run on Linux so far.** Read `docs/FEATURE_MATRIX.md`
-for exactly what exists and what has (not) been verified, and `docs/PLAN.md` for evidence and
-remaining work. Licence: GNU GPL v3 or later (`LICENSE`, `docs/DECISIONS.md` D-001).
+<p align="center">
+  <a href="../../releases">Download</a> ·
+  <a href="#features">Features</a> ·
+  <a href="#install">Install</a> ·
+  <a href="DEVELOPING.md">Build it yourself</a> ·
+  <a href="LICENSE">GPL-3.0</a>
+</p>
 
-## Build and run
+<p align="center"><img src="docs/screenshots/copilot.png" alt="BergPDF with the PDF Copilot panel" width="820"></p>
 
-```
-rustup show                       # installs the pinned toolchain (rust-toolchain.toml)
-cargo run --release -p bergpdf # opens the app; pass PDF paths as arguments to open them
-cargo run --release -p bergpdf -- tests/fixtures/report-chromium.pdf
-```
+## Why BergPDF
 
-Linux needs the usual windowing stack (X11 or Wayland) and a Vulkan or GL driver; on Linux
-the native file dialog uses the XDG desktop portal. No C compiler is needed for first-party code.
+* **Your documents stay on your computer.** Everything core works offline. There is no account, no
+  telemetry and no cloud. The optional AI features only send text when *you* press a button, to the provider
+  you chose, with your own key.
+* **Quick and light.** A native app written in Rust: pages render in tiles (built with large drawings in mind), and
+  there is no browser engine or runtime to install.
+* **Real editing, not just stamping.** Change existing text and images in place, add text in the fonts you
+  have installed, reorganise pages, and keep every change undoable.
+* **Free software.** GPLv3: you can read the source, build it yourself and share it.
 
-## Developer commands
+## Features
 
-```
-cargo xtask check      # fmt --check, clippy -D warnings, all tests (the CI gate)
-cargo xtask fetch-ocr-models  # OPTIONAL: download + verify the OCR models (needed for OCR)
-cargo run -p ai-client --example mock_ai_server -- 8099   # fake AI service to try Copilot without an account
-cargo xtask icons      # regenerate the logo icons (PNG/ICO/ICNS) from the vector logo
-cargo xtask fixtures   # write generated fixtures to target/fixtures
-cargo xtask bench      # release-mode performance numbers
-cargo xtask licenses   # regenerate docs/THIRD_PARTY_LICENSES.md
-cargo xtask dist       # release build + UNSIGNED distribution folder (macOS: .app layout)
-cargo xtask dist --with-ocr-models   # same, plus verified OCR models in ocr-models/ (see Shipping notes)
-```
+**Read and navigate**
+Tabs, thumbnails, bookmarks, links, full-text search, fit page / fit width / any zoom, single or continuous
+pages, a dark page view, a command palette (Ctrl+K) and a right-click menu for what you can do right there.
+Pictures (PNG, JPEG) open as one-page PDFs.
 
-## Orientation
+**Annotate**
+Highlight, underline, strikeout, squiggly, sticky notes, text boxes, callouts (click the point, then place
+the box), stamps, rectangles, ellipses, lines, arrows, polygons and freehand drawing, with colour, opacity,
+line width and dash style. Text stays upright on rotated and landscape pages and can be turned in 90° steps.
+A comments panel lists everything.
 
-* `docs/ARCHITECTURE.md` — crates and invariants
-* `docs/SECURITY.md` — what the app refuses to do, limits, what is not isolated
-* `docs/PERFORMANCE.md` — measured numbers and their caveats
-* `docs/DEPENDENCIES.md` — what we depend on and what needs legal attention
-* `docs/PLATFORM_CHECKLIST.md` — what a human must verify on Windows and macOS
-* `tests/fixtures/README.md` — where test files come from
+**Edit the document**
+Edit existing text and images in place (for the font types BergPDF can safely rewrite; it tells you when it
+cannot), add new text and images, and rotate, delete, insert, duplicate, reorder, extract and merge pages.
+Choose from five bundled font families or **any TrueType font installed on your computer**.
 
-Not implemented (deliberately gated or not yet built): secure redaction, password-protected
-PDFs, printing, installers. Digital signatures check integrity only (never certificate trust).
-OCR needs model files that are not included (see above). Nothing is signed or published.
+**Forms and signatures**
+Fill in form fields, flatten them, and decide whether copied pages keep their fields linked. Place a
+handwritten signature, or sign digitally with a PKCS#12 certificate (`.p12` / `.pfx`).
 
-## Optional AI features (PDF Copilot, Translate)
+**Measure**
+Calibrate a scale, then measure distance, path length, area, rectangles, radius and angles, or count items
+by category. Measurements **snap to the corners, ends, intersections and midpoints** of technical drawings,
+and export to CSV.
 
-Off until you add your own key: Preferences ▸ PDF Copilot (OpenAI, Anthropic, or a *Custom* OpenAI-compatible
-server such as a local model). Text is sent only when you press a button, after a one-time consent. The key is
-kept in a file only your account can read (not encrypted — use a spending limit). To try the feature without an
-account, run the mock server above and choose Custom with address `http://127.0.0.1:8099/v1`.
+<p align="center"><img src="docs/screenshots/measure.png" alt="Measuring on a floor plan with snapping" width="720"></p>
 
-Independent PDF/A validation in the tests is optional: set `BERG_VERAPDF` to a directory containing the veraPDF
-jars (see docs/EVIDENCE.md for how they were fetched) and `BERG_REQUIRE_VERAPDF=1` to make it mandatory.
+**Scans and archiving**
+* **OCR** turns a scanned page into searchable text with an invisible text layer. It runs on your computer.
+* **Save As Optimized** shrinks files (lossless, balanced or smallest) and reports what it saved.
+* **Convert to PDF/A-2b** for archiving, with a preview of the changes or the exact reason it cannot be done.
 
-## Shipping notes
+**Optional: PDF Copilot and Translate** (bring your own key: OpenAI, Anthropic, or a local server)
+Summarise a document or its comments, ask questions and get answers with page references and the quoted
+passages highlighted, explain a selected term, and **translate a document in place**: each paragraph is replaced
+where it stands, in a copy that opens in a new tab. Nothing is sent until you press a button, and your own
+document is never changed by it.
 
-* **OCR models (D-023).** The models (≈12 MB) are not in the repository or the binary. Two ways to make OCR
-  work without the user doing anything by hand:
-  1. *Download button* (default): the OCR dialog offers "Download the OCR models", fetched from the model
-     author's public host, checked against pinned SHA-256 hashes, and only installed when the hash matches.
-     Needs internet once; stored in the per-user data folder.
-  2. *Bundled*: `cargo xtask dist --with-ocr-models` downloads and verifies them into `ocr-models/` next to the
-     program (macOS: `BergPDF.app/Contents/Resources/ocr-models`), together with `NOTICE-OCR.txt`. The app looks
-     there first, so OCR works offline from the first start.
-  The trained weights come from a CC BY-SA 4.0 dataset and the model repository has no licence file, so whether
-  you may **redistribute** them (option 2, or even hosting them yourself) is **unverified** and is the owner's
-  decision. Option 1 does not redistribute anything; the user fetches the files from their author.
-* **OCR models at install time (Windows).** The NSIS installer asks whether to download them; see D-029. It uses a
-  copy of cargo-packager 0.11.8's NSIS template with one added section, so install exactly that version
-  (`cargo install cargo-packager --version 0.11.8 --locked`). Not yet run on Windows.
-* **Installer with cargo-packager.** `Packager.toml` configures [cargo-packager](https://github.com/crabnebula-dev/cargo-packager):
-  `cargo install cargo-packager --version 0.11.8 --locked`, `cargo xtask dist`, then `cargo packager --release -f nsis` on Windows
-  (an NSIS `.exe`, per user, "Open with" entry for PDF, icon, uninstaller; output in `dist/packages`; the tool
-  downloads NSIS itself on first use), `-f dmg` on macOS, `-f deb` on Linux. The `.deb` was built and inspected here;
-  the Windows and macOS packages were not. Unsigned. Keep `version` in `Packager.toml` equal to the workspace
-  version (a test checks it).
-* **GitHub release.** `.github/workflows/release.yml` builds the installers on Windows, macOS and Linux when a tag
-  such as `v0.1.0` (equal to the workspace version) is pushed, and attaches them with `SHA256SUMS.txt` to a
-  **draft** release; nothing is published until you press "Publish release". Before the first public release
-  the project is GPL-3.0-or-later: a release is a distribution, so the source for that exact version must be
-  available to everyone who gets the binary (the tag in this repository, which GitHub also offers as a source
-  archive on the release, satisfies that; keep the tag). Clear the product name, and read
-  `docs/THIRD_PARTY_LICENSES.md` (an inventory, not the full notices). Not yet run on GitHub.
-* **Windows installer (alternative).** `packaging/windows/bergpdf.iss` is an Inno Setup script for the `cargo xtask dist` folder
-  (`winget install --id JRSoftware.InnoSetup`, then `ISCC.exe packaging\windows\bergpdf.iss /DAppVersion=0.1.0`).
-  Unsigned and not yet tried on Windows.
-* **Windows packaging.** `cargo xtask dist` links the C runtime statically on Windows/MSVC (no Visual C++
-  redistributable needed) and the exe carries the BergPDF icon and version info. It is **not** an installer and
-  **not** code-signed, so Windows SmartScreen will warn on first start. None of this has been run on Windows yet.
-* **Installed fonts** can be chosen for text; only fonts whose embedding flags allow it are offered, and the user
-  remains responsible for the font's licence when a document is shared.
-* **Fonts**: 14 font files are embedded in the binary (Liberation — SIL OFL 1.1; DejaVu — Bitstream Vera licence);
-  ship their licence texts (`crates/pdf-engine/assets/fonts/LICENSE-*.txt`) with the app.
+<p align="center"><img src="docs/screenshots/translate.png" alt="A document translated in place, opened as a copy" width="720"></p>
+
+**Safe by design**
+Unlimited undo and redo, autosave with crash recovery, atomic saving that checks the result before replacing
+your file, and warnings instead of silent changes.
+
+## Install
+
+Download the installer for your system from the **[Releases](../../releases)** page and check its SHA-256 sum
+against `SHA256SUMS.txt`.
+
+| System | Download | Notes |
+|---|---|---|
+| **Windows 11** (x86-64) | `BergPDF_…-setup.exe` | Installs for your user, no administrator rights needed. The installer asks whether to download the OCR models. |
+| **macOS** (Apple Silicon) | `BergPDF_….dmg` | Drag BergPDF to Applications. |
+| **Linux** (x86-64) | `bergpdf_…_amd64.deb` | `sudo apt install ./bergpdf_…_amd64.deb`. Needs an X11 or Wayland desktop with Vulkan or OpenGL. |
+
+**About the first start.** BergPDF is a young project and the installers are **not code-signed** yet. Windows
+SmartScreen ("Windows protected your PC": choose *More info → Run anyway*) and macOS Gatekeeper
+(right-click the app, choose *Open*) will therefore warn you the first time. Verify the checksum and, if you
+prefer, [build it yourself](DEVELOPING.md).
+
+**OCR models.** Text recognition needs two small model files (about 12 MB). Say yes in the Windows installer, or
+use *Download the OCR models* the first time you run OCR; they are fetched once, checked against a fixed
+checksum and stored in your user folder. OCR currently recognises the basic Latin alphabet (accented letters are
+lost) and works best on straight, printed text.
+
+**If resizing or zooming feels slow on Windows**, open *Preferences ▸ Graphics* to see which graphics adapter is
+used and to try another drawing API.
+
+## Status and limits
+
+BergPDF is at version 0.1. It was developed and tested on Linux; the Windows and macOS builds are new, so expect
+rough edges and please [report them](../../issues). Not (yet) available: secure redaction, password-protected
+PDFs, printing, and trust validation of signature certificates (signatures are checked for integrity only).
+The exact state of every feature, and how it was verified, is in [`docs/FEATURE_MATRIX.md`](docs/FEATURE_MATRIX.md).
+
+## Build it yourself
+
+See **[DEVELOPING.md](DEVELOPING.md)** for compiling, testing and packaging.
+
+## Licence
+
+BergPDF is free software under the **GNU General Public License v3.0 or later** ([`LICENSE`](LICENSE)). It comes
+with no warranty. It uses open-source libraries (see [`docs/THIRD_PARTY_LICENSES.md`](docs/THIRD_PARTY_LICENSES.md))
+and bundles the Liberation and DejaVu fonts under their own licences. The OCR models are separate files
+from their own project and are not covered by the GPL ([`docs/DEPENDENCIES.md`](docs/DEPENDENCIES.md)).
+Contributions are welcome: see [`CONTRIBUTING.md`](CONTRIBUTING.md).

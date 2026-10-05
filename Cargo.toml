@@ -32,6 +32,9 @@ rust-version = "1.92"
 # `publish = false` keeps the crates off crates.io.
 license = "GPL-3.0-or-later"
 publish = false
+repository = "https://github.com/markvdberg0/BergPDF"
+homepage = "https://github.com/markvdberg0/BergPDF"
+authors = ["BergPDF contributors"]
 
 [workspace.dependencies]
 hayro = { version = "0.8", default-features = false, features = ["embed-fonts", "embed-cmaps", "simd"] }

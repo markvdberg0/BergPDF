@@ -3,7 +3,7 @@
 #
 # Start it by pushing a tag that matches the workspace version (e.g. v0.1.0), or run it by hand
 # ("Run workflow") to only build the installers as workflow artefacts without any release.
-# The installers are unsigned (see docs/DECISIONS.md D-028 and the README's shipping notes).
+# The installers are unsigned (see docs/DECISIONS.md D-028 and DEVELOPING.md).
 name: release
 
 on:

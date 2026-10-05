@@ -3,3 +3,8 @@
 .DS_Store
 /out/
 /dist/
+.vscode/
+.idea/
+*.orig
+*.rej
+Thumbs.db

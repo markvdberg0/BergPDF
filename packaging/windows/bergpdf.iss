@@ -1,5 +1,5 @@
 ; Inno Setup script for BergPDF (https://jrsoftware.org/isinfo.php).
-; Build the folder first:   cargo xtask dist            (add --with-ocr-models to bundle OCR, see README)
+; Build the folder first:   cargo xtask dist            (add --with-ocr-models to bundle OCR, see DEVELOPING.md)
 ; Then:   ISCC.exe packaging\windows\bergpdf.iss /DAppVersion=0.1.0
 ; Result: dist\BergPDF-Setup-<version>.exe (unsigned; not yet tried on Windows, see docs/PLATFORM_CHECKLIST.md).
 

@@ -1,7 +1,7 @@
 # Installer configuration for cargo-packager (https://github.com/crabnebula-dev/cargo-packager).
 # Build the program folder first (cargo xtask dist), then:  cargo packager --release
 # Windows: an NSIS installer (.exe); macOS: .dmg; Linux: .deb / AppImage. Output: dist/packages.
-# See README ("Shipping notes") before handing the result to anyone.
+# See DEVELOPING.md ("Packaging", "Shipping notes") before handing the result to anyone.
 name = "bergpdf"
 product-name = "BergPDF"
 # Reverse-domain identifier; change it to one you own before distributing.

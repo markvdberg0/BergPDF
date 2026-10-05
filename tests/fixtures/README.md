@@ -26,7 +26,7 @@ Write them to disk for manual checks: `cargo xtask fixtures` → `target/fixture
 ## Oracles
 
 Tests that call poppler (`pdftotext`, `pdftoppm`) skip those assertions when the tool is not
-installed, **unless** `FERRUM_REQUIRE_ORACLES=1` is set (CI sets it on Linux/macOS), in which
+installed, **unless** `BERG_REQUIRE_ORACLES=1` is set (CI sets it on Linux/macOS), in which
 case a missing tool or a mismatch fails the test.
 
 ## Signing fixtures

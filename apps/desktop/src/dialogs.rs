@@ -462,17 +462,7 @@ impl App {
                         ui.allocate_exact_size(egui::vec2(64.0, 64.0), egui::Sense::hover());
                     crate::icons::paint_logo(ui.painter(), r, self.pal.text, self.pal.accent);
                     ui.heading("BergPDF");
-                    ui.label(format!(
-                        "Version {}  (development build)",
-                        env!("CARGO_PKG_VERSION")
-                    ));
-                    ui.label(
-                        RichText::new(
-                            "“BergPDF” is an internal working name, not a cleared product name.",
-                        )
-                        .size(12.0)
-                        .color(self.pal.text_dim),
-                    );
+                    ui.label(format!("Version {}", env!("CARGO_PKG_VERSION")));
                     ui.add_space(6.0);
                     ui.label(
                         "Free software under the GNU General Public License, version 3 or (at your option) any later version. It comes with NO WARRANTY. You may share and change it under those terms; the source code of this version is at https://github.com/markvdberg0/pdf-editor and the licence text is the file LICENSE next to the program.",
