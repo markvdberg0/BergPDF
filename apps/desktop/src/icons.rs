@@ -585,3 +585,29 @@ pub fn paint(p: &Painter, rect: Rect, icon: Icon, color: Color32) {
     }
     let _ = dim;
 }
+
+/// Draw the BergPDF logo (Mont Blanc outline with a copper snow line) inside `rect`.
+pub fn paint_logo(p: &Painter, rect: Rect, outline: Color32, accent: Color32) {
+    let s = rect.width().min(rect.height());
+    let o = rect.center() - Vec2::splat(s / 2.0);
+    let u = s / 100.0;
+    // Inset the artwork slightly so round joins are not clipped.
+    let (scale, off) = (0.94, 3.0);
+    let to =
+        |q: &(f32, f32)| Pos2::new(o.x + (q.0 * scale + off) * u, o.y + (q.1 * scale + off) * u);
+    let width = (brand::STROKE * scale * u).max(1.0);
+    for (poly, is_accent) in brand::strokes() {
+        let pts: Vec<Pos2> = poly.iter().map(to).collect();
+        let st = Stroke::new(width, if is_accent { accent } else { outline });
+        p.add(PathShape {
+            points: pts.clone(),
+            closed: false,
+            fill: Color32::TRANSPARENT,
+            stroke: st.into(),
+        });
+        // Round joins/caps for the soft look of the raster icon.
+        for q in &pts {
+            p.circle_filled(*q, width / 2.0, st.color);
+        }
+    }
+}

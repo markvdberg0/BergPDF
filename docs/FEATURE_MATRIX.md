@@ -24,6 +24,9 @@ own output.
 | Feature | Status | Evidence / gaps |
 |---|---|---|
 | Open PDF (dialog, drag-and-drop, command line) | Implemented | manual GUI; hayro + lopdf parse |
+| Open PNG/JPEG pictures: become a one-page PDF (A4 long side, aspect kept, JPEG bytes embedded unchanged, EXIF rotation 3/6/8 honoured); Save writes the PDF | Implemented | `m5_image_docs` (5 tests, poppler render oracle); GUI open. Other formats (TIFF, WebP, GIF, BMP, HEIC) are not supported |
+| Insert pictures as pages of an open document (Organize → Image Page) | Implemented | `m5_image_docs`; native picker not exercised headless |
+| Default zoom on open (Fit page / Fit width / 100 %, default Fit page); Esc leaves any tool for Select | Implemented | manual GUI |
 | Continuous / single / facing layout, zoom, fit width/page, view rotation | Implemented | `editor_core::view` unit tests; manual GUI |
 | Tiled, cached, cancellable rendering (hayro) with placeholders | Implemented | `editor_core::jobs`, `tiles` tests; manual GUI |
 | Thumbnails (sidebar) with drag-to-reorder | Implemented | manual GUI |

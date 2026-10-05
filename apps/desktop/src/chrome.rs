@@ -81,6 +81,7 @@ pub fn command_icon(c: C) -> Icon {
         C::ViewDarkPages => Icon::Moon,
         C::PageDelete => Icon::Trash,
         C::PageInsertBlank => Icon::InsertPage,
+        C::PageInsertImage => Icon::AddImage,
         C::PageDuplicate => Icon::Duplicate,
         C::PageExtract => Icon::Extract,
         C::PageMoveUp => Icon::ArrowUp,
@@ -103,11 +104,29 @@ impl App {
         let m = theme::metrics(self.prefs.density);
         let enabled = self.command_enabled(id);
         let info = editor_core::command::info(id);
-        let text = label.unwrap_or(info.title);
+        let text = label.unwrap_or_else(|| ribbon_label(id, info.title));
         let short = text.trim_end_matches('…');
         let with_label = m.show_labels && !compact;
-        let size = if with_label {
-            m.ribbon_button
+        // Lay the caption out first and size the button to it, so neighbouring buttons never
+        // overlap: one line if it fits in 84 px, otherwise at most two word-wrapped lines.
+        let caption = with_label.then(|| {
+            let font = egui::FontId::proportional(11.0);
+            let one = ui
+                .painter()
+                .layout_no_wrap(short.to_string(), font.clone(), Color32::WHITE);
+            if one.size().x <= 84.0 {
+                (one, false)
+            } else {
+                let mut job =
+                    egui::text::LayoutJob::simple(short.to_string(), font, Color32::WHITE, 76.0);
+                job.wrap.max_rows = 2;
+                job.halign = egui::Align::Center;
+                // A centre-aligned galley is anchored at its centre line.
+                (ui.painter().layout_job(job), true)
+            }
+        });
+        let size = if let Some((g, _)) = &caption {
+            egui::vec2(m.ribbon_button.x.max(g.size().x + 12.0), m.ribbon_button.y)
         } else {
             egui::vec2(m.button_h.max(28.0), m.button_h.max(28.0))
         };
@@ -145,18 +164,18 @@ impl App {
                 command_icon(id),
                 if selected { pal.accent } else { col },
             );
-            if with_label {
-                let galley = ui.painter().layout(
-                    short.to_string(),
-                    egui::FontId::proportional(11.0),
-                    col,
-                    rect.width() - 4.0,
-                );
+            if let Some((galley, centre_anchored)) = caption {
+                // Starts just below the icon, so it can never climb into it.
                 let pos = egui::pos2(
-                    rect.center().x - galley.size().x / 2.0,
-                    rect.max.y - galley.size().y - 4.0,
+                    if centre_anchored {
+                        rect.center().x
+                    } else {
+                        rect.center().x - galley.size().x / 2.0
+                    },
+                    rect.min.y + 6.0 + m.icon + 3.0,
                 );
-                ui.painter().galley(pos, galley, col);
+                ui.painter()
+                    .galley_with_override_text_color(pos, galley, col);
             }
         }
         resp.widget_info(|| {
@@ -221,17 +240,9 @@ impl App {
 
     pub fn quick_access_bar(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
         ui.horizontal(|ui| {
-            let (r, _) = ui.allocate_exact_size(Vec2::new(22.0, 22.0), Sense::hover());
-            // Original mark: a copper "F" on a slate rounded square.
-            ui.painter().rect_filled(r, 5.0, self.pal.text);
-            ui.painter().text(
-                r.center(),
-                egui::Align2::CENTER_CENTER,
-                "F",
-                egui::FontId::proportional(15.0),
-                self.pal.accent,
-            );
-            ui.label(RichText::new("Ferrum PDF").strong());
+            let (r, _) = ui.allocate_exact_size(Vec2::new(26.0, 26.0), Sense::hover());
+            icons::paint_logo(ui.painter(), r, self.pal.text, self.pal.accent);
+            ui.label(RichText::new("BergPDF").strong());
             ui.add_space(10.0);
             for id in [C::FileOpen, C::FileSave, C::EditUndo, C::EditRedo] {
                 if self.cmd_button(ui, id, false, None, true) {
@@ -373,7 +384,7 @@ impl App {
                     self.group(ui, "Report", |s, ui| s.cmds(ui, ctx, &[C::ExportMeasurements]));
                 }
                 RibbonTab::Organize => {
-                    self.group(ui, "Pages", |s, ui| s.cmds(ui, ctx, &[C::PageRotateCounterClockwise, C::PageRotateClockwise, C::PageInsertBlank, C::PageDuplicate, C::PageDelete]));
+                    self.group(ui, "Pages", |s, ui| s.cmds(ui, ctx, &[C::PageRotateCounterClockwise, C::PageRotateClockwise, C::PageInsertBlank, C::PageInsertImage, C::PageDuplicate, C::PageDelete]));
                     self.group(ui, "Order", |s, ui| s.cmds(ui, ctx, &[C::PageMoveUp, C::PageMoveDown]));
                     self.group(ui, "Documents", |s, ui| s.cmds(ui, ctx, &[C::PageExtract, C::DocumentMerge]));
                 }
@@ -492,7 +503,7 @@ impl App {
     pub fn status_bar(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
         ui.horizontal(|ui| {
             let hint = if self.tabs.is_empty() {
-                "Open a PDF to begin".to_string()
+                "Open a PDF or image to begin".to_string()
             } else {
                 self.tool.hint().to_string()
             };
@@ -605,9 +616,12 @@ impl App {
 
     pub fn welcome(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
         ui.vertical_centered(|ui| {
-            ui.add_space(ui.available_height() * 0.22);
+            ui.add_space(ui.available_height() * 0.18);
+            let (r, _) = ui.allocate_exact_size(Vec2::new(96.0, 96.0), Sense::hover());
+            icons::paint_logo(ui.painter(), r, self.pal.text, self.pal.accent);
+            ui.add_space(8.0);
             ui.label(
-                RichText::new("Ferrum PDF")
+                RichText::new("BergPDF")
                     .size(34.0)
                     .strong()
                     .color(self.pal.text),
@@ -621,7 +635,7 @@ impl App {
             if ui
                 .add(
                     egui::Button::new(
-                        RichText::new("Open a PDF…")
+                        RichText::new("Open a PDF or image…")
                             .size(15.0)
                             .color(Color32::WHITE),
                     )
@@ -634,7 +648,7 @@ impl App {
             }
             ui.add_space(6.0);
             ui.label(
-                RichText::new("or drop a file anywhere in this window")
+                RichText::new("or drop a PDF or picture anywhere in this window")
                     .color(self.pal.text_dim)
                     .size(12.0),
             );
@@ -718,4 +732,41 @@ impl App {
 
 fn s_dim(p: &crate::theme::Palette) -> egui::Color32 {
     p.text_dim
+}
+
+/// Short ribbon captions for commands whose full title is too long for a ribbon button.
+/// (The palette, tooltips and menus keep the full title.)
+fn ribbon_label(id: C, title: &'static str) -> &'static str {
+    match id {
+        C::PageRotateCounterClockwise => "Rotate Left",
+        C::PageRotateClockwise => "Rotate Right",
+        C::ViewRotateCounterClockwise => "Rotate View Left",
+        C::ViewRotateClockwise => "Rotate View Right",
+        C::PageInsertBlank => "Blank Page",
+        C::PageInsertImage => "Image Page",
+        C::PageDuplicate => "Duplicate",
+        C::PageDelete => "Delete",
+        C::PageMoveUp => "Move Up",
+        C::PageMoveDown => "Move Down",
+        C::PageExtract => "Extract",
+        C::DocumentMerge => "Merge",
+        C::ToolMeasurePerimeter => "Path Length",
+        C::ToolMeasureDistance => "Distance",
+        C::ToolMeasureRect => "Rectangle",
+        C::ExportMeasurements => "Export CSV",
+        C::ToolFillForm => "Fill Form",
+        C::FormFlatten => "Flatten",
+        C::FileExportImage => "Export Image",
+        C::FileProperties => "Properties",
+        C::ToolHighlight => "Highlight",
+        C::ToolUnderline => "Underline",
+        C::ToolStrikeOut => "Strikeout",
+        C::ToolCalibrate => "Calibrate",
+        C::ViewZoomActual => "100 %",
+        C::ViewDarkPages => "Dark Pages",
+        C::ViewToggleLeftSidebar => "Navigation",
+        C::ViewToggleRightSidebar => "Properties",
+        C::ShortcutReference => "Shortcuts",
+        _ => title,
+    }
 }

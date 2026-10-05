@@ -31,6 +31,18 @@ pub enum Workspace {
     Professional,
 }
 
+/// Zoom applied when a document is opened.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum DefaultZoom {
+    /// Whole page visible.
+    #[default]
+    FitPage,
+    /// Page width fills the window.
+    FitWidth,
+    /// 100 % (actual size).
+    Actual,
+}
+
 /// Defaults applied to newly created annotations.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
@@ -68,6 +80,8 @@ pub struct Preferences {
     /// UI scale for chrome (icons, hit targets, text); independent of PDF rendering.
     pub ui_scale: f32,
     pub workspace: Workspace,
+    /// Zoom used when opening a document.
+    pub default_zoom: DefaultZoom,
     /// Whether the first-run workspace choice has been made.
     pub first_run_done: bool,
     /// Comfortable dark reading filter for page bitmaps (display only).
@@ -94,6 +108,7 @@ impl Default for Preferences {
             density: Density::Comfortable,
             ui_scale: 1.0,
             workspace: Workspace::Professional,
+            default_zoom: DefaultZoom::FitPage,
             first_run_done: false,
             dark_page_filter: false,
             author: String::new(),
@@ -192,6 +207,12 @@ pub static SETTINGS: &[SettingInfo] = &[
         title: "Workspace",
         description: "Essential shows the common tools; Professional shows everything.",
         keywords: "simple advanced essential professional",
+    },
+    SettingInfo {
+        key: "default_zoom",
+        title: "Zoom when opening a document",
+        description: "Fit page, fit width or actual size (100 %).",
+        keywords: "zoom open fit page width actual size 100",
     },
     SettingInfo {
         key: "author",

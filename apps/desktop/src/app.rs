@@ -326,11 +326,11 @@ impl eframe::App for App {
         // Window title.
         let title = match self.active_tab() {
             Some(t) => format!(
-                "{}{} — Ferrum PDF",
+                "{}{} — BergPDF",
                 if t.session.is_dirty() { "● " } else { "" },
                 t.session.title
             ),
-            None => "Ferrum PDF".to_string(),
+            None => "BergPDF".to_string(),
         };
         // Only send when it changed: a viewport command every frame would force a repaint loop.
         if self.last_title != title {

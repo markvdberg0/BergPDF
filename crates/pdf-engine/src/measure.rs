@@ -3,9 +3,9 @@
 //!
 //! Measurements are ordinary PDF annotations (`Line`, `PolyLine`, `Polygon`, `Square`,
 //! `Circle`) carrying the standard `/Measure` dictionary (ISO 32000-1 §12.9, `RL` subtype) so
-//! other viewers can interpret them, plus a private `/FerrumMeasure` dictionary that records
+//! other viewers can interpret them, plus a private `/BergMeasure` dictionary that records
 //! the exact kind, category and scale this application used. The scale *registry* (which scale
-//! applies where) is stored in a private `/FerrumScales` catalog entry that other readers
+//! applies where) is stored in a private `/BergScales` catalog entry that other readers
 //! ignore. Computations are done in PDF user-space points; `/UserUnit` is not applied.
 
 use crate::annot::{self, AnnotId, AnnotationKind, AnnotationSpec};
@@ -644,7 +644,7 @@ fn number_format(unit: &str, c: f64, precision: u8) -> Dictionary {
     }
 }
 
-/// `(standard /Measure dictionary, private /FerrumMeasure dictionary, /IT name)`.
+/// `(standard /Measure dictionary, private /BergMeasure dictionary, /IT name)`.
 pub(crate) fn to_pdf(m: &MeasureData) -> (Dictionary, Dictionary, Option<&'static str>) {
     let s = &m.scale;
     let u = s.unit.abbr();
@@ -706,7 +706,7 @@ fn text_at(doc: &Document, d: &Dictionary, k: &[u8]) -> String {
 
 /// Read the private measurement dictionary of an annotation, if present and valid.
 pub(crate) fn from_pdf(doc: &Document, annot: &Dictionary) -> Option<MeasureData> {
-    let d = objutil::dict_dict(doc, annot, b"FerrumMeasure")?;
+    let d = objutil::dict_dict(doc, annot, b"BergMeasure")?;
     let kind = MeasureKind::parse(&text_at(doc, d, b"K"))?;
     let unit = Unit::parse(&text_at(doc, d, b"Unit"))?;
     let upp = read_upp(doc, d)?;
@@ -838,7 +838,7 @@ pub fn read_scales(doc: &PdfDocument) -> ScaleSet {
     let Some(cat) = catalog_id(d).ok().and_then(|c| d.get_dictionary(c).ok()) else {
         return set;
     };
-    let Some(reg) = objutil::dict_dict(d, cat, b"FerrumScales") else {
+    let Some(reg) = objutil::dict_dict(d, cat, b"BergScales") else {
         return set;
     };
     set.document = objutil::dict_dict(d, reg, b"Doc").and_then(|s| scale_from_dict(d, s));
@@ -915,9 +915,9 @@ pub fn write_scales(tx: &mut Tx<'_>, set: &ScaleSet) -> Result<()> {
     }
     let cd = tx.dict_mut(cat)?;
     if reg.is_empty() {
-        cd.remove(b"FerrumScales");
+        cd.remove(b"BergScales");
     } else {
-        cd.set("FerrumScales", Object::Dictionary(reg));
+        cd.set("BergScales", Object::Dictionary(reg));
     }
     Ok(())
 }
@@ -970,7 +970,7 @@ pub struct MeasureRow {
     pub author: String,
 }
 
-/// Collect every Ferrum measurement in the document, recomputed from geometry so reports
+/// Collect every Berg measurement in the document, recomputed from geometry so reports
 /// always match what is drawn.
 pub fn collect_measurements(doc: &PdfDocument) -> Vec<MeasureRow> {
     let mut rows = Vec::new();

@@ -5,9 +5,9 @@ and macOS Apple Silicon are first-class targets; until each box below is ticked 
 on that OS (with notes), nothing in `FEATURE_MATRIX.md` may be marked “Verified”.
 
 ## Build (each OS)
-- [ ] `rustup show` picks Rust 1.97.0; `cargo build --release -p ferrum-pdf` succeeds
+- [ ] `rustup show` picks Rust 1.97.0; `cargo build --release -p bergpdf` succeeds
 - [ ] `cargo xtask check` passes (Windows: install poppler or accept skipped oracle checks)
-- [ ] `cargo xtask dist` produces the unsigned folder (macOS: `Ferrum PDF.app`)
+- [ ] `cargo xtask dist` produces the unsigned folder (macOS: `BergPDF.app`)
 - [ ] CI workflow `ci.yml` runs green on `windows-latest`, `macos-14`, `ubuntu-latest`
 
 ## Launch and rendering

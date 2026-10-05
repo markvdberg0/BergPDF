@@ -515,7 +515,7 @@ impl PageContent {
                 let codes = fb.encode_str(text)?;
                 let w = fb.text_width(text, new_size.abs());
                 let fid = fb.finish(tx)?;
-                let nm = format!("FerrumF{}", fid.0);
+                let nm = format!("BergF{}", fid.0);
                 font_res = nm.clone().into_bytes();
                 new_font_obj = Some(fid);
                 items = vec![RunItem::Codes(codes)];
@@ -783,7 +783,7 @@ impl PageContent {
     ) -> Result<()> {
         let d = self.do_by_ref(img)?;
         let new = crate::imageembed::add_image_xobject(tx, data)?;
-        let nm = format!("FerrumIm{}", new.id.0);
+        let nm = format!("BergIm{}", new.id.0);
         add_resource(tx, self.page, b"XObject", &nm, Object::Reference(new.id))?;
         let mut wrap = String::new();
         if !stretch {
@@ -1030,7 +1030,7 @@ pub fn add_text(
         }
     }
     let fid = fb.finish(tx)?;
-    let nm = format!("FerrumT{}", fid.0);
+    let nm = format!("BergT{}", fid.0);
     let content = format!(
         "q\n{} cm\nBT\n/{} {} Tf\n{} {} {} rg\n{}ET\nQ\n",
         inv.operands(),
@@ -1059,7 +1059,7 @@ pub fn add_image(tx: &mut Tx<'_>, page: PageId, rect: Rect, data: &[u8]) -> Resu
         EngineError::Unsupported("the page ends with a degenerate transform".into())
     })?;
     let new = crate::imageembed::add_image_xobject(tx, data)?;
-    let nm = format!("FerrumIm{}", new.id.0);
+    let nm = format!("BergIm{}", new.id.0);
     add_resource(tx, page.0, b"XObject", &nm, Object::Reference(new.id))?;
     let content = format!(
         "q\n{} cm\n{} 0 0 {} {} {} cm\n/{} Do\nQ\n",

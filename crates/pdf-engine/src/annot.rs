@@ -873,7 +873,7 @@ fn build(tx: &mut Tx<'_>, spec: &AnnotationSpec) -> Result<(Dictionary, Stream)>
     if let Some(md) = &spec.measure {
         let (measure, private, it) = crate::measure::to_pdf(md);
         dict.set("Measure", Object::Dictionary(measure));
-        dict.set("FerrumMeasure", Object::Dictionary(private));
+        dict.set("BergMeasure", Object::Dictionary(private));
         if let Some(it) = it {
             dict.set("IT", name(it));
         }
@@ -1485,7 +1485,7 @@ pub fn pdf_date_from_unix(secs: u64) -> String {
 }
 
 fn unique_name(tx: &Tx<'_>) -> String {
-    format!("ferrum-{}", tx.doc().max_id + 1)
+    format!("berg-{}", tx.doc().max_id + 1)
 }
 
 impl AnnotationSpec {

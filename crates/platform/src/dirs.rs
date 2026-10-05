@@ -2,7 +2,7 @@
 
 use std::path::PathBuf;
 
-const APP: &str = "FerrumPDF";
+const APP: &str = "BergPDF";
 
 fn env_path(name: &str) -> Option<PathBuf> {
     std::env::var_os(name)

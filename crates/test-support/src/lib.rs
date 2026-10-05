@@ -169,10 +169,10 @@ pub fn non_white_fraction(
 }
 
 /// True when the environment demands that independent-oracle checks (poppler) really run
-/// (`FERRUM_REQUIRE_ORACLES=1`, set in CI where the tools are installed). Locally, a missing
+/// (`BERG_REQUIRE_ORACLES=1`, set in CI where the tools are installed). Locally, a missing
 /// tool makes those assertions skip rather than fail.
 pub fn oracles_required() -> bool {
-    std::env::var("FERRUM_REQUIRE_ORACLES").is_ok_and(|v| v == "1")
+    std::env::var("BERG_REQUIRE_ORACLES").is_ok_and(|v| v == "1")
 }
 
 /// Full `pdfinfo` stdout (Title, Author, Pages, …) for `bytes`, if poppler is installed.

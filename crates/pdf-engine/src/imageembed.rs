@@ -155,3 +155,95 @@ fn split_channels(img: &DynamicImage) -> (Vec<u8>, Option<Vec<u8>>, bool) {
         _ => (img.to_rgb8().into_raw(), None, false),
     }
 }
+
+/// Pixel dimensions of a PNG/JPEG without decoding the pixels (so limits can be enforced first).
+pub fn dimensions(data: &[u8]) -> Result<(u32, u32)> {
+    let fmt = image::guess_format(data).map_err(|_| {
+        EngineError::Unsupported("unrecognised image format (PNG and JPEG are supported)".into())
+    })?;
+    let dec: Box<dyn ImageDecoder> = match fmt {
+        ImageFormat::Png => {
+            Box::new(image::codecs::png::PngDecoder::new(Cursor::new(data)).map_err(img_err)?)
+        }
+        ImageFormat::Jpeg => {
+            Box::new(image::codecs::jpeg::JpegDecoder::new(Cursor::new(data)).map_err(img_err)?)
+        }
+        _ => {
+            return Err(EngineError::Unsupported(
+                "only PNG and JPEG images are supported".into(),
+            ));
+        }
+    };
+    let (w, h) = dec.dimensions();
+    if w == 0 || h == 0 || w > MAX_DIM || h > MAX_DIM || u64::from(w) * u64::from(h) > MAX_PIXELS {
+        return Err(EngineError::LimitExceeded(format!(
+            "image {w}×{h} is too large"
+        )));
+    }
+    Ok((w, h))
+}
+
+/// EXIF orientation (1–8) of a JPEG, 1 when absent or unreadable.
+pub fn jpeg_orientation(data: &[u8]) -> u8 {
+    if data.len() < 4 || data[0] != 0xFF || data[1] != 0xD8 {
+        return 1;
+    }
+    let mut i = 2;
+    while i + 4 <= data.len() {
+        if data[i] != 0xFF {
+            return 1;
+        }
+        let marker = data[i + 1];
+        if marker == 0xDA || marker == 0xD9 {
+            return 1; // start of scan / end of image: no EXIF before pixel data
+        }
+        if (0xD0..=0xD8).contains(&marker) || marker == 0x01 {
+            i += 2;
+            continue;
+        }
+        let len = usize::from(u16::from_be_bytes([data[i + 2], data[i + 3]]));
+        if len < 2 || i + 2 + len > data.len() {
+            return 1;
+        }
+        let seg = &data[i + 4..i + 2 + len];
+        if marker == 0xE1 && seg.starts_with(b"Exif\0\0") {
+            return exif_orientation(&seg[6..]).unwrap_or(1);
+        }
+        i += 2 + len;
+    }
+    1
+}
+
+fn exif_orientation(tiff: &[u8]) -> Option<u8> {
+    let little = match tiff.get(..2)? {
+        b"II" => true,
+        b"MM" => false,
+        _ => return None,
+    };
+    let u16at = |o: usize| -> Option<u16> {
+        let b = tiff.get(o..o + 2)?;
+        Some(if little {
+            u16::from_le_bytes([b[0], b[1]])
+        } else {
+            u16::from_be_bytes([b[0], b[1]])
+        })
+    };
+    let u32at = |o: usize| -> Option<u32> {
+        let b = tiff.get(o..o + 4)?;
+        Some(if little {
+            u32::from_le_bytes([b[0], b[1], b[2], b[3]])
+        } else {
+            u32::from_be_bytes([b[0], b[1], b[2], b[3]])
+        })
+    };
+    let ifd = u32at(4)? as usize;
+    let n = usize::from(u16at(ifd)?);
+    for k in 0..n.min(64) {
+        let e = ifd + 2 + k * 12;
+        if u16at(e)? == 0x0112 {
+            let v = u16at(e + 8)?;
+            return u8::try_from(v).ok().filter(|v| (1..=8).contains(v));
+        }
+    }
+    None
+}

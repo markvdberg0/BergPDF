@@ -13,7 +13,7 @@ are pasted as printed, not paraphrased. **Nothing here was run on Windows or mac
   The window was given X focus explicitly before typing (a test-harness requirement, not an
   application behaviour).
 
-## Quality gate — `FERRUM_REQUIRE_ORACLES=1 cargo xtask check`
+## Quality gate — `BERG_REQUIRE_ORACLES=1 cargo xtask check`
 
 (= `cargo fmt --all -- --check`, `cargo clippy --workspace --all-targets -- -D warnings`,
 `cargo test --workspace`; with oracles *required*, so a missing poppler would have failed.)
@@ -66,12 +66,12 @@ advisory. Duplicate-version warnings (windows-sys, skrifa, …) remain as warnin
 
 ```
     Finished `dist` profile [optimized + debuginfo] target(s) in 7m 27s
-unsigned distribution folder: /home/user/pdf-editor/dist/ferrum-pdf-0.1.0-linux-x86_64
+unsigned distribution folder: /home/user/pdf-editor/dist/bergpdf-0.1.0-linux-x86_64
 (not signed, not notarised, not an installer — see docs/PLATFORM_CHECKLIST.md)
       4250  DEPENDENCIES.md
       2012  README.md
      43297  THIRD_PARTY_LICENSES.md
-  33621120  ferrum-pdf
+  33621120  bergpdf
 ```
 
 The stripped Linux binary was launched (screenshot `evidence/01-launch-release-binary.png`),

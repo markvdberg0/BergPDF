@@ -3,7 +3,7 @@
 use crate::app::OS;
 use crate::state::*;
 use editor_core::command::{self, CommandId as C, Key, PaletteItem, Shortcut};
-use editor_core::prefs::{Density, SETTINGS, ThemeChoice, Workspace};
+use editor_core::prefs::{DefaultZoom, Density, SETTINGS, ThemeChoice, Workspace};
 use editor_core::tools::Tool;
 use egui::{Align2, Color32, RichText, Vec2};
 
@@ -375,14 +375,17 @@ impl App {
             Dialog::About => {
                 let mut close = false;
                 modal(ctx, "about", |ui| {
-                    ui.heading("Ferrum PDF");
+                    let (r, _) =
+                        ui.allocate_exact_size(egui::vec2(64.0, 64.0), egui::Sense::hover());
+                    crate::icons::paint_logo(ui.painter(), r, self.pal.text, self.pal.accent);
+                    ui.heading("BergPDF");
                     ui.label(format!(
                         "Version {}  (development build)",
                         env!("CARGO_PKG_VERSION")
                     ));
                     ui.label(
                         RichText::new(
-                            "“Ferrum PDF” is an internal working name, not a cleared product name.",
+                            "“BergPDF” is an internal working name, not a cleared product name.",
                         )
                         .size(12.0)
                         .color(self.pal.text_dim),
@@ -407,7 +410,7 @@ impl App {
             Dialog::FirstRun => {
                 let mut done = false;
                 modal(ctx, "first_run", |ui| {
-                    ui.heading("Welcome to Ferrum PDF");
+                    ui.heading("Welcome to BergPDF");
                     ui.label("Choose how much to show. You can change this any time in Preferences, and every tool stays reachable through Search commands.");
                     ui.add_space(8.0);
                     ui.radio_value(
@@ -486,6 +489,14 @@ impl App {
                             ui.horizontal(|ui| {
                                 changed |= ui.selectable_value(&mut self.prefs.workspace, Workspace::Essential, "Essential").changed();
                                 changed |= ui.selectable_value(&mut self.prefs.workspace, Workspace::Professional, "Professional").changed();
+                            });
+                        }
+                        if show("default_zoom") {
+                            section(ui, "Zoom when opening a document", "Applies to documents you open from now on; you can still zoom freely.");
+                            ui.horizontal(|ui| {
+                                changed |= ui.selectable_value(&mut self.prefs.default_zoom, DefaultZoom::FitPage, "Fit page").changed();
+                                changed |= ui.selectable_value(&mut self.prefs.default_zoom, DefaultZoom::FitWidth, "Fit width").changed();
+                                changed |= ui.selectable_value(&mut self.prefs.default_zoom, DefaultZoom::Actual, "100 %").changed();
                             });
                         }
                         if show("author") {
@@ -930,7 +941,7 @@ impl App {
             ui.heading("Recover unsaved work?");
             ui.label(
                 RichText::new(
-                    "Ferrum PDF found copies of documents that were open with unsaved changes when it last stopped unexpectedly.",
+                    "BergPDF found copies of documents that were open with unsaved changes when it last stopped unexpectedly.",
                 )
                 .size(12.0)
                 .color(self.pal.text_dim),

@@ -770,7 +770,7 @@ pub fn flatten_page_widgets(tx: &mut Tx<'_>, page: PageId) -> Result<(usize, usi
                 );
                 let am =
                     crate::content::Mat([sx, 0.0, 0.0, sy, rect.x0 - tx0 * sx, rect.y0 - ty0 * sy]);
-                let nm = format!("FerrumFl{}", ap_id.0);
+                let nm = format!("BergFl{}", ap_id.0);
                 add_resource(tx, page.0, b"XObject", &nm, reference(ap_id))?;
                 content.push_str(&format!(
                     "q {} cm {} cm /{} Do Q\n",

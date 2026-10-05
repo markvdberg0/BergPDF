@@ -57,3 +57,33 @@ pub fn pick_save_png(suggested: &str) -> Option<PathBuf> {
     }
     Some(p)
 }
+
+/// Ask for PDFs and/or pictures to open (pictures become new one-page PDFs).
+pub fn pick_open_documents(start_dir: Option<&Path>) -> Vec<PathBuf> {
+    let mut d = rfd::FileDialog::new()
+        .set_title("Open")
+        .add_filter("PDF documents and images", &["pdf", "png", "jpg", "jpeg"])
+        .add_filter("PDF documents", &["pdf"])
+        .add_filter("Images (become a PDF when saved)", &["png", "jpg", "jpeg"]);
+    if let Some(dir) = start_dir {
+        d = d.set_directory(dir);
+    }
+    d.pick_files().unwrap_or_default()
+}
+
+/// Whether a path looks like a picture BergPDF can turn into a PDF (by extension).
+pub fn is_image_path(p: &Path) -> bool {
+    p.extension().is_some_and(|e| {
+        let e = e.to_string_lossy().to_ascii_lowercase();
+        matches!(e.as_str(), "png" | "jpg" | "jpeg")
+    })
+}
+
+/// Ask for one or more pictures to insert as pages.
+pub fn pick_open_images() -> Vec<PathBuf> {
+    rfd::FileDialog::new()
+        .set_title("Insert images as pages")
+        .add_filter("Images", &["png", "jpg", "jpeg"])
+        .pick_files()
+        .unwrap_or_default()
+}

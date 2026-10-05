@@ -2,6 +2,7 @@
 resolver = "3"
 members = [
     "apps/desktop",
+    "crates/brand",
     "crates/editor-core",
     "crates/pdf-engine",
     "crates/platform",
@@ -10,6 +11,7 @@ members = [
 ]
 default-members = [
     "apps/desktop",
+    "crates/brand",
     "crates/editor-core",
     "crates/pdf-engine",
     "crates/platform",
@@ -38,6 +40,7 @@ pdf-engine = { path = "crates/pdf-engine" }
 editor-core = { path = "crates/editor-core" }
 platform = { path = "crates/platform" }
 test-support = { path = "crates/test-support" }
+brand = { path = "crates/brand" }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
@@ -60,3 +63,6 @@ opt-level = 2
 [profile.dist]
 inherits = "release"
 strip = "symbols"
+
+[profile.dev.package.brand]
+opt-level = 3

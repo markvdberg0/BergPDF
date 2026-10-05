@@ -36,7 +36,7 @@ fn tmp_files(dir: &std::path::Path) -> Vec<String> {
         .unwrap()
         .flatten()
         .map(|e| e.file_name().to_string_lossy().into_owned())
-        .filter(|n| n.ends_with(".ferrum-tmp"))
+        .filter(|n| n.ends_with(".berg-tmp"))
         .collect()
 }
 

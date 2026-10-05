@@ -58,7 +58,7 @@ fn tmp_path(dest: &Path) -> PathBuf {
     let nanos = SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
         .map_or(0, |d| d.subsec_nanos());
-    dest.with_file_name(format!(".{name}.{}.{nanos}.ferrum-tmp", std::process::id()))
+    dest.with_file_name(format!(".{name}.{}.{nanos}.berg-tmp", std::process::id()))
 }
 
 /// Atomically write `bytes` to `dest`. Returns the new file stamp.

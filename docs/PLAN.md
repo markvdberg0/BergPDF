@@ -1,6 +1,6 @@
-# Ferrum PDF — plan, status and evidence
+# BergPDF — plan, status and evidence
 
-“Ferrum PDF” is an internal working name, not a cleared product name.
+“BergPDF” is an internal working name, not a cleared product name.
 
 Goal: a native, offline, Rust-only desktop PDF editor in the class of PDF-XChange Editor, for
 Windows 11 x86_64 and macOS Apple Silicon, with an original look and feel.

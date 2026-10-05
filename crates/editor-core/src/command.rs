@@ -85,6 +85,7 @@ pub enum CommandId {
     PageRotateCounterClockwise,
     PageDelete,
     PageInsertBlank,
+    PageInsertImage,
     PageDuplicate,
     PageExtract,
     PageMoveUp,
@@ -367,7 +368,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     cmd!(
         Id::FileQuit,
         "Quit",
-        "Quit Ferrum PDF",
+        "Quit BergPDF",
         C::File,
         "exit",
         [
@@ -492,7 +493,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::About,
-        "About Ferrum PDF",
+        "About BergPDF",
         "Version, licences and dependency notices",
         C::Help,
         "version",
@@ -921,6 +922,14 @@ pub static REGISTRY: &[CommandInfo] = &[
         "Insert an empty page after the current one",
         C::Organize,
         "new page add",
+        []
+    ),
+    cmd!(
+        Id::PageInsertImage,
+        "Insert Image as Page…",
+        "Add one or more pictures (PNG, JPEG) as new pages after the current page",
+        C::Organize,
+        "picture photo scan add page",
         []
     ),
     cmd!(

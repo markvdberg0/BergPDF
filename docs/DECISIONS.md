@@ -45,9 +45,9 @@ removes the fields on the copy. Cross-document operations refuse Linked.
 
 ## D-008 — Measurements are standard annotations plus a private extension
 Each measurement carries `/Measure` (RL) so other viewers can interpret it, and a private
-`/FerrumMeasure` dictionary with exact kind/category/scale. Scale factors are stored as decimal
+`/BergMeasure` dictionary with exact kind/category/scale. Scale factors are stored as decimal
 **text** because PDF reals are f32 in the library (found by a failing test: 10.000008 instead
-of 10). The scale registry lives in a private catalog entry `/FerrumScales`.
+of 10). The scale registry lives in a private catalog entry `/BergScales`.
 
 ## D-009 — Redaction, OCR and signatures are separate gates and are *not* offered
 A visible black box is not redaction. Until true content removal can be shown by an
@@ -69,3 +69,11 @@ Trade-off: a second crash within 90 s of a restart is only offered on the next l
 ## D-012 — No telemetry, no network access in core flows
 There is no HTTP client in the runtime dependency graph. External links open only after a
 confirmation dialog and only for allow-listed URI schemes (`platform::links`).
+
+## D-013 — Name and logo: “BergPDF”, a Mont Blanc outline
+The owner’s surname means “mountain”. The logo is plain vector data in the `brand` crate (outline of
+the Mont Blanc massif with a copper snow line), drawn by the UI painter and rasterised by a tiny
+built-in rasteriser for the window icon; `cargo xtask icons` writes PNG/ICO/ICNS into
+`assets/icons`. “BergPDF” has **not** been cleared as a product name (trademark search pending).
+Internal private PDF keys were renamed with the product (`/BergMeasure`, `/BergScales`); no files
+using the old names were ever released.

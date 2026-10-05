@@ -122,7 +122,7 @@ impl App {
             }
             FieldKind::PushButton => {
                 self.notify(
-                    "Buttons that run actions are not executed: Ferrum PDF never runs scripts.",
+                    "Buttons that run actions are not executed: BergPDF never runs scripts.",
                 );
             }
             FieldKind::Signature => {

@@ -4,11 +4,13 @@
 //! * `licenses` — write `docs/THIRD_PARTY_LICENSES.md` from `cargo metadata`
 //! * `fixtures` — write the programmatic fixtures to `target/fixtures`
 //! * `bench`    — release-mode performance measurements (see docs/PERFORMANCE.md)
+//! * `icons`    — regenerate `assets/icons` (PNG, ICO, ICNS) from the vector logo
 //! * `dist`     — release build and an *unsigned* distribution folder (macOS: `.app` bundle)
 //!
 //! Nothing here publishes, uploads, signs or notarises anything.
 
 mod bundle;
+mod icons;
 
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
@@ -90,12 +92,12 @@ fn licenses() -> Result<(), String> {
 }
 
 fn dist() -> Result<(), String> {
-    cargo(&["build", "--profile", "dist", "-p", "ferrum-pdf"])?;
+    cargo(&["build", "--profile", "dist", "-p", "bergpdf"])?;
     let (os, arch) = (std::env::consts::OS, std::env::consts::ARCH);
     let exe = if os == "windows" {
-        "ferrum-pdf.exe"
+        "bergpdf.exe"
     } else {
-        "ferrum-pdf"
+        "bergpdf"
     };
     let bin = root().join("target/dist").join(exe);
     if !bin.exists() {
@@ -104,13 +106,24 @@ fn dist() -> Result<(), String> {
     let version = env!("CARGO_PKG_VERSION");
     let dir = root()
         .join("dist")
-        .join(format!("ferrum-pdf-{version}-{os}-{arch}"));
+        .join(format!("bergpdf-{version}-{os}-{arch}"));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
     if os == "macos" {
-        bundle::write_app_bundle(&dir, &bin, version).map_err(|e| e.to_string())?;
+        bundle::write_app_bundle(
+            &dir,
+            &bin,
+            Some(&root().join("assets/icons/bergpdf.icns")),
+            version,
+        )
+        .map_err(|e| e.to_string())?;
     } else {
         std::fs::copy(&bin, dir.join(exe)).map_err(|e| e.to_string())?;
+        // Icons for packagers (Windows .ico for the installer/shortcut, PNG for Linux .desktop).
+        for f in ["bergpdf.ico", "bergpdf.png"] {
+            std::fs::copy(root().join("assets/icons").join(f), dir.join(f))
+                .map_err(|e| e.to_string())?;
+        }
     }
     for f in [
         "README.md",
@@ -144,9 +157,10 @@ fn main() -> ExitCode {
             "target/fixtures",
         ]),
         "bench" => cargo(&["run", "--release", "-p", "pdf-engine", "--example", "bench"]),
+        "icons" => icons::write_all(&root().join("assets/icons")).map_err(|e| e.to_string()),
         "dist" => dist(),
         _ => {
-            eprintln!("usage: cargo xtask <check|licenses|fixtures|bench|dist>");
+            eprintln!("usage: cargo xtask <check|licenses|fixtures|bench|icons|dist>");
             return ExitCode::from(2);
         }
     };

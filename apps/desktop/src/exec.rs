@@ -65,6 +65,7 @@ impl App {
             | C::PageRotateCounterClockwise
             | C::PageDelete
             | C::PageInsertBlank
+            | C::PageInsertImage
             | C::PageDuplicate
             | C::PageMoveUp
             | C::PageMoveDown
@@ -220,6 +221,7 @@ impl App {
             }
             C::PageInsertBlank => self.insert_blank(),
             C::ExportMeasurements => self.export_measurements(),
+            C::PageInsertImage => self.insert_image_pages(),
             C::PageDuplicate => self.duplicate_pages(),
             C::PageExtract => self.extract_pages(ctx),
             C::PageMoveUp => self.move_pages_by(-1),
@@ -245,17 +247,23 @@ impl App {
             self.palette_open = false;
             return;
         }
+        // Esc first cancels whatever is in progress, and always leaves the current tool for the
+        // Select tool; only when already in Select does it clear the page-content selection.
+        let mut in_progress = false;
         if let Some(tab) = self.active_tab_mut() {
-            if !matches!(tab.ui.interaction, Interaction::None)
+            in_progress = !matches!(tab.ui.interaction, Interaction::None)
                 || !tab.ui.polygon_points.is_empty()
-                || tab.ui.pending_region.is_some()
-            {
+                || tab.ui.pending_region.is_some();
+            if in_progress {
                 tab.ui.interaction = Interaction::None;
                 tab.ui.polygon_points.clear();
                 tab.ui.pending_region = None;
-            } else {
-                tab.session.selection.clear_content();
             }
+        }
+        if self.tool != Tool::Select {
+            self.set_tool(Tool::Select);
+        } else if !in_progress && let Some(tab) = self.active_tab_mut() {
+            tab.session.selection.clear_content();
         }
     }
 
@@ -266,7 +274,7 @@ impl App {
             .active_tab()
             .and_then(|t| t.session.path.as_ref())
             .and_then(|p| p.parent().map(Path::to_path_buf));
-        for p in platform::dialogs::pick_open_pdfs(start.as_deref()) {
+        for p in platform::dialogs::pick_open_documents(start.as_deref()) {
             self.open_path(ctx, &p);
         }
     }
@@ -278,6 +286,10 @@ impl App {
             .position(|t| t.session.path.as_deref() == Some(path))
         {
             self.active = i;
+            return;
+        }
+        if platform::dialogs::is_image_path(path) {
+            self.open_image(ctx, path);
             return;
         }
         match DocumentSession::open_path(path) {
@@ -294,7 +306,10 @@ impl App {
                     lines.push(w.0.clone());
                 }
                 if caps.has_javascript {
-                    lines.push("This document contains JavaScript. Ferrum PDF never runs document scripts.".into());
+                    lines.push(
+                        "This document contains JavaScript. BergPDF never runs document scripts."
+                            .into(),
+                    );
                 }
                 if !lines.is_empty() {
                     let name = path
@@ -315,6 +330,17 @@ impl App {
     }
 
     pub fn add_tab(&mut self, session: DocumentSession) {
+        let mut session = session;
+        match self.prefs.default_zoom {
+            editor_core::prefs::DefaultZoom::FitPage => session.view.zoom_mode = ZoomMode::FitPage,
+            editor_core::prefs::DefaultZoom::FitWidth => {
+                session.view.zoom_mode = ZoomMode::FitWidth
+            }
+            editor_core::prefs::DefaultZoom::Actual => {
+                session.view.zoom_mode = ZoomMode::Custom;
+                session.view.zoom = 1.0;
+            }
+        }
         self.tabs.push(Tab {
             session,
             ui: TabState::default(),
@@ -920,6 +946,69 @@ impl App {
             FormOp::Duplicate => self.duplicate_pages_with(Some(policy)),
             FormOp::Extract => self.extract_pages_with(ctx, Some(policy)),
             FormOp::Merge(files) => self.merge_files_with(files, Some(policy)),
+        }
+    }
+}
+
+impl App {
+    /// Open a picture as a new one-page PDF (it has no file until the user saves).
+    fn open_image(&mut self, ctx: &egui::Context, path: &Path) {
+        let result = std::fs::read(path)
+            .map_err(pdf_engine::EngineError::from)
+            .and_then(|bytes| pdf_engine::doc::PdfDocument::from_image(&bytes));
+        match result {
+            Ok(doc) => {
+                let stem = path
+                    .file_stem()
+                    .map_or_else(|| "image".into(), |n| n.to_string_lossy().into_owned());
+                let session = DocumentSession::from_new_document(doc, &format!("{stem}.pdf"));
+                self.add_tab(session);
+                self.notify("Opened the picture as a PDF page. Save to create the PDF file.");
+                ctx.request_repaint();
+            }
+            Err(e) => {
+                self.dialog = Some(Dialog::Error {
+                    title: "Cannot open image".into(),
+                    detail: format!("{}\n\n{e}", path.display()),
+                });
+            }
+        }
+    }
+
+    /// Insert pictures as new pages after the current page.
+    pub fn insert_image_pages(&mut self) {
+        let files = platform::dialogs::pick_open_images();
+        if files.is_empty() {
+            return;
+        }
+        let Some(tab) = self.active_tab_mut() else {
+            return;
+        };
+        let at = tab.session.view.current_page + 1;
+        let mut datas = Vec::new();
+        for f in &files {
+            match std::fs::read(f) {
+                Ok(b) => datas.push(b),
+                Err(e) => {
+                    self.notify_error(format!("Could not read {}: {e}", f.display()));
+                    return;
+                }
+            }
+        }
+        let n = datas.len();
+        let r = tab.session.execute("Insert image pages", |tx| {
+            let mut last = None;
+            for (i, d) in datas.iter().enumerate() {
+                last = Some(pdf_engine::imagedoc::insert_image_page(tx, at + i, d)?);
+            }
+            Ok(last)
+        });
+        match r {
+            Ok(_) => {
+                tab.ui.goto = Some(at);
+                self.notify(format!("Inserted {n} image page(s)."));
+            }
+            Err(e) => self.notify_error(e.to_string()),
         }
     }
 }

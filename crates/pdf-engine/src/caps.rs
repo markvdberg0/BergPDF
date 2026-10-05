@@ -93,7 +93,7 @@ impl Capabilities {
 
         if c.encrypted {
             c.edit_blockers.push(Limitation(
-                "This document is encrypted. Ferrum PDF opens it read-only; it never strips \
+                "This document is encrypted. BergPDF opens it read-only; it never strips \
                  or re-writes encryption."
                     .into(),
             ));
@@ -109,7 +109,7 @@ impl Capabilities {
             c.warnings.push(Limitation(
                 "The document contains digital signatures. Saving appends a new revision and \
                  keeps signed bytes intact, but the signature will report that the document \
-                 was modified after signing. Signature validity is not verified by Ferrum PDF."
+                 was modified after signing. Signature validity is not verified by BergPDF."
                     .into(),
             ));
         }

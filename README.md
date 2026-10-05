@@ -1,4 +1,4 @@
-# Ferrum PDF (working name)
+# BergPDF (working name)
 
 A native, offline desktop PDF editor written in Rust: viewing, annotation, page organisation,
 in-place text/image editing, form filling, and calibrated measurement/count take-off.
@@ -12,8 +12,8 @@ remaining work. Project licence: undecided (`docs/DECISIONS.md` D-001).
 
 ```
 rustup show                       # installs the pinned toolchain (rust-toolchain.toml)
-cargo run --release -p ferrum-pdf # opens the app; pass PDF paths as arguments to open them
-cargo run --release -p ferrum-pdf -- tests/fixtures/report-chromium.pdf
+cargo run --release -p bergpdf # opens the app; pass PDF paths as arguments to open them
+cargo run --release -p bergpdf -- tests/fixtures/report-chromium.pdf
 ```
 
 Linux needs the usual windowing stack (X11 or Wayland) and a Vulkan or GL driver; on Linux

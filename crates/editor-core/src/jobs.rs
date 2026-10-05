@@ -272,7 +272,7 @@ impl RenderPool {
             let w = wake.clone();
             let (doc, revision) = (snapshot.doc, snapshot.revision);
             let h = std::thread::Builder::new()
-                .name(format!("ferrum-render-{n}"))
+                .name(format!("berg-render-{n}"))
                 .stack_size(16 * 1024 * 1024)
                 .spawn(move || worker_main(doc, revision, bytes, q, txc, w));
             if let Ok(h) = h {

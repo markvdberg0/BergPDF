@@ -33,7 +33,7 @@ jobs:
       - name: Require independent oracles on runners where they are installed
         if: runner.os != 'Windows'
         shell: bash
-        run: echo "FERRUM_REQUIRE_ORACLES=1" >> "$GITHUB_ENV"
+        run: echo "BERG_REQUIRE_ORACLES=1" >> "$GITHUB_ENV"
       - name: Linux system packages (headless render checks use poppler as an oracle)
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y poppler-utils
@@ -47,12 +47,12 @@ jobs:
       - name: Tests
         run: cargo test --workspace
       - name: Release build
-        run: cargo build --release -p ferrum-pdf
+        run: cargo build --release -p bergpdf
       - name: Unsigned distribution folder
         run: cargo xtask dist
       - uses: actions/upload-artifact@v4
         with:
-          name: ferrum-pdf-dev-${{ matrix.os }}
+          name: bergpdf-dev-${{ matrix.os }}
           path: dist/
           retention-days: 7
 

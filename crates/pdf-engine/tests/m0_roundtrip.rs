@@ -83,7 +83,7 @@ fn render_search_annotate_restructure_save_reopen() {
         "original bytes preserved verbatim"
     );
 
-    if let Ok(dir) = std::env::var("FERRUM_KEEP_OUT") {
+    if let Ok(dir) = std::env::var("BERG_KEEP_OUT") {
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(std::path::Path::new(&dir).join("m0-saved.pdf"), &saved).unwrap();
     }

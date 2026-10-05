@@ -1,4 +1,4 @@
-//! Original Ferrum visual identity: slate chrome with a copper accent.
+//! Original Berg visual identity: slate chrome with a copper accent.
 //! Applies light/dark chrome, density and UI scale. It never touches page colours.
 
 use editor_core::prefs::{Density, Preferences, ThemeChoice};
@@ -85,7 +85,7 @@ pub fn metrics(d: Density) -> Metrics {
         Density::Comfortable => Metrics {
             icon: 20.0,
             button_h: 28.0,
-            ribbon_button: egui::vec2(58.0, 54.0),
+            ribbon_button: egui::vec2(60.0, 58.0),
             tab_h: 32.0,
             show_labels: true,
         },

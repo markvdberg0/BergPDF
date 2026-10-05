@@ -97,7 +97,7 @@ fn measurement_annotations_roundtrip_with_standard_measure_dictionary() {
     } else {
         assert!(
             !oracles_required(),
-            "poppler is required for this check (FERRUM_REQUIRE_ORACLES=1)"
+            "poppler is required for this check (BERG_REQUIRE_ORACLES=1)"
         );
     }
 }

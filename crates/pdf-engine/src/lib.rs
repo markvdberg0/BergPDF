@@ -1,4 +1,4 @@
-//! Ferrum PDF engine: parsing, preservation, rendering adapter, text extraction,
+//! BergPDF engine: parsing, preservation, rendering adapter, text extraction,
 //! annotations, page/content editing and safe serialization.
 //!
 //! The editable representation is a [`lopdf::Document`]; rendering goes through
@@ -13,6 +13,7 @@ pub mod error;
 pub mod fontembed;
 pub mod forms;
 pub mod geom;
+pub mod imagedoc;
 pub mod imageembed;
 pub mod measure;
 pub mod meta;
