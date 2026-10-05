@@ -76,6 +76,11 @@ jars (see docs/EVIDENCE.md for how they were fetched) and `BERG_REQUIRE_VERAPDF=
   downloads NSIS itself on first use), `-f dmg` on macOS, `-f deb` on Linux. The `.deb` was built and inspected here;
   the Windows and macOS packages were not. Unsigned. Keep `version` in `Packager.toml` equal to the workspace
   version (a test checks it).
+* **GitHub release.** `.github/workflows/release.yml` builds the installers on Windows, macOS and Linux when a tag
+  such as `v0.1.0` (equal to the workspace version) is pushed, and attaches them with `SHA256SUMS.txt` to a
+  **draft** release; nothing is published until you press "Publish release". Before the first public release
+  decide the project licence (D-001, the licence field is still "undecided"), clear the product name, and read
+  `docs/THIRD_PARTY_LICENSES.md` (an inventory, not the full notices). Not yet run on GitHub.
 * **Windows installer (alternative).** `packaging/windows/bergpdf.iss` is an Inno Setup script for the `cargo xtask dist` folder
   (`winget install --id JRSoftware.InnoSetup`, then `ISCC.exe packaging\windows\bergpdf.iss /DAppVersion=0.1.0`).
   Unsigned and not yet tried on Windows.

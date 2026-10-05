@@ -1,0 +1,79 @@
+# Builds installers and attaches them to a DRAFT GitHub release. It publishes nothing by itself:
+# a person has to read the draft and press "Publish release".
+#
+# Start it by pushing a tag that matches the workspace version (e.g. v0.1.0), or run it by hand
+# ("Run workflow") to only build the installers as workflow artefacts without any release.
+# The installers are unsigned (see docs/DECISIONS.md D-028 and the README's shipping notes).
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  installers:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: windows-x86_64, os: windows-latest, format: nsis }
+          - { name: macos-aarch64, os: macos-14, format: dmg }
+          - { name: linux-x86_64, os: ubuntu-latest, format: deb }
+    steps:
+      - uses: actions/checkout@v4
+      - name: The tag must match the workspace version
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          v=$(grep -m1 '^version = ' Cargo.toml | sed 's/version = "\(.*\)"/\1/')
+          [ "${GITHUB_REF_NAME}" = "v${v}" ] || { echo "tag ${GITHUB_REF_NAME} does not match version ${v}"; exit 1; }
+      - name: Install pinned toolchain
+        run: rustup show
+      - uses: Swatinem/rust-cache@v2
+      - name: Build the program folder (static CRT on Windows)
+        run: cargo xtask dist
+      - name: Install cargo-packager
+        run: cargo install cargo-packager --locked
+      - name: Build the installer
+        run: cargo packager --release -f ${{ matrix.format }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: installer-${{ matrix.name }}
+          path: dist/packages/*.*
+          if-no-files-found: error
+
+  draft-release:
+    name: draft release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: installers
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: assets
+          pattern: installer-*
+          merge-multiple: true
+      - name: Checksums
+        run: cd assets && sha256sum * > SHA256SUMS.txt && cat SHA256SUMS.txt
+      - name: Create the draft (not published)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          cat > notes.md <<'NOTES'
+          Unsigned build. Windows SmartScreen and macOS Gatekeeper will warn on first start.
+          OCR models are not included; BergPDF offers to download them (checksum-verified) the first time you use OCR.
+          Check the SHA-256 sums in `SHA256SUMS.txt` against the downloaded file.
+          NOTES
+          gh release create "$TAG" assets/* --repo "$GITHUB_REPOSITORY" --draft --title "BergPDF $TAG" --notes-file notes.md
