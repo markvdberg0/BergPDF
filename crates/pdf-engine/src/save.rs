@@ -4,7 +4,7 @@
 
 use crate::doc::{OpenOptions, PdfDocument};
 use crate::error::{EngineError, Result};
-use std::fs::{self, File, OpenOptions as FsOpen};
+use std::fs::{self, OpenOptions as FsOpen};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
@@ -133,7 +133,7 @@ fn write_and_replace(
 #[cfg(unix)]
 fn sync_dir(dest: &Path) {
     if let Some(dir) = dest.parent()
-        && let Ok(d) = File::open(if dir.as_os_str().is_empty() {
+        && let Ok(d) = fs::File::open(if dir.as_os_str().is_empty() {
             Path::new(".")
         } else {
             dir
