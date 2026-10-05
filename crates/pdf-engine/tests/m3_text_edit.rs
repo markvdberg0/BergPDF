@@ -264,7 +264,7 @@ fn characters_missing_from_a_subset_font_are_reported_and_substitution_is_explic
         &run,
         &TextEdit {
             text: Some("QZ-1377".into()),
-            substitute_font: true,
+            substitute_font: Some(pdf_engine::fontembed::FontStyle::default()),
             ..Default::default()
         },
     )

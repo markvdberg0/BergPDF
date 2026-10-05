@@ -170,7 +170,7 @@ fn added_text_is_real_extractable_page_text_and_stays_editable() {
             "Added café – Ünïcode line\nsecond added line",
             16.0,
             (0.0, 0.2, 0.7),
-            false,
+            pdf_engine::fontembed::FontStyle::default(),
         )
     })
     .unwrap();
@@ -211,7 +211,7 @@ fn added_text_is_real_extractable_page_text_and_stays_editable() {
             "漢字",
             12.0,
             (0.0, 0.0, 0.0),
-            false,
+            pdf_engine::fontembed::FontStyle::default(),
         )
     });
     assert!(
@@ -229,7 +229,15 @@ fn added_content_respects_rotation_cropping_and_a_flipped_ctm() {
     let page = doc.pages().unwrap()[0].id;
     let target = Point::new(100.0, 200.0); // inside the crop box (20..320, 30..330)
     doc.transact(|tx| {
-        pagecontent::add_text(tx, page, target, "Marker", 14.0, (0.0, 0.0, 0.0), false)
+        pagecontent::add_text(
+            tx,
+            page,
+            target,
+            "Marker",
+            14.0,
+            (0.0, 0.0, 0.0),
+            pdf_engine::fontembed::FontStyle::default(),
+        )
     })
     .unwrap();
     let bytes = doc.snapshot_bytes().unwrap();
@@ -290,7 +298,7 @@ fn adding_resources_never_leaks_into_pages_that_share_them() {
             "Only on page one",
             12.0,
             (0.0, 0.0, 0.0),
-            false,
+            pdf_engine::fontembed::FontStyle::default(),
         )
     })
     .unwrap();
@@ -315,7 +323,7 @@ fn text_added_with_the_bundled_font_can_be_edited_within_its_subset() {
             "Draft note",
             12.0,
             (0.0, 0.0, 0.0),
-            false,
+            pdf_engine::fontembed::FontStyle::default(),
         )
     })
     .unwrap();

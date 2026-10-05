@@ -110,6 +110,8 @@ pub fn install_fonts(ctx: &egui::Context) {
     for fam in [FontFamily::Proportional, FontFamily::Monospace] {
         fonts.families.entry(fam).or_default().push("dejavu".into());
     }
+    // Every bundled PDF font, so pickers and previews are drawn in the font itself.
+    crate::fontpick::register(&mut fonts);
     ctx.set_fonts(fonts);
 }
 

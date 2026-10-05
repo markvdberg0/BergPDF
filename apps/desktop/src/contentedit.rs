@@ -87,7 +87,7 @@ impl App {
                         at: pt,
                         text: String::new(),
                         size: self.prefs.tool_defaults.font_size.max(8.0),
-                        bold: false,
+                        font: self.prefs.tool_defaults.font_style(),
                     });
                 }
             }
@@ -259,6 +259,8 @@ impl App {
                 size: (r.size_pt * 100.0).round() / 100.0,
                 original_size: (r.size_pt * 100.0).round() / 100.0,
                 fit_width: false,
+                original_font: r.base_font.clone(),
+                font: None,
                 message: r
                     .editable
                     .clone()
@@ -444,11 +446,18 @@ impl App {
         }
     }
 
-    pub fn commit_add_text(&mut self, page: PageId, at: Point, text: &str, size: f64, bold: bool) {
+    pub fn commit_add_text(
+        &mut self,
+        page: PageId,
+        at: Point,
+        text: &str,
+        size: f64,
+        font: pdf_engine::fontembed::FontStyle,
+    ) {
         let ti = self.active;
         let col = (0.0f32, 0.0f32, 0.0f32);
         let r = self.tabs[ti].session.execute("Add text", |tx| {
-            pagecontent::add_text(tx, page, at, text, size, col, bold)
+            pagecontent::add_text(tx, page, at, text, size, col, font)
         });
         match r {
             Ok(()) => {
@@ -459,7 +468,7 @@ impl App {
                 self.dialog = Some(Dialog::Error {
                     title: "Some characters are not available".into(),
                     detail: format!(
-                        "The bundled font cannot show: {chars}\nThe text was not added. Remove or replace those characters."
+                        "The chosen font cannot show: {chars}\nThe text was not added. Remove those characters or pick a font that has them."
                     ),
                 });
             }
@@ -472,24 +481,26 @@ impl App {
         }
     }
 
-    pub fn apply_text_draft(&mut self, substitute: bool) {
+    pub fn apply_text_draft(&mut self, force_font: Option<pdf_engine::fontembed::FontStyle>) {
         let ti = self.active;
         let Some(mut d) = self.tabs[ti].ui.edit_draft.clone() else {
             return;
         };
+        let font = force_font.or(d.font);
         let text_changed = d.text != d.original;
         let size_changed = (d.size - d.original_size).abs() > 0.005;
-        if !text_changed && !size_changed {
+        if !text_changed && !size_changed && font.is_none() {
             d.message = Some((false, "No changes to apply.".into()));
             self.tabs[ti].ui.edit_draft = Some(d);
             return;
         }
         let edit = TextEdit {
-            text: text_changed.then(|| d.text.clone()),
+            // A font change re-encodes the text, so the text is always passed along with it.
+            text: (text_changed || font.is_some()).then(|| d.text.clone()),
             size_pt: size_changed.then_some(d.size),
             shift: None,
             fit_width: d.fit_width,
-            substitute_font: substitute,
+            substitute_font: font,
         };
         let (page, run) = (d.page, d.run);
         let center = self
@@ -788,6 +799,32 @@ impl App {
                             ui.label("Size");
                             ui.add(egui::DragValue::new(&mut d.size).range(4.0..=300.0).speed(0.2).suffix(" pt"));
                         });
+                        ui.horizontal(|ui| {
+                            ui.label("Font");
+                            let orig = d.original_font.to_lowercase();
+                            let label = match d.font {
+                                None => format!("Keep ({})", short_font_name(&d.original_font)),
+                                Some(s) => s.family.title().to_string(),
+                            };
+                            egui::ComboBox::from_id_salt("edit_font").selected_text(label).width(190.0).show_ui(ui, |ui| {
+                                if ui.selectable_label(d.font.is_none(), "Keep the original font").clicked() {
+                                    d.font = None;
+                                }
+                                for f in pdf_engine::fontembed::FontFamily::ALL {
+                                    let sel = d.font.is_some_and(|s| s.family == f);
+                                    let t = egui::RichText::new(f.title()).family(crate::fontpick::egui_family(pdf_engine::fontembed::FontStyle::new(f, false, false)));
+                                    if ui.selectable_label(sel, t).clicked() && !sel {
+                                        d.font = Some(pdf_engine::fontembed::FontStyle::new(f, orig.contains("bold"), orig.contains("italic") || orig.contains("oblique")));
+                                    }
+                                }
+                            });
+                        });
+                        if let Some(s) = &mut d.font {
+                            ui.horizontal(|ui| {
+                                crate::fontpick::font_picker_toggles(ui, s);
+                            });
+                            ui.label(RichText::new("This replaces the font of this text only; other text keeps its font.").size(11.0).color(self.pal.text_dim));
+                        }
                         ui.checkbox(&mut d.fit_width, "Keep original width (adjust spacing)").on_hover_text("Tightens or loosens character spacing so surrounding text keeps its place and nothing overlaps.");
                         ui.horizontal(|ui| {
                             if ui.button("Apply").clicked() {
@@ -803,8 +840,9 @@ impl App {
                         egui::Frame::new().fill(self.pal.accent_soft).corner_radius(6).inner_margin(8).show(ui, |ui| {
                             ui.label(RichText::new("Characters not in this font").strong());
                             ui.label(format!("“{font}” has no glyph for: {chars}"));
-                            ui.label(RichText::new("The font stays unchanged unless you choose to replace it for this text.").size(11.0));
-                            if ui.button("Use bundled DejaVu Sans for this text").clicked() {
+                            ui.label(RichText::new("The font stays unchanged unless you choose to replace it for this text. Pick a font above, or use the default below.").size(11.0));
+                            let which = d.font.map_or("DejaVu Sans".to_string(), |s| s.family.title().to_string());
+                            if ui.button(format!("Use {which} for this text")).clicked() {
                                 apply_sub = true;
                             }
                         });
@@ -839,14 +877,28 @@ impl App {
                 if revert && let Some(d) = self.tabs[ti].ui.edit_draft.as_mut() {
                     d.text = d.original.clone();
                     d.size = d.original_size;
+                    d.font = None;
                     d.missing = None;
                     d.message = None;
                 }
                 if apply {
-                    self.apply_text_draft(false);
+                    self.apply_text_draft(None);
                 }
                 if apply_sub {
-                    self.apply_text_draft(true);
+                    let chosen = self.tabs[ti].ui.edit_draft.as_ref().and_then(|d| d.font);
+                    let orig = self.tabs[ti]
+                        .ui
+                        .edit_draft
+                        .as_ref()
+                        .map(|d| d.original_font.to_lowercase())
+                        .unwrap_or_default();
+                    self.apply_text_draft(Some(chosen.unwrap_or_else(|| {
+                        pdf_engine::fontembed::FontStyle::new(
+                            pdf_engine::fontembed::FontFamily::DejaVuSans,
+                            orig.contains("bold"),
+                            false,
+                        )
+                    })));
                 }
                 if del {
                     self.delete_selected_content();
@@ -901,5 +953,18 @@ impl App {
         }
         let _ = ctx;
         true
+    }
+}
+
+/// A readable font name without the subset tag ("ABCDEF+Arial-BoldMT" → "Arial-BoldMT").
+fn short_font_name(n: &str) -> String {
+    let n = match n.split_once('+') {
+        Some((p, rest)) if p.len() == 6 && p.chars().all(|c| c.is_ascii_uppercase()) => rest,
+        _ => n,
+    };
+    if n.is_empty() {
+        "unnamed font".to_string()
+    } else {
+        n.to_string()
     }
 }

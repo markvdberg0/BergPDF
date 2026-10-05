@@ -13,10 +13,185 @@ use std::io::Write;
 use subsetter::GlyphRemapper;
 use ttf_parser::Face;
 
-/// Regular weight of the bundled font.
+/// Regular weight of the default bundled font.
 pub static DEJAVU_SANS: &[u8] = include_bytes!("../assets/fonts/DejaVuSans.ttf");
-/// Bold weight of the bundled font.
+/// Bold weight of the default bundled font.
 pub static DEJAVU_SANS_BOLD: &[u8] = include_bytes!("../assets/fonts/DejaVuSans-Bold.ttf");
+
+/// The bundled font families offered for new and replaced text. All are redistributable
+/// (DejaVu licence, SIL OFL 1.1 for Liberation — see `assets/fonts/LICENSE-*.txt`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum FontFamily {
+    /// DejaVu Sans — widest language coverage; the default.
+    DejaVuSans,
+    /// DejaVu Serif.
+    DejaVuSerif,
+    /// Liberation Sans — metric-compatible with Arial/Helvetica.
+    LiberationSans,
+    /// Liberation Serif — metric-compatible with Times New Roman.
+    LiberationSerif,
+    /// Liberation Mono — metric-compatible with Courier New.
+    LiberationMono,
+}
+
+impl FontFamily {
+    /// Every family, in the order shown to the user.
+    pub const ALL: [FontFamily; 5] = [
+        FontFamily::LiberationSans,
+        FontFamily::LiberationSerif,
+        FontFamily::LiberationMono,
+        FontFamily::DejaVuSans,
+        FontFamily::DejaVuSerif,
+    ];
+
+    /// Name shown in menus.
+    pub fn title(self) -> &'static str {
+        match self {
+            FontFamily::DejaVuSans => "DejaVu Sans",
+            FontFamily::DejaVuSerif => "DejaVu Serif",
+            FontFamily::LiberationSans => "Liberation Sans (Arial-like)",
+            FontFamily::LiberationSerif => "Liberation Serif (Times-like)",
+            FontFamily::LiberationMono => "Liberation Mono (Courier-like)",
+        }
+    }
+
+    /// Stable identifier used in files and preferences.
+    pub fn key(self) -> &'static str {
+        match self {
+            FontFamily::DejaVuSans => "DejaVuSans",
+            FontFamily::DejaVuSerif => "DejaVuSerif",
+            FontFamily::LiberationSans => "LiberationSans",
+            FontFamily::LiberationSerif => "LiberationSerif",
+            FontFamily::LiberationMono => "LiberationMono",
+        }
+    }
+
+    /// Inverse of [`FontFamily::key`].
+    pub fn from_key(k: &str) -> Option<FontFamily> {
+        FontFamily::ALL.into_iter().find(|f| f.key() == k)
+    }
+
+    /// Whether the family has an italic face. (DejaVu Sans/Serif are offered upright and bold
+    /// only; Liberation has all four styles.)
+    pub fn has_italic(self) -> bool {
+        matches!(
+            self,
+            FontFamily::LiberationSans | FontFamily::LiberationSerif | FontFamily::LiberationMono
+        )
+    }
+}
+
+/// A family with weight and slant.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct FontStyle {
+    /// Family.
+    pub family: FontFamily,
+    /// Bold weight.
+    pub bold: bool,
+    /// Italic slant (ignored, and normalised to `false`, for families without italics).
+    pub italic: bool,
+}
+
+impl Default for FontStyle {
+    fn default() -> Self {
+        FontStyle::new(FontFamily::DejaVuSans, false, false)
+    }
+}
+
+impl FontStyle {
+    /// Build a style; italic is dropped when the family has none.
+    pub fn new(family: FontFamily, bold: bool, italic: bool) -> Self {
+        Self {
+            family,
+            bold,
+            italic: italic && family.has_italic(),
+        }
+    }
+
+    /// PostScript-like name of the face, used as the embedded font's base name and stored in
+    /// annotations so the choice survives saving and re-opening.
+    pub fn base_name(self) -> String {
+        let suffix = match (self.bold, self.italic) {
+            (false, false) => "",
+            (true, false) => "-Bold",
+            (false, true) => "-Italic",
+            (true, true) => "-BoldItalic",
+        };
+        match (self.family, suffix) {
+            (
+                FontFamily::LiberationSans
+                | FontFamily::LiberationSerif
+                | FontFamily::LiberationMono,
+                "",
+            ) => {
+                format!("{}-Regular", self.family.key())
+            }
+            _ => format!("{}{suffix}", self.family.key()),
+        }
+    }
+
+    /// Inverse of [`FontStyle::base_name`] (also accepts names without `-Regular`).
+    pub fn from_base_name(n: &str) -> Option<FontStyle> {
+        FontFamily::ALL.into_iter().find_map(|f| {
+            let rest = n.strip_prefix(f.key())?;
+            let (b, i) = match rest {
+                "" | "-Regular" => (false, false),
+                "-Bold" => (true, false),
+                "-Italic" => (false, true),
+                "-BoldItalic" => (true, true),
+                _ => return None,
+            };
+            Some(FontStyle::new(f, b, i))
+        })
+    }
+
+    /// The font program's bytes.
+    pub fn data(self) -> &'static [u8] {
+        use FontFamily::*;
+        match (self.family, self.bold, self.italic) {
+            (DejaVuSans, false, _) => DEJAVU_SANS,
+            (DejaVuSans, true, _) => DEJAVU_SANS_BOLD,
+            (DejaVuSerif, false, _) => include_bytes!("../assets/fonts/DejaVuSerif.ttf"),
+            (DejaVuSerif, true, _) => include_bytes!("../assets/fonts/DejaVuSerif-Bold.ttf"),
+            (LiberationSans, false, false) => {
+                include_bytes!("../assets/fonts/LiberationSans-Regular.ttf")
+            }
+            (LiberationSans, true, false) => {
+                include_bytes!("../assets/fonts/LiberationSans-Bold.ttf")
+            }
+            (LiberationSans, false, true) => {
+                include_bytes!("../assets/fonts/LiberationSans-Italic.ttf")
+            }
+            (LiberationSans, true, true) => {
+                include_bytes!("../assets/fonts/LiberationSans-BoldItalic.ttf")
+            }
+            (LiberationSerif, false, false) => {
+                include_bytes!("../assets/fonts/LiberationSerif-Regular.ttf")
+            }
+            (LiberationSerif, true, false) => {
+                include_bytes!("../assets/fonts/LiberationSerif-Bold.ttf")
+            }
+            (LiberationSerif, false, true) => {
+                include_bytes!("../assets/fonts/LiberationSerif-Italic.ttf")
+            }
+            (LiberationSerif, true, true) => {
+                include_bytes!("../assets/fonts/LiberationSerif-BoldItalic.ttf")
+            }
+            (LiberationMono, false, false) => {
+                include_bytes!("../assets/fonts/LiberationMono-Regular.ttf")
+            }
+            (LiberationMono, true, false) => {
+                include_bytes!("../assets/fonts/LiberationMono-Bold.ttf")
+            }
+            (LiberationMono, false, true) => {
+                include_bytes!("../assets/fonts/LiberationMono-Italic.ttf")
+            }
+            (LiberationMono, true, true) => {
+                include_bytes!("../assets/fonts/LiberationMono-BoldItalic.ttf")
+            }
+        }
+    }
+}
 
 /// Which bundled face to use.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -25,20 +200,29 @@ pub enum BundledFace {
     Sans,
     /// DejaVu Sans Bold.
     SansBold,
+    /// Any bundled family and style.
+    Styled(FontStyle),
+}
+
+impl From<FontStyle> for BundledFace {
+    fn from(s: FontStyle) -> Self {
+        BundledFace::Styled(s)
+    }
 }
 
 impl BundledFace {
-    fn data(self) -> &'static [u8] {
+    fn style(self) -> FontStyle {
         match self {
-            BundledFace::Sans => DEJAVU_SANS,
-            BundledFace::SansBold => DEJAVU_SANS_BOLD,
+            BundledFace::Sans => FontStyle::new(FontFamily::DejaVuSans, false, false),
+            BundledFace::SansBold => FontStyle::new(FontFamily::DejaVuSans, true, false),
+            BundledFace::Styled(s) => s,
         }
     }
-    fn base_name(self) -> &'static str {
-        match self {
-            BundledFace::Sans => "DejaVuSans",
-            BundledFace::SansBold => "DejaVuSans-Bold",
-        }
+    fn data(self) -> &'static [u8] {
+        self.style().data()
+    }
+    fn base_name(self) -> String {
+        self.style().base_name()
     }
 }
 
@@ -288,4 +472,60 @@ pub fn font_resource(name: &str, id: lopdf::ObjectId) -> Dictionary {
     let mut d = Dictionary::new();
     d.set(name, Object::Reference(id));
     d
+}
+
+#[cfg(test)]
+mod font_style_tests {
+    use super::*;
+
+    #[test]
+    fn names_round_trip_for_every_family_and_style() {
+        for f in FontFamily::ALL {
+            for bold in [false, true] {
+                for italic in [false, true] {
+                    let s = FontStyle::new(f, bold, italic);
+                    assert_eq!(FontStyle::from_base_name(&s.base_name()), Some(s), "{s:?}");
+                    assert_eq!(FontFamily::from_key(f.key()), Some(f));
+                    // The font program must parse and cover basic Latin.
+                    let face = ttf_parser::Face::parse(s.data(), 0).unwrap();
+                    assert!(face.glyph_index('A').is_some() && face.glyph_index('é').is_some());
+                }
+            }
+        }
+        assert_eq!(FontStyle::from_base_name("Comic-Sans"), None);
+        // Historic names stay valid.
+        assert_eq!(
+            FontStyle::from_base_name("DejaVuSans-Bold"),
+            Some(FontStyle::new(FontFamily::DejaVuSans, true, false))
+        );
+    }
+
+    #[test]
+    fn italic_is_dropped_where_the_family_has_none() {
+        assert!(!FontStyle::new(FontFamily::DejaVuSerif, false, true).italic);
+        assert!(FontStyle::new(FontFamily::LiberationSerif, false, true).italic);
+        assert_eq!(FontStyle::default().base_name(), "DejaVuSans");
+        assert_eq!(
+            FontStyle::new(FontFamily::LiberationMono, true, true).base_name(),
+            "LiberationMono-BoldItalic"
+        );
+    }
+
+    #[test]
+    fn liberation_covers_latin_greek_and_cyrillic() {
+        for f in [
+            FontFamily::LiberationSans,
+            FontFamily::LiberationSerif,
+            FontFamily::LiberationMono,
+        ] {
+            let fb =
+                FontBuilder::new(BundledFace::Styled(FontStyle::new(f, false, false))).unwrap();
+            assert!(
+                fb.missing_chars("Dutch: ëïöü €. Ελληνικά. Русский.")
+                    .is_empty(),
+                "{f:?}"
+            );
+            assert!(!fb.missing_chars("漢字").is_empty());
+        }
+    }
 }

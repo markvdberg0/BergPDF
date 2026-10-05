@@ -57,6 +57,31 @@ pub struct ToolDefaults {
     pub opacity: f64,
     /// FreeText font size.
     pub font_size: f64,
+    /// Font family for new text (`FontFamily::key`).
+    pub font_family: String,
+    /// Bold by default.
+    pub font_bold: bool,
+    /// Italic by default (ignored for families without italics).
+    pub font_italic: bool,
+}
+
+impl ToolDefaults {
+    /// The default font for new text and text boxes.
+    pub fn font_style(&self) -> pdf_engine::fontembed::FontStyle {
+        use pdf_engine::fontembed::{FontFamily, FontStyle};
+        FontStyle::new(
+            FontFamily::from_key(&self.font_family).unwrap_or(FontFamily::DejaVuSans),
+            self.font_bold,
+            self.font_italic,
+        )
+    }
+
+    /// Remember `s` as the default.
+    pub fn set_font_style(&mut self, s: pdf_engine::fontembed::FontStyle) {
+        self.font_family = s.family.key().to_string();
+        self.font_bold = s.bold;
+        self.font_italic = s.italic;
+    }
 }
 
 impl Default for ToolDefaults {
@@ -67,6 +92,9 @@ impl Default for ToolDefaults {
             stroke_width: 1.5,
             opacity: 1.0,
             font_size: 12.0,
+            font_family: "DejaVuSans".to_string(),
+            font_bold: false,
+            font_italic: false,
         }
     }
 }
@@ -312,6 +340,12 @@ pub static SETTINGS: &[SettingInfo] = &[
         title: "Workspace",
         description: "Essential shows the common tools; Professional shows everything.",
         keywords: "simple advanced essential professional",
+    },
+    SettingInfo {
+        key: "default_font",
+        title: "Default font for new text",
+        description: "Font, bold and italic used when you add text or a text box.",
+        keywords: "font typeface family serif sans mono bold italic text box liberation dejavu arial times courier",
     },
     SettingInfo {
         key: "snap_to_geometry",

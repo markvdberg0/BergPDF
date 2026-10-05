@@ -181,7 +181,11 @@ fn text_added_by_the_editor_with_embedded_fonts_validates() {
             "Added text: café, ünïcode € ≠",
             14.0,
             (0.1, 0.2, 0.6),
-            false,
+            pdf_engine::fontembed::FontStyle::new(
+                pdf_engine::fontembed::FontFamily::LiberationSerif,
+                false,
+                true,
+            ),
         )?;
         add_text(
             tx,
@@ -190,7 +194,11 @@ fn text_added_by_the_editor_with_embedded_fonts_validates() {
             "Bold line",
             14.0,
             (0.0, 0.0, 0.0),
-            true,
+            pdf_engine::fontembed::FontStyle::new(
+                pdf_engine::fontembed::FontFamily::LiberationMono,
+                true,
+                false,
+            ),
         )
     })
     .unwrap();

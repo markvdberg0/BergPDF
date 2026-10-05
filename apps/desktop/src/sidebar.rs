@@ -697,7 +697,7 @@ impl App {
                     if let AnnotationKind::FreeText {
                         font_size,
                         text_color,
-                        bold,
+                        font,
                         ..
                     } = &mut spec.kind
                     {
@@ -710,8 +710,10 @@ impl App {
                             *text_color = Rgb(tc[0], tc[1], tc[2]);
                         }
                         ui.end_row();
-                        ui.label("Bold");
-                        ui.checkbox(bold, "");
+                        ui.label("Font");
+                        ui.horizontal(|ui| {
+                            crate::fontpick::font_picker(ui, "freetext_font", font);
+                        });
                         ui.end_row();
                     }
                 });
@@ -829,6 +831,17 @@ impl App {
                     changed |= ui
                         .add(egui::Slider::new(&mut d.font_size, 6.0..=48.0).suffix(" pt"))
                         .changed();
+                    ui.end_row();
+                    ui.label("Font");
+                    ui.vertical(|ui| {
+                        let mut st = d.font_style();
+                        ui.horizontal_wrapped(|ui| {
+                            if crate::fontpick::font_picker(ui, "defaults_font", &mut st) {
+                                d.set_font_style(st);
+                                changed = true;
+                            }
+                        });
+                    });
                     ui.end_row();
                 });
             if changed {

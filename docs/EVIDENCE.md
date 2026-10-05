@@ -253,3 +253,26 @@ Escape; the next runs showed it every time, so it is recorded here as unexplaine
 * Native file pickers (optimize/PDF-A/translation saves, certificate picker) are not driven headless.
 * Windows and macOS: nothing was compiled or run; the OS certificate verifiers and the key-file permissions
   there are untested (PLATFORM_CHECKLIST).
+
+---
+
+## Addendum — fonts for text (2026-10-05)
+
+`cargo fmt`, `clippy -D warnings` clean; **225 tests passed, 0 failed** with poppler, OpenSSL, OCR models and
+veraPDF required (`evidence/test-run-2026-10-05-fonts.txt`); `cargo deny check` ok.
+
+* All 16 distinct faces (5 families × bold/italic where available) added to a blank page: poppler extracts every
+  sample line (accents, Greek, Cyrillic, €), `pdffonts` lists each as an **embedded subset** under its own
+  name, and upright/italic/serif/sans pages render measurably differently.
+* A text box in Liberation Serif Bold Italic reopens with that exact font (`/BergFont`); before this change a
+  text box's bold flag was not stored and was lost on re-open.
+* Replacing the font of an existing Chromium/Cairo run with Liberation Mono Bold reopens in that face; the
+  edit report names both fonts. A document using every face, plus a text box, converts to PDF/A and veraPDF
+  reports it compliant.
+* GUI (`evidence/29-…`–`32-…`): picker with each name drawn in its own typeface, the Add-Text box previewing the
+  chosen font, Edit Text → Font → Liberation Mono (bold pre-ticked from the original name), the text-box
+  dialog and Properties panel with the font picker.
+* Harness note: typing into the app with `xdotool` before a dialog is visible fires keyboard shortcuts
+  (it scrolled to page 3 once); the final runs screenshot before typing. `xdotool` also cannot type `é`.
+
+Not covered: system fonts, CJK, mixed fonts inside one text run, Windows/macOS.

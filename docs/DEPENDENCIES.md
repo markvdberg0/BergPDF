@@ -41,6 +41,14 @@ a legal notice bundle. This file covers what a human has to look at.
      binary and subset-embedded into user PDFs. Licence file: `crates/pdf-engine/assets/fonts/
      LICENSE-DejaVu.txt`. The Vera licence restricts *modified* fonts to being renamed; whether
      subset embedding counts needs a decision by the owner (D-010).
+   * **Liberation Sans / Serif / Mono** (12 faces, regular/bold/italic/bold-italic; metric-compatible with
+     Arial, Times New Roman and Courier New) and **DejaVu Serif** (regular/bold) were added on 2026-10-05
+     so users can choose a font for new and replaced text. Liberation is **SIL OFL 1.1** (notice in
+     `crates/pdf-engine/assets/fonts/LICENSE-Liberation.txt`): it may be bundled and embedded, and the OFL
+     explicitly does not apply to documents made with the fonts. The fonts add ~5 MB to the binary. The
+     same files are registered with egui so pickers preview each face. They come from the Debian
+     `fonts-liberation` / `fonts-dejavu-core` packages (unmodified); licence review by the owner is still
+     advisable before distribution, like D-010.
    * `epaint_default_fonts` (via egui): MIT/Apache-2.0 for the crate, plus **OFL-1.1** and
      **Ubuntu Font Licence** for the fonts inside; notices required.
 3. **Adobe font metrics** (`APAFML`) inside `pdf-base14-metrics`: notice must be preserved.

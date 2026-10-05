@@ -10,6 +10,7 @@ mod ctxmenu;
 mod dialogs;
 mod docops_ui;
 mod exec;
+mod fontpick;
 mod forms_ui;
 mod icons;
 mod interaction;

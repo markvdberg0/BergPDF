@@ -165,7 +165,7 @@ impl App {
                     font_size: d.font_size,
                     text_color: Rgb::BLACK,
                     align: Align::Left,
-                    bold: false,
+                    font: d.font_style(),
                     callout: Some(vec![tip, knee]),
                 }
             }
@@ -174,7 +174,7 @@ impl App {
                 font_size: d.font_size,
                 text_color: Rgb::BLACK,
                 align: Align::Left,
-                bold: false,
+                font: d.font_style(),
                 callout: None,
             },
         };
@@ -187,11 +187,11 @@ impl App {
             if let AnnotationKind::FreeText {
                 rect,
                 font_size,
-                bold,
+                font,
                 ..
             } = &mut spec.kind
                 && let Ok(h) =
-                    annot::freetext_required_height(&contents, *font_size, rect.width(), *bold)
+                    annot::freetext_required_height(&contents, *font_size, rect.width(), *font)
                 && h > rect.height()
             {
                 // Grow the box so the text is not clipped.

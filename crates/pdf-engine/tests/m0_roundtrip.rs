@@ -51,7 +51,7 @@ fn render_search_annotate_restructure_save_reopen() {
                 font_size: 12.0,
                 text_color: Rgb(0.0, 0.2, 0.8),
                 align: annot::Align::Left,
-                bold: false,
+                font: pdf_engine::fontembed::FontStyle::default(),
                 callout: None,
             });
             ft.contents = "Free text: café € ≠ naïve".into();

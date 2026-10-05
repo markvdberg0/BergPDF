@@ -95,7 +95,7 @@ pub enum Dialog {
         at: Point,
         text: String,
         size: f64,
-        bold: bool,
+        font: pdf_engine::fontembed::FontStyle,
     },
     /// Document properties.
     Properties(Box<PropsState>),
@@ -228,6 +228,10 @@ pub struct EditDraft {
     pub size: f64,
     pub original_size: f64,
     pub fit_width: bool,
+    /// Name of the run's current font (shown as "keep original").
+    pub original_font: String,
+    /// Replace the run's font with this bundled one (`None` keeps the original).
+    pub font: Option<pdf_engine::fontembed::FontStyle>,
     /// Last outcome: (is_error, message).
     pub message: Option<(bool, String)>,
     /// Characters the font cannot show, with the font name, when an apply failed for that reason.

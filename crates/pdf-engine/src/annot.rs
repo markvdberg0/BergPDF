@@ -6,7 +6,7 @@
 
 use crate::doc::{PageId, PdfDocument, Tx};
 use crate::error::{EngineError, Result};
-use crate::fontembed::{BundledFace, FontBuilder, hex_string};
+use crate::fontembed::{BundledFace, FontBuilder, FontStyle, hex_string};
 use crate::geom::{Point, Quad, Rect};
 use crate::objutil::{self, fmt_num, name, num_array, reference, text_obj};
 use lopdf::{Dictionary, Document, Object, ObjectId, Stream, dictionary};
@@ -125,7 +125,8 @@ pub enum AnnotationKind {
         font_size: f64,
         text_color: Rgb,
         align: Align,
-        bold: bool,
+        /// Bundled font family, weight and slant.
+        font: FontStyle,
         callout: Option<Vec<Point>>,
     },
     /// Rectangle.
@@ -697,7 +698,7 @@ fn build(tx: &mut Tx<'_>, spec: &AnnotationSpec) -> Result<(Dictionary, Stream)>
             font_size,
             text_color,
             align,
-            bold,
+            font,
             callout,
         } => {
             build_freetext(
@@ -707,7 +708,7 @@ fn build(tx: &mut Tx<'_>, spec: &AnnotationSpec) -> Result<(Dictionary, Stream)>
                 *font_size,
                 *text_color,
                 *align,
-                *bold,
+                *font,
                 callout.as_deref(),
                 &mut dict,
                 &mut ap,
@@ -1047,12 +1048,13 @@ fn lerp(a: Point, b: Point, t: f64) -> Point {
 }
 
 /// Required height for FreeText content at a given width (for auto-sizing the box).
-pub fn freetext_required_height(text: &str, font_size: f64, width: f64, bold: bool) -> Result<f64> {
-    let fb = FontBuilder::new(if bold {
-        BundledFace::SansBold
-    } else {
-        BundledFace::Sans
-    })?;
+pub fn freetext_required_height(
+    text: &str,
+    font_size: f64,
+    width: f64,
+    font: FontStyle,
+) -> Result<f64> {
+    let fb = FontBuilder::new(BundledFace::Styled(font))?;
     let lines = wrap_lines(&fb, text, font_size, (width - 2.0 * FT_PAD).max(1.0));
     Ok(lines.len() as f64 * fb.line_height_em() * font_size + 2.0 * FT_PAD)
 }
@@ -1107,7 +1109,7 @@ fn build_freetext(
     font_size: f64,
     text_color: Rgb,
     align: Align,
-    bold: bool,
+    font: FontStyle,
     callout: Option<&[Point]>,
     dict: &mut Dictionary,
     ap: &mut Ap,
@@ -1115,17 +1117,17 @@ fn build_freetext(
 ) -> Result<()> {
     let r = rect.abs();
     let lw = spec.border_width.max(0.0);
-    let mut fb = FontBuilder::new(if bold {
-        BundledFace::SansBold
-    } else {
-        BundledFace::Sans
-    })?;
+    let mut fb = FontBuilder::new(BundledFace::Styled(font))?;
     let missing = fb.missing_chars(&spec.contents);
     if !missing.is_empty() {
         return Err(EngineError::Unsupported(format!(
-            "text contains characters that are not in the bundled font: {missing:?}"
+            "text contains characters that are not in {}: {missing:?}",
+            font.family.title()
         )));
     }
+    // Remember the choice so it survives saving and re-opening (the content stream alone
+    // cannot tell us which bundled font was used).
+    dict.set("BergFont", Object::string_literal(font.base_name()));
     dict.set(
         "DA",
         Object::string_literal(format!(
@@ -1355,12 +1357,20 @@ fn parse_spec(doc: &Document, d: &Dictionary) -> Option<AnnotationSpec> {
                 _ => Align::Left,
             };
             let callout = nums(b"CL").map(|v| pts(&v)).filter(|c| c.len() >= 2);
+            let font = d
+                .get(b"BergFont")
+                .ok()
+                .and_then(|o| objutil::deref(doc, o))
+                .and_then(|o| o.as_str().ok())
+                .map(|b| String::from_utf8_lossy(b).into_owned())
+                .and_then(|n| FontStyle::from_base_name(&n))
+                .unwrap_or_default();
             AnnotationKind::FreeText {
                 rect,
                 font_size: fs,
                 text_color: tc,
                 align,
-                bold: false,
+                font,
                 callout,
             }
         }
@@ -1516,14 +1526,14 @@ impl AnnotationSpec {
                 font_size,
                 text_color,
                 align,
-                bold,
+                font,
                 callout,
             } => AnnotationKind::FreeText {
                 rect: mr(rect),
                 font_size: *font_size,
                 text_color: *text_color,
                 align: *align,
-                bold: *bold,
+                font: *font,
                 callout: callout.as_ref().map(|c| c.iter().map(mv).collect()),
             },
             AnnotationKind::Rectangle { rect } => AnnotationKind::Rectangle { rect: mr(rect) },

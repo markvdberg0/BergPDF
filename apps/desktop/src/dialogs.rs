@@ -270,12 +270,29 @@ impl App {
                             }
                         });
                     }
-                    let r = ui.add(
-                        egui::TextEdit::multiline(text)
-                            .desired_rows(if tool == Tool::Stamp { 1 } else { 5 })
-                            .desired_width(380.0)
-                            .hint_text("Type here…"),
-                    );
+                    let boxed = matches!(tool, Tool::FreeText | Tool::Callout);
+                    let mut font_style = self.prefs.tool_defaults.font_style();
+                    if boxed {
+                        ui.horizontal(|ui| {
+                            ui.label("Font");
+                            if crate::fontpick::font_picker(ui, "textbox_font", &mut font_style) {
+                                // Remembered as the default for the next text box too.
+                                self.prefs.tool_defaults.set_font_style(font_style);
+                                self.prefs_dirty = true;
+                            }
+                        });
+                    }
+                    let mut edit = egui::TextEdit::multiline(text)
+                        .desired_rows(if tool == Tool::Stamp { 1 } else { 5 })
+                        .desired_width(380.0)
+                        .hint_text("Type here…");
+                    if boxed {
+                        edit = edit.font(egui::FontId::new(
+                            self.prefs.tool_defaults.font_size.clamp(10.0, 22.0) as f32,
+                            crate::fontpick::egui_family(font_style),
+                        ));
+                    }
+                    let r = ui.add(edit);
                     if self.frame_counter.is_multiple_of(2) && !r.has_focus() {
                         r.request_focus();
                     }
@@ -305,7 +322,7 @@ impl App {
                 at,
                 text,
                 size,
-                bold,
+                font,
             } => {
                 let (page, at) = (*page, *at);
                 let mut choice: Option<bool> = None;
@@ -316,10 +333,19 @@ impl App {
                             .size(12.0)
                             .color(self.pal.text_dim),
                     );
+                    ui.horizontal(|ui| {
+                        ui.label("Font");
+                        crate::fontpick::font_picker(ui, "add_text_font", font);
+                    });
+                    // The box previews the chosen font (at most 22 px so it stays tidy).
                     let r = ui.add(
                         egui::TextEdit::multiline(text)
                             .desired_rows(4)
                             .desired_width(380.0)
+                            .font(egui::FontId::new(
+                                size.clamp(10.0, 22.0) as f32,
+                                crate::fontpick::egui_family(*font),
+                            ))
                             .hint_text("Type here…"),
                     );
                     if self.frame_counter.is_multiple_of(2) && !r.has_focus() {
@@ -328,7 +354,6 @@ impl App {
                     ui.horizontal(|ui| {
                         ui.label("Size");
                         ui.add(egui::DragValue::new(size).range(4.0..=200.0).suffix(" pt"));
-                        ui.checkbox(bold, "Bold");
                     });
                     ui.add_space(8.0);
                     ui.horizontal(|ui| {
@@ -348,8 +373,11 @@ impl App {
                 if let Some(c) = choice {
                     keep = false;
                     if c {
-                        let (t, s, b) = (text.clone(), *size, *bold);
-                        self.commit_add_text(page, at, &t, s, b);
+                        let (t, s, f) = (text.clone(), *size, *font);
+                        // Remember the choice for the next piece of text.
+                        self.prefs.tool_defaults.set_font_style(f);
+                        self.prefs_dirty = true;
+                        self.commit_add_text(page, at, &t, s, f);
                     }
                 }
             }
@@ -425,7 +453,7 @@ impl App {
                     ui.label("Rust (egui/eframe, wgpu, hayro, lopdf). Native dependencies are the OS windowing/graphics stack and GPU drivers; full audit in docs/DEPENDENCIES.md.");
                     ui.add_space(6.0);
                     ui.label(RichText::new("Bundled font").strong());
-                    ui.label("DejaVu Sans (Bitstream Vera licence) — used for new text in annotations and for interface symbols. See assets/fonts/LICENSE-DejaVu.txt.");
+                    ui.label("Fonts for new and replaced text, embedded as subsets in your documents: Liberation Sans, Serif and Mono (SIL Open Font License 1.1), DejaVu Sans and Serif (Bitstream Vera licence). DejaVu Sans is also used for interface symbols. Licence texts: assets/fonts/LICENSE-Liberation.txt and LICENSE-DejaVu.txt.");
                     ui.add_space(10.0);
                     if ui.button("Close").clicked() {
                         close = true;
@@ -499,6 +527,16 @@ impl App {
                         if show("dark_page_filter") {
                             section(ui, "Dark page view", "Comfortable dark reading filter. Display only — saved PDFs are never changed.");
                             changed |= ui.checkbox(&mut self.prefs.dark_page_filter, "Use dark page view").changed();
+                        }
+                        if show("default_font") {
+                            section(ui, "Default font for new text", "Font, bold and italic used when you add text or a text box. Text you add is stored with an embedded subset of the font, so it looks the same everywhere.");
+                            let mut st = self.prefs.tool_defaults.font_style();
+                            ui.horizontal(|ui| {
+                                if crate::fontpick::font_picker(ui, "default_font_pick", &mut st) {
+                                    self.prefs.tool_defaults.set_font_style(st);
+                                    changed = true;
+                                }
+                            });
                         }
                         if show("snap_to_geometry") {
                             section(ui, "Snap to drawing geometry", "Measurements jump to line ends, corners, intersections and midpoints of the page when the pointer is close.");

@@ -17,7 +17,7 @@
 use crate::content::{self, FontMetrics, Mat, Op, Operand, RunItem, TextGroup, Walk};
 use crate::doc::{PageId, Tx};
 use crate::error::{EngineError, Result};
-use crate::fontembed::{BundledFace, FontBuilder, zlib};
+use crate::fontembed::{BundledFace, FontBuilder, FontStyle, zlib};
 use crate::geom::{Point, Quad, Rect};
 use crate::objutil::{self, fmt_num_prec, name};
 use crate::textfont::{Enc, FontInfo};
@@ -89,8 +89,8 @@ pub struct TextEdit {
     pub shift: Option<(f64, f64)>,
     /// Distribute the difference in width over character spacing so the run keeps its width.
     pub fit_width: bool,
-    /// Use the bundled font (DejaVu Sans) for this run — an explicit, visible font change.
-    pub substitute_font: bool,
+    /// Replace this run's font with a bundled one — an explicit, visible font change.
+    pub substitute_font: Option<FontStyle>,
 }
 
 /// What an edit did.
@@ -501,17 +501,12 @@ impl PageContent {
         let new_text_width: f64; // text-space units at new size (before fit)
         let mut code_len = font.code_len;
         match (&edit.text, edit.substitute_font) {
-            (Some(text), true) => {
-                let mut fb =
-                    FontBuilder::new(if font.base_font.to_ascii_lowercase().contains("bold") {
-                        BundledFace::SansBold
-                    } else {
-                        BundledFace::Sans
-                    })?;
+            (Some(text), Some(style)) => {
+                let mut fb = FontBuilder::new(BundledFace::Styled(style))?;
                 let missing = fb.missing_chars(text);
                 if !missing.is_empty() {
                     return Err(EngineError::MissingGlyphs {
-                        font: "DejaVu Sans".into(),
+                        font: style.family.title().into(),
                         chars: missing
                             .iter()
                             .map(char::to_string)
@@ -529,7 +524,8 @@ impl PageContent {
                 new_text_width = w * th * new_size.signum();
                 code_len = 2;
                 report.warnings.push(format!(
-                    "Font changed to DejaVu Sans for this text (was {}).",
+                    "Font changed to {} for this text (was {}).",
+                    style.family.title(),
                     if font.base_font.is_empty() {
                         "an unnamed font"
                     } else {
@@ -537,7 +533,7 @@ impl PageContent {
                     }
                 ));
             }
-            (Some(text), false) => {
+            (Some(text), None) => {
                 let used = self.used_codes(&first.params.font);
                 let enc = font.encode(text, &used);
                 if !enc.missing.is_empty() {
@@ -998,7 +994,7 @@ pub fn add_text(
     text: &str,
     size_pt: f64,
     color: (f32, f32, f32),
-    bold: bool,
+    font: FontStyle,
 ) -> Result<()> {
     if !(1.0..=500.0).contains(&size_pt) || text.trim().is_empty() {
         return Err(EngineError::InvalidArgument(
@@ -1010,15 +1006,11 @@ pub fn add_text(
     let inv = ctm.inverse().ok_or_else(|| {
         EngineError::Unsupported("the page ends with a degenerate transform".into())
     })?;
-    let mut fb = FontBuilder::new(if bold {
-        BundledFace::SansBold
-    } else {
-        BundledFace::Sans
-    })?;
+    let mut fb = FontBuilder::new(BundledFace::Styled(font))?;
     let missing = fb.missing_chars(text);
     if !missing.is_empty() {
         return Err(EngineError::MissingGlyphs {
-            font: "DejaVu Sans".into(),
+            font: font.family.title().into(),
             chars: missing
                 .iter()
                 .map(char::to_string)

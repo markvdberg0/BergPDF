@@ -55,3 +55,12 @@ account, run the mock server above and choose Custom with address `http://127.0.
 
 Independent PDF/A validation in the tests is optional: set `BERG_VERAPDF` to a directory containing the veraPDF
 jars (see docs/EVIDENCE.md for how they were fetched) and `BERG_REQUIRE_VERAPDF=1` to make it mandatory.
+
+## Shipping notes
+
+* **OCR models are not part of the build.** The OCR command is present in every build, but the recognition
+  models (≈12 MB) are neither in the repository nor in `cargo xtask dist` output. Without them the OCR dialog
+  says where to put them and nothing else happens. The trained weights come from a CC BY-SA 4.0 dataset whose
+  redistribution terms have not been reviewed (docs/DECISIONS.md D-015), so bundling them is the owner's call.
+* **Fonts**: 14 font files are embedded in the binary (Liberation — SIL OFL 1.1; DejaVu — Bitstream Vera licence);
+  ship their licence texts (`crates/pdf-engine/assets/fonts/LICENSE-*.txt`) with the app.

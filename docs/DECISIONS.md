@@ -157,3 +157,14 @@ veraPDF 1.28 (an independent implementation) and the UI says "prepared as PDF/A-
 ACL on Windows), or reads `BERGPDF_AI_KEY`. It is **not encrypted**; the Preferences text says so and
 advises a provider-side spending limit. An OS key store (Keychain / Credential Manager / Secret Service)
 is the better design but needs per-platform code that cannot be exercised here; it is on the roadmap.
+
+## D-022 — More fonts for text: five bundled families, chosen per text, remembered per annotation
+Text is still never drawn from system fonts (so a document looks the same everywhere and nothing is
+fetched): five bundled families (Liberation Sans/Serif/Mono, DejaVu Sans/Serif) with bold and, where the
+family has it, italic. The choice applies to Add Text, text boxes/callouts (the box's font is stored in
+the annotation as `/BergFont`, so it survives saving; before this, a text box's *bold* was lost on
+re-open) and to *replacing* the font of one existing run in Edit Text (an explicit, labelled change; the
+text keeps its position, there is still no reflow). Editing an existing run without choosing a font still
+keeps its original font. The last choice becomes the default for new text (Preferences ▸ Default font).
+Not offered: system fonts, font upload, per-character formatting inside one run, CJK (no bundled font has it —
+text with such characters is refused with the font named, never silently replaced).
