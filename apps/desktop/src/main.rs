@@ -29,6 +29,7 @@ mod snap_ui;
 mod state;
 mod theme;
 mod translate_ui;
+mod update_ui;
 
 use std::path::PathBuf;
 

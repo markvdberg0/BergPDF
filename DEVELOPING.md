@@ -111,6 +111,12 @@ Pushing a tag `vX.Y.Z` that equals the workspace version runs
 Linux and attaches them with `SHA256SUMS.txt` to a **draft** GitHub release. Nothing is published until a person
 presses *Publish release*. Because BergPDF is GPL software, keep the tag: it is the source for that binary.
 
+To bring out a new version: raise `version` in **both** `Cargo.toml` (workspace) and `Packager.toml` (the workflow
+checks they agree with the tag), commit and push to `main`, wait for CI, then `git tag vX.Y.Z && git push origin vX.Y.Z`,
+write release notes in the draft and publish it. Installed copies that allowed the update check then show
+"Update available" (see D-033); to try that without a real release run a local server that answers
+`{"tag_name":"v9.9.9"}` and start BergPDF with `BERG_UPDATE_URL=http://127.0.0.1:PORT/latest`.
+
 ## Shipping notes
 
 * **OCR models.** They are not in the repository or in the binary. By default users download them (OCR dialog,

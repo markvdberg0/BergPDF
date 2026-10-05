@@ -11,7 +11,7 @@ audit. No external security review and no fuzzing campaign has been done (see â€
 * **Makes no network requests** in core flows and has **no telemetry**. The one exception is the
   optional AI features (PDF Copilot, Translate), which exist only in the `ai-client` crate, run only
   after a button press and a one-time consent per provider, and use the user's own key (see D-020 /
-  D-021). `cargo tree -p ai-client` shows the whole network stack; nothing else links it.
+  D-021), the OCR model download (button or installer question, pinned SHA-256) and the update check (off until the user says yes, or pressed by hand; D-033: one GET to the GitHub releases API, only a link is shown, nothing is downloaded or run). `cargo tree -p ai-client` shows the whole network stack; nothing else links it.
   On Linux, `rfd` talks to the desktop portal over local D-Bus.
 * **Opens external links only after explicit confirmation**, only for `http`, `https`, `mailto`,
   without control characters, under 2048 bytes (`platform::links`, unit-tested).

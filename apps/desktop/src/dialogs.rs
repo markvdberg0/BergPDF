@@ -6,7 +6,8 @@ use crate::state::*;
 use crate::tf;
 use editor_core::command::{self, CommandId as C, Key, PaletteItem, Shortcut};
 use editor_core::prefs::{
-    DefaultZoom, Density, GfxBackend, Language, PresentChoice, SETTINGS, ThemeChoice, Workspace,
+    DefaultZoom, Density, GfxBackend, Language, PresentChoice, SETTINGS, ThemeChoice, UpdateCheck,
+    Workspace,
 };
 use editor_core::tools::Tool;
 use egui::{Align2, Color32, RichText, Vec2};
@@ -492,6 +493,12 @@ impl App {
                     keep = false;
                 }
             }
+            Dialog::UpdateAsk => {
+                keep = self.dialog_update_ask(ctx);
+            }
+            Dialog::Update(st) => {
+                keep = self.dialog_update(ctx, st);
+            }
             Dialog::FirstRun => {
                 let mut done = false;
                 modal(ctx, "first_run", |ui| {
@@ -535,6 +542,7 @@ impl App {
             Dialog::Preferences { filter } => {
                 let mut close = false;
                 let mut changed = false;
+                let mut check_now = false;
                 let f = filter.to_lowercase();
                 let show = |key: &str| -> bool {
                     f.is_empty()
@@ -570,6 +578,18 @@ impl App {
                                 changed |= ui.selectable_value(&mut self.prefs.language, Language::Dutch, "Nederlands").changed();
                                 changed |= ui.selectable_value(&mut self.prefs.language, Language::German, "Deutsch").changed();
                             });
+                        }
+                        if show("updates") {
+                            section(ui, tr("Updates"), tr("Let BergPDF look for a newer version when it starts (once a day). Only the program name and version are sent; nothing is downloaded or installed."));
+                            let mut on = self.prefs.update_check == UpdateCheck::On;
+                            if ui.checkbox(&mut on, tr("Look for updates when BergPDF starts")).changed() {
+                                self.prefs.update_check = if on { UpdateCheck::On } else { UpdateCheck::Off };
+                                self.prefs.last_update_check = 0;
+                                changed = true;
+                            }
+                            if ui.button(tr("Check for Updates…")).clicked() {
+                                check_now = true;
+                            }
                         }
                         if show("theme") {
                             section(ui, tr("Application theme"), tr("Light, Dark or follow the system. Never changes document colours."));
@@ -685,6 +705,10 @@ impl App {
                 }
                 if close {
                     keep = false;
+                }
+                if check_now {
+                    keep = false;
+                    self.start_update_check(true);
                 }
             }
             Dialog::Shortcuts { filter, capture } => {

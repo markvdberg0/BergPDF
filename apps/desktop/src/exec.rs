@@ -36,6 +36,7 @@ impl App {
             | C::Preferences
             | C::ShortcutReference
             | C::About
+            | C::CheckForUpdates
             | C::NextTab
             | C::PreviousTab => true,
             C::Escape => true,
@@ -199,6 +200,7 @@ impl App {
                 })
             }
             C::About => self.dialog = Some(Dialog::About),
+            C::CheckForUpdates => self.start_update_check(true),
             C::ViewZoomIn => self.zoom_step(true),
             C::ViewZoomOut => self.zoom_step(false),
             C::ViewZoomActual => self.request_zoom(1.0, None),

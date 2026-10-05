@@ -33,6 +33,7 @@ pub enum CommandId {
     Preferences,
     ShortcutReference,
     About,
+    CheckForUpdates,
     ViewZoomIn,
     ViewZoomOut,
     ViewZoomActual,
@@ -512,6 +513,14 @@ pub static REGISTRY: &[CommandInfo] = &[
         "Version, licences and dependency notices",
         C::Help,
         "version",
+        []
+    ),
+    cmd!(
+        Id::CheckForUpdates,
+        "Check for Updates…",
+        "Look for a newer published version of BergPDF",
+        C::Help,
+        "update upgrade new version release",
         []
     ),
     cmd!(

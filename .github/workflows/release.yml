@@ -36,6 +36,8 @@ jobs:
         run: |
           v=$(grep -m1 '^version = ' Cargo.toml | sed 's/version = "\(.*\)"/\1/')
           [ "${GITHUB_REF_NAME}" = "v${v}" ] || { echo "tag ${GITHUB_REF_NAME} does not match version ${v}"; exit 1; }
+          p=$(grep -m1 '^version = ' Packager.toml | sed 's/version = "\(.*\)"/\1/')
+          [ "${p}" = "${v}" ] || { echo "Packager.toml version ${p} does not match Cargo.toml ${v}"; exit 1; }
       - name: Install pinned toolchain
         run: rustup show
       - uses: Swatinem/rust-cache@v2

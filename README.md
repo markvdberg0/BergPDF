@@ -20,7 +20,8 @@ Edit, annotate, sign, measure, fill in forms and make scans searchable. Offline,
 
 * **Your documents stay on your computer.** Everything core works offline. There is no account, no
   telemetry and no cloud. The optional AI features only send text when *you* press a button, to the provider
-  you chose, with your own key.
+  you chose, with your own key. BergPDF can tell you when a newer version is published, but only if you allow it;
+  it never downloads or installs anything by itself.
 * **Quick and light.** A native app written in Rust: pages render in tiles (built with large drawings in mind), and
   there is no browser engine or runtime to install.
 * **Real editing, not just stamping.** Change existing text and images in place, add text in the fonts you

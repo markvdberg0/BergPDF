@@ -83,6 +83,7 @@ impl App {
             ctx_target: None,
             snaps: crate::snap_ui::SnapService::new(),
             ai: crate::copilot_ui::AiRuntime::default(),
+            update: crate::update_ui::UpdateRuntime::default(),
         };
         app.dark_filter_applied = app.prefs.dark_page_filter;
         if !app.prefs.first_run_done {
@@ -378,6 +379,7 @@ impl eframe::App for App {
         self.poll_exports(ctx);
         self.poll_ocr(ctx);
         self.poll_ai(ctx);
+        self.poll_update(ctx);
         if self.snaps.poll() {
             ctx.request_repaint_after(std::time::Duration::from_millis(60));
         }

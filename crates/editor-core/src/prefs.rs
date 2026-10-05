@@ -112,6 +112,18 @@ pub enum Language {
     German,
 }
 
+/// Whether BergPDF may look for a newer published version on its own.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum UpdateCheck {
+    /// Not decided yet: the application asks once.
+    #[default]
+    Ask,
+    /// Check at start-up, at most once a day.
+    On,
+    /// Never check by itself (the "Check for updates" command still works when pressed).
+    Off,
+}
+
 /// Defaults applied to newly created annotations.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
@@ -314,6 +326,10 @@ pub struct Preferences {
     pub graphics: GraphicsPrefs,
     /// Interface language.
     pub language: Language,
+    /// Automatic check for a newer version (needs the user's yes first).
+    pub update_check: UpdateCheck,
+    /// When the last automatic check ran (seconds since 1970).
+    pub last_update_check: u64,
     /// Snap measurement points to line ends, corners, intersections and midpoints of the page.
     pub snap_to_geometry: bool,
     /// Whether the PDF Copilot panel is open.
@@ -351,6 +367,8 @@ impl Default for Preferences {
             render_cache_mb: 384,
             graphics: GraphicsPrefs::default(),
             language: Language::default(),
+            update_check: UpdateCheck::default(),
+            last_update_check: 0,
             snap_to_geometry: true,
             show_copilot: false,
             ai: AiSettings::default(),
@@ -456,6 +474,12 @@ pub static SETTINGS: &[SettingInfo] = &[
         keywords: "language taal sprache dutch nederlands german deutsch english translate interface",
     },
     SettingInfo {
+        key: "updates",
+        title: "Updates",
+        description: "Let BergPDF look for a newer version when it starts (once a day). Only the program name and version are sent; nothing is downloaded or installed.",
+        keywords: "update upgrade version new release check automatic",
+    },
+    SettingInfo {
         key: "graphics",
         title: "Graphics (drawing backend, frame pacing)",
         description: "Shows which graphics adapter is used and lets you try another API or uncapped frames if resizing or zooming feels slow.",
@@ -531,6 +555,20 @@ mod tests {
         assert_eq!(r.ui_scale, 1.0);
         // Garbage is an error, not a panic.
         assert!(Preferences::from_toml("= = =").is_err());
+    }
+
+    #[test]
+    fn update_check_is_undecided_by_default_and_survives_a_round_trip() {
+        let p = Preferences::default();
+        assert_eq!(p.update_check, UpdateCheck::Ask);
+        let p = Preferences {
+            update_check: UpdateCheck::On,
+            last_update_check: 42,
+            ..Default::default()
+        };
+        let back = Preferences::from_toml(&p.to_toml().unwrap()).unwrap();
+        assert_eq!(back.update_check, UpdateCheck::On);
+        assert_eq!(back.last_update_check, 42);
     }
 
     #[test]

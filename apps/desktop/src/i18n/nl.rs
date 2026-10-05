@@ -150,6 +150,10 @@ pub static ENTRIES: &[(&str, &str)] = &[
     ("Back", "Terug"),
     ("Balanced (recommended)", "Gebalanceerd (aanbevolen)"),
     (
+        "BergPDF can look once a day whether a newer version has been published. For that it contacts github.com and sends only its name and version number. Nothing is downloaded or installed: you get a link to the release page. You can change this in Preferences ▸ Updates.",
+        "BergPDF kan één keer per dag nagaan of er een nieuwere versie is gepubliceerd. Daarvoor maakt het verbinding met github.com en verstuurt alleen de programmanaam en het versienummer. Er wordt niets gedownload of geïnstalleerd: u krijgt een link naar de releasepagina. U kunt dit wijzigen in Voorkeuren ▸ Updates.",
+    ),
+    (
         "BergPDF checks that the signed bytes still match the signature. It does not check whether the signer's certificate is trusted, valid today, or revoked, and the signing time is only what the signer claimed. Confirm who the signer is by other means.",
         "BergPDF controleert of de ondertekende bytes nog overeenkomen met de handtekening. Het controleert niet of het certificaat van de ondertekenaar vertrouwd, vandaag geldig of ingetrokken is, en de ondertekentijd is alleen wat de ondertekenaar opgaf. Stel op een andere manier vast wie de ondertekenaar is.",
     ),
@@ -210,6 +214,8 @@ pub static ENTRIES: &[(&str, &str)] = &[
     ("Check", "Controleren"),
     ("Check again", "Opnieuw controleren"),
     ("Check box", "Selectievakje"),
+    ("Check for Updates…", "Op updates controleren…"),
+    ("Check for updates", "Op updates controleren"),
     (
         "Checking the document…",
         "Het document wordt gecontroleerd…",
@@ -379,6 +385,10 @@ pub static ENTRIES: &[(&str, &str)] = &[
         "Could not be checked: {}",
         "Kon niet worden gecontroleerd: {}",
     ),
+    (
+        "Could not check for updates.",
+        "Controleren op updates is niet gelukt.",
+    ),
     ("Could not delete: {}", "Kan niet verwijderen: {}"),
     ("Could not extract pages", "Kan de pagina's niet extraheren"),
     (
@@ -518,6 +528,10 @@ pub static ENTRIES: &[(&str, &str)] = &[
     ("Don't save", "Niet opslaan"),
     ("Done", "Klaar"),
     ("Download the OCR models", "De OCR-modellen downloaden"),
+    (
+        "Download the installer from the release page and run it over the current installation; your settings are kept.",
+        "Download het installatieprogramma van de releasepagina en voer het uit over de huidige installatie; uw instellingen blijven behouden.",
+    ),
     (
         "Drag a box to place the stamp.",
         "Sleep een kader om de stempel te plaatsen.",
@@ -859,6 +873,10 @@ pub static ENTRIES: &[(&str, &str)] = &[
     ("Last Page", "Laatste pagina"),
     ("Layout", "Indeling"),
     ("Length", "Lengte"),
+    (
+        "Let BergPDF look for a newer version when it starts (once a day). Only the program name and version are sent; nothing is downloaded or installed.",
+        "Laat BergPDF bij het opstarten naar een nieuwere versie zoeken (één keer per dag). Alleen de programmanaam en versie worden verstuurd; er wordt niets gedownload of geïnstalleerd.",
+    ),
     ("Light", "Licht"),
     (
         "Light, Dark or follow the system. Never changes document colours.",
@@ -873,6 +891,19 @@ pub static ENTRIES: &[(&str, &str)] = &[
         "De belangrijkste punten van dit document opsommen",
     ),
     ("Location", "Locatie"),
+    (
+        "Look for a newer published version of BergPDF",
+        "Zoeken naar een nieuwere gepubliceerde versie van BergPDF",
+    ),
+    (
+        "Look for updates when BergPDF starts",
+        "Bij het opstarten van BergPDF naar updates zoeken",
+    ),
+    ("Look for updates?", "Naar updates zoeken?"),
+    (
+        "Looking for a newer version…",
+        "Zoeken naar een nieuwere versie…",
+    ),
     ("Lossless", "Verliesvrij"),
     ("Low latency (vsync)", "Lage vertraging (vsync)"),
     (
@@ -971,6 +1002,7 @@ pub static ENTRIES: &[(&str, &str)] = &[
     ("Native components", "Native onderdelen"),
     ("Navigate", "Navigeren"),
     ("Navigation", "Navigatie"),
+    ("Never", "Nooit"),
     ("Next Page", "Volgende pagina"),
     ("Next Tab", "Volgend tabblad"),
     ("Next ▶", "Volgende ▶"),
@@ -1037,7 +1069,9 @@ pub static ENTRIES: &[(&str, &str)] = &[
     ("Open a PDF or image…", "Een PDF of afbeelding openen…"),
     ("Open external link?", "Externe link openen?"),
     ("Open in browser", "Openen in browser"),
+    ("Open release page", "Releasepagina openen"),
     ("Open settings", "Instellingen openen"),
+    ("Open the release page", "De releasepagina openen"),
     ("Open translated copy", "Vertaalde kopie openen"),
     ("OpenAI", "OpenAI"),
     ("OpenGL", "OpenGL"),
@@ -1806,6 +1840,7 @@ pub static ENTRIES: &[(&str, &str)] = &[
         "Unlock the file and show who it identifies",
         "Het bestand ontgrendelen en tonen wie het identificeert",
     ),
+    ("Update available: {}", "Update beschikbaar: {}"),
     (
         "Update existing measurements to this scale",
         "Bestaande metingen bijwerken naar deze schaal",
@@ -1815,6 +1850,7 @@ pub static ENTRIES: &[(&str, &str)] = &[
         "Update them to the page scale",
         "Werk ze bij naar de paginaschaal",
     ),
+    ("Updates", "Updates"),
     ("Upright", "Rechtop"),
     ("Use dark page view", "Donkere paginaweergave gebruiken"),
     (
@@ -1832,6 +1868,7 @@ pub static ENTRIES: &[(&str, &str)] = &[
         "De sleutel uit de omgevingsvariabele BERGPDF_AI_KEY wordt gebruikt.",
     ),
     ("Version {}", "Versie {}"),
+    ("Version {} is available.", "Versie {} is beschikbaar."),
     (
         "Version, licences and dependency notices",
         "Versie, licenties en afhankelijkheidsvermeldingen",
@@ -1870,6 +1907,11 @@ pub static ENTRIES: &[(&str, &str)] = &[
         "You can undo this with Undo until you close the document.",
         "U kunt dit met Ongedaan maken terugdraaien totdat u het document sluit.",
     ),
+    (
+        "You have the latest version ({}).",
+        "U hebt de nieuwste versie ({}).",
+    ),
+    ("You have version {}.", "U hebt versie {}."),
     ("Your name", "Uw naam"),
     ("Zoom", "Zoom"),
     ("Zoom In", "Inzoomen"),

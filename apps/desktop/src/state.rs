@@ -76,6 +76,10 @@ pub enum Dialog {
     },
     /// About / licences.
     About,
+    /// One-time question whether BergPDF may look for updates.
+    UpdateAsk,
+    /// Result of "Check for updates".
+    Update(crate::update_ui::UpdateState),
     /// First-run workspace choice.
     FirstRun,
     /// Delete-pages confirmation.
@@ -305,6 +309,7 @@ pub struct App {
     pub snaps: crate::snap_ui::SnapService,
     /// PDF Copilot runtime (jobs, key, cached text).
     pub ai: crate::copilot_ui::AiRuntime,
+    pub update: crate::update_ui::UpdateRuntime,
 }
 
 impl App {

@@ -258,3 +258,16 @@ matches both the English and the translated title. A test scans the source and t
 has no Dutch or German entry or when the `{}` holes differ. Not translated on purpose: error messages that come from
 the PDF engine, the operating system or an AI provider; the prompts sent to AI providers; language names. The German
 text was written without a native reviewer. Adding a language: see DEVELOPING.md.
+
+## D-033 — Update check: a notice and a link, nothing is installed by the program
+Auto-update of the installed program was weighed against the privacy promise (no network for core use) and the fact that
+the installers are unsigned. Chosen: a *notification* only. `ai_client::update` asks
+`api.github.com/repos/markvdberg0/BergPDF/releases/latest` (published, non-draft, non-pre-release releases only), compares
+versions numerically and, when newer, the application shows "Update available: X" in the status bar and a dialog with a
+link to the release page. The link is built from the tag (accepted only if it contains letters, digits, `.`, `-`, `+`), never
+taken from the response. The request carries only a `BergPDF/<version>` user agent. The check is **off until the user
+says yes**: a one-time question after the welcome screen (Check / Never), later changeable in Preferences ▸ Updates; when
+on it runs at most once a day in the background; a failure is silent. "Check for Updates…" (File ▸ Application, command
+palette) always works when pressed. `BERG_UPDATE_URL` points the check at another address (https or loopback) for testing.
+Not done on purpose: downloading and running an installer from inside the program. That would need our own signing key
+and signature verification and cannot be tested here on Windows; it can be added later on top of this.

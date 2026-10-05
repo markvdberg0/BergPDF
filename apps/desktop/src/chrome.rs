@@ -79,6 +79,7 @@ pub fn command_icon(c: C) -> Icon {
         C::Preferences => Icon::Settings,
         C::ShortcutReference => Icon::Keys,
         C::About => Icon::Info,
+        C::CheckForUpdates => Icon::Info,
         C::ViewZoomIn => Icon::ZoomIn,
         C::ViewZoomOut => Icon::ZoomOut,
         C::ViewZoomActual => Icon::Page,
@@ -361,7 +362,7 @@ impl App {
                             });
                         }
                     });
-                    self.group(ui, tr("Application"), |s, ui| s.cmds(ui, ctx, &[C::Preferences, C::ShortcutReference, C::About]));
+                    self.group(ui, tr("Application"), |s, ui| s.cmds(ui, ctx, &[C::Preferences, C::ShortcutReference, C::CheckForUpdates, C::About]));
                 }
                 RibbonTab::Home => {
                     self.group(ui, tr("History"), |s, ui| s.cmds(ui, ctx, &[C::EditUndo, C::EditRedo]));
@@ -564,6 +565,23 @@ impl App {
                             .color(self.pal.text_dim)
                             .size(12.0),
                     );
+                }
+                if let Some(r) = self.update.available.clone() {
+                    if ui
+                        .add(
+                            egui::Label::new(
+                                RichText::new(tf!("Update available: {}", r.version))
+                                    .color(self.pal.accent)
+                                    .size(12.0),
+                            )
+                            .sense(Sense::click()),
+                        )
+                        .on_hover_text(tr("Open the release page"))
+                        .clicked()
+                    {
+                        self.open_update_page();
+                    }
+                    ui.separator();
                 }
                 let Some(info) = self.status_info() else {
                     return;

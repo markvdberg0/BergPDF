@@ -150,6 +150,10 @@ pub static ENTRIES: &[(&str, &str)] = &[
     ("Back", "Zurück"),
     ("Balanced (recommended)", "Ausgewogen (empfohlen)"),
     (
+        "BergPDF can look once a day whether a newer version has been published. For that it contacts github.com and sends only its name and version number. Nothing is downloaded or installed: you get a link to the release page. You can change this in Preferences ▸ Updates.",
+        "BergPDF kann einmal täglich prüfen, ob eine neuere Version veröffentlicht wurde. Dafür verbindet es sich mit github.com und sendet nur seinen Namen und die Versionsnummer. Es wird nichts heruntergeladen oder installiert: Sie erhalten einen Link zur Release-Seite. Sie können dies unter Einstellungen ▸ Updates ändern.",
+    ),
+    (
         "BergPDF checks that the signed bytes still match the signature. It does not check whether the signer's certificate is trusted, valid today, or revoked, and the signing time is only what the signer claimed. Confirm who the signer is by other means.",
         "BergPDF prüft, ob die signierten Bytes noch zur Signatur passen. Es prüft nicht, ob das Zertifikat des Unterzeichners vertrauenswürdig, heute gültig oder widerrufen ist, und die Signierzeit ist nur die Angabe des Unterzeichners. Stellen Sie auf anderem Weg fest, wer der Unterzeichner ist.",
     ),
@@ -213,6 +217,8 @@ pub static ENTRIES: &[(&str, &str)] = &[
     ("Check", "Prüfen"),
     ("Check again", "Erneut prüfen"),
     ("Check box", "Kontrollkästchen"),
+    ("Check for Updates…", "Nach Updates suchen …"),
+    ("Check for updates", "Nach Updates suchen"),
     ("Checking the document…", "Das Dokument wird geprüft …"),
     (
         "Choose OpenAI, Anthropic or your own server and store the API key on this computer.",
@@ -385,6 +391,10 @@ pub static ENTRIES: &[(&str, &str)] = &[
         "Could not be checked: {}",
         "Konnte nicht geprüft werden: {}",
     ),
+    (
+        "Could not check for updates.",
+        "Die Suche nach Updates ist fehlgeschlagen.",
+    ),
     ("Could not delete: {}", "Löschen nicht möglich: {}"),
     (
         "Could not extract pages",
@@ -539,6 +549,10 @@ pub static ENTRIES: &[(&str, &str)] = &[
     ("Don't save", "Nicht speichern"),
     ("Done", "Fertig"),
     ("Download the OCR models", "OCR-Modelle herunterladen"),
+    (
+        "Download the installer from the release page and run it over the current installation; your settings are kept.",
+        "Laden Sie das Installationsprogramm von der Release-Seite herunter und führen Sie es über die bestehende Installation aus; Ihre Einstellungen bleiben erhalten.",
+    ),
     (
         "Drag a box to place the stamp.",
         "Ziehen Sie einen Rahmen auf, um den Stempel zu platzieren.",
@@ -892,6 +906,10 @@ pub static ENTRIES: &[(&str, &str)] = &[
     ("Last Page", "Letzte Seite"),
     ("Layout", "Layout"),
     ("Length", "Länge"),
+    (
+        "Let BergPDF look for a newer version when it starts (once a day). Only the program name and version are sent; nothing is downloaded or installed.",
+        "BergPDF beim Start nach einer neueren Version suchen lassen (einmal täglich). Es werden nur Programmname und Version gesendet; es wird nichts heruntergeladen oder installiert.",
+    ),
     ("Light", "Hell"),
     (
         "Light, Dark or follow the system. Never changes document colours.",
@@ -906,6 +924,19 @@ pub static ENTRIES: &[(&str, &str)] = &[
         "Die wichtigsten Punkte dieses Dokuments auflisten",
     ),
     ("Location", "Ort"),
+    (
+        "Look for a newer published version of BergPDF",
+        "Nach einer neueren veröffentlichten Version von BergPDF suchen",
+    ),
+    (
+        "Look for updates when BergPDF starts",
+        "Beim Start von BergPDF nach Updates suchen",
+    ),
+    ("Look for updates?", "Nach Updates suchen?"),
+    (
+        "Looking for a newer version…",
+        "Suche nach einer neueren Version …",
+    ),
     ("Lossless", "Verlustfrei"),
     ("Low latency (vsync)", "Geringe Latenz (VSync)"),
     (
@@ -1004,6 +1035,7 @@ pub static ENTRIES: &[(&str, &str)] = &[
     ("Native components", "Native Komponenten"),
     ("Navigate", "Navigation"),
     ("Navigation", "Navigation"),
+    ("Never", "Nie"),
     ("Next Page", "Nächste Seite"),
     ("Next Tab", "Nächster Tab"),
     ("Next ▶", "Weiter ▶"),
@@ -1070,7 +1102,9 @@ pub static ENTRIES: &[(&str, &str)] = &[
     ("Open a PDF or image…", "Eine PDF oder ein Bild öffnen …"),
     ("Open external link?", "Externen Link öffnen?"),
     ("Open in browser", "Im Browser öffnen"),
+    ("Open release page", "Release-Seite öffnen"),
     ("Open settings", "Einstellungen öffnen"),
+    ("Open the release page", "Die Release-Seite öffnen"),
     ("Open translated copy", "Übersetzte Kopie öffnen"),
     ("OpenAI", "OpenAI"),
     ("OpenGL", "OpenGL"),
@@ -1854,6 +1888,7 @@ pub static ENTRIES: &[(&str, &str)] = &[
         "Unlock the file and show who it identifies",
         "Die Datei entsperren und anzeigen, wen sie identifiziert",
     ),
+    ("Update available: {}", "Update verfügbar: {}"),
     (
         "Update existing measurements to this scale",
         "Vorhandene Messungen auf diesen Maßstab aktualisieren",
@@ -1863,6 +1898,7 @@ pub static ENTRIES: &[(&str, &str)] = &[
         "Update them to the page scale",
         "Auf den Seitenmaßstab aktualisieren",
     ),
+    ("Updates", "Updates"),
     ("Upright", "Aufrecht"),
     ("Use dark page view", "Dunkle Seitenansicht verwenden"),
     (
@@ -1880,6 +1916,7 @@ pub static ENTRIES: &[(&str, &str)] = &[
         "Der Schlüssel aus der Umgebungsvariablen BERGPDF_AI_KEY wird verwendet.",
     ),
     ("Version {}", "Version {}"),
+    ("Version {} is available.", "Version {} ist verfügbar."),
     (
         "Version, licences and dependency notices",
         "Version, Lizenzen und Hinweise zu Abhängigkeiten",
@@ -1918,6 +1955,11 @@ pub static ENTRIES: &[(&str, &str)] = &[
         "You can undo this with Undo until you close the document.",
         "Sie können dies mit „Rückgängig“ zurücknehmen, bis Sie das Dokument schließen.",
     ),
+    (
+        "You have the latest version ({}).",
+        "Sie haben die neueste Version ({}).",
+    ),
+    ("You have version {}.", "Sie haben Version {}."),
     ("Your name", "Ihr Name"),
     ("Zoom", "Zoom"),
     ("Zoom In", "Vergrößern"),
