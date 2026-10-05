@@ -231,7 +231,7 @@ fn main() -> ExitCode {
 
 #[cfg(test)]
 mod tests {
-    #![allow(clippy::unwrap_used)]
+    #![allow(clippy::unwrap_used, clippy::expect_used)]
 
     /// `Packager.toml` repeats the version; it must not drift from the workspace's.
     #[test]
