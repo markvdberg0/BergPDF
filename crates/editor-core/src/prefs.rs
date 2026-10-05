@@ -46,7 +46,8 @@ pub enum DefaultZoom {
 /// Which graphics API the window draws with (applied at the next start).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum GfxBackend {
-    /// Let the graphics library choose (the `WGPU_BACKEND` environment variable still works).
+    /// DirectX 12 on Windows (falling back to the library's choice if it cannot start); the
+    /// library's choice elsewhere. The `WGPU_BACKEND` environment variable still overrides.
     #[default]
     Auto,
     /// Direct3D 12 (Windows).
@@ -61,7 +62,7 @@ impl GfxBackend {
     /// Display name.
     pub fn title(self) -> &'static str {
         match self {
-            GfxBackend::Auto => "Automatic",
+            GfxBackend::Auto => "Automatic (DirectX 12 on Windows)",
             GfxBackend::Dx12 => "DirectX 12",
             GfxBackend::Vulkan => "Vulkan",
             GfxBackend::Gl => "OpenGL",

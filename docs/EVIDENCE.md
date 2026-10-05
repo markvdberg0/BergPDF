@@ -308,3 +308,10 @@ Not covered: system fonts, CJK, mixed fonts inside one text run, Windows/macOS.
   copy (mock AI server: every paragraph tagged "[EN]"). Typing needed the window focused (`xdotool windowfocus`).
 * Not covered: any Windows/macOS run, a real AI provider, translation quality, tables and multi-column layouts
   on real documents, slider timing on a real pointer, Graphics settings on a real GPU.
+
+## Addendum — Windows resize (owner report, 2026-10-05)
+
+After choosing DirectX 12 under Preferences ▸ Graphics, the owner reported that the slow window resizing on their
+Windows laptop was gone completely. This confirms the cause was the graphics path, not the application's own work.
+"Automatic" now means DirectX 12 on Windows (D-027, with a fallback to the library default); the change itself
+was only compiled and unit-tested on Linux.

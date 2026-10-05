@@ -27,10 +27,15 @@ fn backends(b: GfxBackend) -> Option<wgpu::Backends> {
 
 /// wgpu configuration from the saved preferences. `Auto` keeps the library defaults, including
 /// the `WGPU_BACKEND` environment override.
-pub fn configuration(g: &GraphicsPrefs) -> WgpuConfiguration {
+///
+/// With `prefer_dx12`, `Auto` on Windows means DirectX 12 (unless `WGPU_BACKEND` is set): on the
+/// laptop that reported slow resizing the library's own choice was slow and DirectX 12 was smooth.
+pub fn configuration(g: &GraphicsPrefs, prefer_dx12: bool) -> WgpuConfiguration {
     let mut setup = WgpuSetupCreateNew::without_display_handle();
     if let Some(b) = backends(g.backend) {
         setup.instance_descriptor.backends = b;
+    } else if prefer_dx12 && dx12_is_default() {
+        setup.instance_descriptor.backends = wgpu::Backends::DX12;
     }
     WgpuConfiguration {
         surface: surface(g.present),
@@ -43,4 +48,9 @@ pub fn configuration(g: &GraphicsPrefs) -> WgpuConfiguration {
 pub fn describe(rs: &egui_wgpu::RenderState) -> String {
     let i = rs.adapter.get_info();
     format!("{} — {:?}, {:?}", i.name, i.backend, i.device_type)
+}
+
+/// Whether `Auto` should try DirectX 12 first: Windows, and no `WGPU_BACKEND` override.
+pub fn dx12_is_default() -> bool {
+    cfg!(windows) && std::env::var_os("WGPU_BACKEND").is_none()
 }

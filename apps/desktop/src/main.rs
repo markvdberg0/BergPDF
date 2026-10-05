@@ -48,8 +48,8 @@ fn main() -> eframe::Result {
     let prefs = platform::dirs::read_text(&platform::dirs::prefs_file())
         .and_then(|s| editor_core::prefs::Preferences::from_toml(&s).ok())
         .unwrap_or_default();
-    let options = eframe::NativeOptions {
-        wgpu_options: gpu::configuration(&prefs.graphics),
+    let options = |prefer_dx12: bool| eframe::NativeOptions {
+        wgpu_options: gpu::configuration(&prefs.graphics, prefer_dx12),
         viewport: egui::ViewportBuilder::default()
             .with_title("BergPDF")
             .with_icon(egui::IconData {
@@ -62,9 +62,23 @@ fn main() -> eframe::Result {
             .with_drag_and_drop(true),
         ..Default::default()
     };
-    eframe::run_native(
+    let first_files = files.clone();
+    let result = eframe::run_native(
         "BergPDF",
-        options,
-        Box::new(move |cc| Ok(Box::new(state::App::new_app(cc, files)))),
-    )
+        options(true),
+        Box::new(move |cc| Ok(Box::new(state::App::new_app(cc, first_files)))),
+    );
+    // If DirectX 12 could not be started, try again with the library's own choice.
+    if result.is_err()
+        && prefs.graphics.backend == editor_core::prefs::GfxBackend::Auto
+        && gpu::dx12_is_default()
+    {
+        tracing::warn!("DirectX 12 could not be started; trying the default graphics API");
+        return eframe::run_native(
+            "BergPDF",
+            options(false),
+            Box::new(move |cc| Ok(Box::new(state::App::new_app(cc, files)))),
+        );
+    }
+    result
 }

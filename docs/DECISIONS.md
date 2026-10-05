@@ -203,3 +203,10 @@ Annotation text is laid out in its own upright frame and placed into the box wit
 default makes text read upright for the page's `/Rotate` plus the temporary view rotation; the user can turn it
 further in 90° steps (stored as `/BergRot`). A callout's text box is stored separately (`/BergBox`) because
 `/Rect` also covers the leader line.
+
+## D-027 — DirectX 12 is the automatic graphics API on Windows
+After the Preferences ▸ Graphics switch, a Windows laptop that resized extremely slowly with the library's own
+choice resized smoothly with DirectX 12 (reported by the owner; one machine, cause not investigated further).
+"Automatic" therefore tries DirectX 12 first on Windows and, if the window cannot be created that way, starts
+again with the library default. `WGPU_BACKEND` and an explicit choice in Preferences still win. Not verified on
+other Windows machines or GPUs.
