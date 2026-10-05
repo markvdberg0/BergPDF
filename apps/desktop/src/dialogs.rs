@@ -353,6 +353,18 @@ impl App {
                     }
                 }
             }
+            Dialog::AiConsent => {
+                keep = self.dialog_ai_consent(ctx);
+            }
+            Dialog::Translate(st) => {
+                keep = self.dialog_translate(ctx, st);
+            }
+            Dialog::PdfA(st) => {
+                keep = self.dialog_pdfa(ctx, st);
+            }
+            Dialog::Optimize(st) => {
+                keep = self.dialog_optimize(ctx, st);
+            }
             Dialog::Ocr(st) => {
                 keep = self.dialog_ocr(ctx, st);
             }
@@ -487,6 +499,14 @@ impl App {
                         if show("dark_page_filter") {
                             section(ui, "Dark page view", "Comfortable dark reading filter. Display only — saved PDFs are never changed.");
                             changed |= ui.checkbox(&mut self.prefs.dark_page_filter, "Use dark page view").changed();
+                        }
+                        if show("snap_to_geometry") {
+                            section(ui, "Snap to drawing geometry", "Measurements jump to line ends, corners, intersections and midpoints of the page when the pointer is close.");
+                            changed |= ui.checkbox(&mut self.prefs.snap_to_geometry, "Snap to drawing geometry").changed();
+                        }
+                        if show("ai") {
+                            section(ui, "PDF Copilot (AI provider and key)", "Use your own OpenAI or Anthropic account (or a server of your own) for Copilot and Translate.");
+                            changed |= self.ai_prefs_section(ui, ctx);
                         }
                         if show("density") {
                             section(ui, "Interface density", "Compact, Comfortable or Touch/Pen hit targets.");

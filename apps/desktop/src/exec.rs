@@ -71,7 +71,14 @@ impl App {
             | C::PageMoveDown
             | C::DocumentMerge => has && can_edit,
             C::PageExtract => has,
-            C::FileProperties | C::FileExportImage | C::ShowSignatures => has,
+            C::FileProperties
+            | C::FileExportImage
+            | C::ShowSignatures
+            | C::FileSaveOptimized
+            | C::FileConvertPdfA => has,
+            C::ToggleCopilot => true,
+            C::CopilotSummarize | C::CopilotSummarizeAnnotations => has && !self.ai_busy(),
+            C::TranslateDocument => has,
             C::SignDocument => has && can_edit,
             C::OcrDocument => has && can_edit && self.ocr_job.is_none(),
             C::DrawSignature => true,
@@ -143,6 +150,8 @@ impl App {
             C::FileProperties => self.open_properties(),
             C::SignDocument => self.open_sign_dialog(),
             C::OcrDocument => self.open_ocr_dialog(),
+            C::FileSaveOptimized => self.open_optimize_dialog(),
+            C::FileConvertPdfA => self.open_pdfa_dialog(),
             C::ShowSignatures => self.open_signatures(),
             C::DrawSignature => self.open_draw_signature(),
             C::FileExportImage => self.export_page_image(),
@@ -209,6 +218,29 @@ impl App {
             C::ViewDarkPages => {
                 self.prefs.dark_page_filter = !self.prefs.dark_page_filter;
                 self.restyle(ctx);
+            }
+            C::ToggleCopilot => self.toggle_copilot(),
+            C::CopilotSummarize => self.copilot_summarize(ctx),
+            C::CopilotSummarizeAnnotations => self.copilot_summarize_annotations(ctx),
+            C::TranslateDocument => {
+                if self.ai_config().is_err() {
+                    self.dialog = Some(Dialog::Preferences {
+                        filter: "ai".into(),
+                    });
+                    self.notify("Add an AI provider key first.");
+                } else if self.ai_consent_or_ask(crate::copilot_ui::AiPending::OpenTranslate) {
+                    self.open_translate_dialog(ctx);
+                }
+            }
+            C::ToggleSnap => {
+                self.prefs.snap_to_geometry = !self.prefs.snap_to_geometry;
+                self.prefs_dirty = true;
+                let on = self.prefs.snap_to_geometry;
+                self.notify(if on {
+                    "Snap to drawing geometry on"
+                } else {
+                    "Snap to drawing geometry off"
+                });
             }
             C::GoNextPage => self.go_relative(1),
             C::GoPreviousPage => self.go_relative(-1),
@@ -353,9 +385,16 @@ impl App {
                 session.view.zoom = 1.0;
             }
         }
+        // Always open at the top, centred: scroll origin is (0,0) and page 0 is brought into view.
+        session.view.scroll = pdf_engine::geom::Vec2::ZERO;
+        session.view.current_page = 0;
+        let ui_state = TabState {
+            goto: Some(0),
+            ..TabState::default()
+        };
         self.tabs.push(Tab {
             session,
-            ui: TabState::default(),
+            ui: ui_state,
         });
         self.active = self.tabs.len() - 1;
     }

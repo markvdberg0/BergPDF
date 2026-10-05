@@ -113,7 +113,7 @@ impl App {
         ]
     }
 
-    fn new_spec(&self, kind: AnnotationKind) -> AnnotationSpec {
+    pub(crate) fn new_spec(&self, kind: AnnotationKind) -> AnnotationSpec {
         let d = &self.prefs.tool_defaults;
         let mut s = AnnotationSpec::new(kind);
         s.author = self.prefs.author.clone();
@@ -127,7 +127,7 @@ impl App {
         s
     }
 
-    fn add_annotation(&mut self, page: PageId, spec: AnnotationSpec, label: &str) {
+    pub(crate) fn add_annotation(&mut self, page: PageId, spec: AnnotationSpec, label: &str) {
         let Some(tab) = self.tabs.get_mut(self.active) else {
             return;
         };

@@ -71,6 +71,99 @@ impl Default for ToolDefaults {
     }
 }
 
+/// Which AI service PDF Copilot talks to.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub enum AiProvider {
+    /// OpenAI chat completions (or any service speaking that protocol).
+    #[default]
+    OpenAi,
+    /// Anthropic messages API.
+    Anthropic,
+    /// A server of your choice that speaks the OpenAI chat protocol (for example a local one).
+    Custom,
+}
+
+impl AiProvider {
+    /// Display name.
+    pub fn title(self) -> &'static str {
+        match self {
+            AiProvider::OpenAi => "OpenAI",
+            AiProvider::Anthropic => "Anthropic (Claude)",
+            AiProvider::Custom => "Custom (OpenAI-compatible)",
+        }
+    }
+
+    /// Default endpoint root.
+    pub fn default_base_url(self) -> &'static str {
+        match self {
+            AiProvider::OpenAi => "https://api.openai.com/v1",
+            AiProvider::Anthropic => "https://api.anthropic.com/v1",
+            AiProvider::Custom => "http://localhost:11434/v1",
+        }
+    }
+
+    /// Default model name (the user can change it).
+    pub fn default_model(self) -> &'static str {
+        match self {
+            AiProvider::OpenAi => "gpt-4.1-mini",
+            AiProvider::Anthropic => "claude-sonnet-5-5",
+            AiProvider::Custom => "llama3.1",
+        }
+    }
+}
+
+/// PDF Copilot settings. The API key itself is **not** here: it lives in its own file
+/// (`platform::secrets`) so this file can be shared or backed up without leaking it.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct AiSettings {
+    pub provider: AiProvider,
+    /// Model name; empty means the provider default.
+    pub model: String,
+    /// Endpoint root; empty means the provider default.
+    pub base_url: String,
+    /// Language Copilot answers in; empty means "the language of the question".
+    pub answer_language: String,
+    /// Language the Translate command targets by default.
+    pub translate_to: String,
+    /// Characters of document text sent per request (bounds cost and what leaves the machine).
+    pub max_chars: u32,
+}
+
+impl Default for AiSettings {
+    fn default() -> Self {
+        Self {
+            provider: AiProvider::OpenAi,
+            model: String::new(),
+            base_url: String::new(),
+            answer_language: String::new(),
+            translate_to: "English".to_string(),
+            max_chars: 60_000,
+        }
+    }
+}
+
+impl AiSettings {
+    /// Effective model name.
+    pub fn model(&self) -> &str {
+        if self.model.trim().is_empty() {
+            self.provider.default_model()
+        } else {
+            self.model.trim()
+        }
+    }
+
+    /// Effective endpoint root without a trailing slash.
+    pub fn base_url(&self) -> String {
+        let b = if self.base_url.trim().is_empty() {
+            self.provider.default_base_url()
+        } else {
+            self.base_url.trim()
+        };
+        b.trim_end_matches('/').to_string()
+    }
+}
+
 /// All persisted preferences.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(default)]
@@ -99,6 +192,14 @@ pub struct Preferences {
     pub right_sidebar_width: f32,
     /// Render cache budget in MiB.
     pub render_cache_mb: u32,
+    /// Snap measurement points to line ends, corners, intersections and midpoints of the page.
+    pub snap_to_geometry: bool,
+    /// Whether the PDF Copilot panel is open.
+    pub show_copilot: bool,
+    /// PDF Copilot / translation settings (the key is stored separately).
+    pub ai: AiSettings,
+    /// The provider the user has agreed to send document text to; asked again when it changes.
+    pub ai_consent_provider: Option<AiProvider>,
 }
 
 impl Default for Preferences {
@@ -124,8 +225,12 @@ impl Default for Preferences {
             show_left_sidebar: true,
             show_right_sidebar: true,
             left_sidebar_width: 190.0,
-            right_sidebar_width: 260.0,
+            right_sidebar_width: 300.0,
             render_cache_mb: 384,
+            snap_to_geometry: true,
+            show_copilot: false,
+            ai: AiSettings::default(),
+            ai_consent_provider: None,
         }
     }
 }
@@ -207,6 +312,18 @@ pub static SETTINGS: &[SettingInfo] = &[
         title: "Workspace",
         description: "Essential shows the common tools; Professional shows everything.",
         keywords: "simple advanced essential professional",
+    },
+    SettingInfo {
+        key: "snap_to_geometry",
+        title: "Snap to drawing geometry",
+        description: "Measurements snap to line ends, corners, intersections and midpoints.",
+        keywords: "snap magnet cad corner endpoint intersection midpoint measure",
+    },
+    SettingInfo {
+        key: "ai",
+        title: "PDF Copilot (AI provider and key)",
+        description: "Choose OpenAI, Anthropic or your own server and store the API key on this computer.",
+        keywords: "ai api key openai claude anthropic copilot chat summarize translate model",
     },
     SettingInfo {
         key: "default_zoom",

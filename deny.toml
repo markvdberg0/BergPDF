@@ -32,6 +32,9 @@ allow = [
     "OFL-1.1",
     "Ubuntu-font-1.0",
     "APAFML",
+    # Mozilla's root-certificate lists (webpki-roots, webpki-root-certs) used by the optional AI
+    # client's TLS stack. A permissive *data* licence: use, modify and redistribute with notice.
+    "CDLA-Permissive-2.0",
 ]
 confidence-threshold = 0.9
 

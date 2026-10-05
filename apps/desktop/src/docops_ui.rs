@@ -6,12 +6,11 @@ use crate::state::*;
 use egui::RichText;
 use pdf_engine::meta::{self, InfoEdit};
 use pdf_engine::render::{export_scale, with_session};
-use std::path::PathBuf;
 use std::sync::mpsc;
 
 /// A running page export.
 pub struct ExportJob {
-    pub rx: mpsc::Receiver<Result<PathBuf, String>>,
+    pub rx: mpsc::Receiver<Result<String, String>>,
 }
 
 impl App {
@@ -244,7 +243,7 @@ impl App {
                 std::fs::write(&tmp, &png)
                     .and_then(|()| std::fs::rename(&tmp, &dest))
                     .map_err(|e| format!("Could not write {}: {e}", dest.display()))?;
-                Ok(dest)
+                Ok(format!("Saved {}", dest.display()))
             });
             let _ = tx.send(result);
         });
@@ -257,7 +256,7 @@ impl App {
         if self.exports.is_empty() {
             return;
         }
-        let mut done: Vec<Result<PathBuf, String>> = Vec::new();
+        let mut done: Vec<Result<String, String>> = Vec::new();
         self.exports.retain(|j| match j.rx.try_recv() {
             Ok(r) => {
                 done.push(r);
@@ -271,7 +270,7 @@ impl App {
         });
         for r in done {
             match r {
-                Ok(p) => self.notify(format!("Saved {}", p.display())),
+                Ok(m) => self.notify(m),
                 Err(e) => self.notify_error(e),
             }
         }

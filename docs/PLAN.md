@@ -79,6 +79,17 @@ implemented (see FEATURE_MATRIX.md, DECISIONS.md D-013…D-016, EVIDENCE.md). St
 run on Windows or macOS, and the certificate/save pickers of the signing flow and the PNG/CSV export
 dialogs were not driven in the headless sandbox.
 
+## Additions after the second review (2026-10-05)
+
+Requested after the owner tried build 2 on the Intel NUC: snapping for measurements, right-click menu,
+open-at-top centring, Save As Optimized, PDF/A, translation, an AI key in Preferences with PDF Copilot,
+collapsible and properly padded side panels. All are implemented (FEATURE_MATRIX "Third round",
+DECISIONS D-017…D-021, EVIDENCE). Honest gaps: the NUC's fit-page offset could not be reproduced, so the
+fix is defensive (reset scroll/page on open, fit on first frame) rather than a confirmed root cause;
+Copilot/Translate were exercised against a mock server and a real endpoint only up to a 401, never with
+a valid key; PDF/A is validated by veraPDF in tests but the app ships no validator; D-012's "no HTTP
+client" is replaced by "one, isolated, opt-in".
+
 ## Quality gate (what “green” means here)
 
 `cargo xtask check` = `cargo fmt --check`, `cargo clippy --workspace --all-targets -D warnings`,
@@ -100,7 +111,9 @@ dialogs were not driven in the headless sandbox.
 8. Fuzz `lopdf`/`hayro` entry points and the content-stream scanner; add corpus tests.
 9. Secure redaction behind its own gate (true removal from content streams, images, metadata,
    annotations, bookmarks and incremental-save remnants, with an independent extraction test).
-10. Signing follow-ups: RFC 3161 timestamps, PAdES-LT, certification signatures, OS certificate
+10. AI follow-ups: OS key store for the API key; streaming answers; a build without the `ai-client` crate;
+    local-model quickstart; evaluate answer quality on real documents; optional-content-aware text.
+11. Signing follow-ups: RFC 3161 timestamps, PAdES-LT, certification signatures, OS certificate
     stores / hardware tokens; replace `rsa` when a fixed release exists. OCR follow-ups: accented
     Latin characters (other models), rotated pages, review model licence and bundle or not.
 

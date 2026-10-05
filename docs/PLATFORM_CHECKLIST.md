@@ -54,3 +54,18 @@ on that OS (with notes), nothing in `FEATURE_MATRIX.md` may be marked “Verifie
 ## Security
 - [ ] Windows: render worker in a job object with limits; macOS: sandbox profile (design only
       today — no worker process exists yet)
+
+## Added 2026-10-05 (nothing below has been run on Windows or macOS)
+
+* [ ] **TLS / certificates**: Copilot "Test connection" with a real key reaches api.openai.com and
+      api.anthropic.com from a normal network and from behind a corporate proxy (OS verifier).
+* [ ] **Key file**: Windows – the file inherits the user-profile ACL (check no other account can read
+      `%APPDATA%\BergPDF\ai-key`); macOS – mode 0600 verified.
+* [ ] **Right-click menu** on Windows (Shift+F10 / menu key) and macOS (two-finger click, Ctrl-click).
+* [ ] **Panels**: collapse/expand rails and padding at 100 %, 150 % and 200 % display scaling; fit-page
+      centring at open on a HiDPI display (the offset reported on the Intel NUC could not be reproduced
+      here).
+* [ ] **Snap** markers visible and aligned on a HiDPI display.
+* [ ] **Save As Optimized / Convert to PDF/A**: native save picker, a 100 MB+ file, cancel behaviour.
+* [ ] **Translate → Save as PDF/text** pickers; non-Latin target languages (the PDF replaces characters
+      outside Latin/Greek/Cyrillic with "?" and says so).

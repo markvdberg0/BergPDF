@@ -21,19 +21,75 @@ fn thumb_bucket(w: f32) -> f32 {
 }
 
 impl App {
+    /// Frame shared by both side panels: fill plus breathing room so nothing touches the edges.
+    pub fn side_frame(&self) -> egui::Frame {
+        egui::Frame::new()
+            .fill(self.pal.panel)
+            .inner_margin(egui::Margin::symmetric(10, 4))
+    }
+
+    fn collapse_button(ui: &mut egui::Ui, glyph: &str, tip: &str) -> bool {
+        ui.add(egui::Button::new(RichText::new(glyph).size(15.0)).frame(false))
+            .on_hover_text(tip)
+            .clicked()
+    }
+
+    /// Thin strip shown instead of a hidden side panel; one click brings the panel back.
+    pub fn collapsed_rail(&mut self, ui: &mut egui::Ui, left: bool) {
+        let panel = if left {
+            egui::Panel::left("left_rail")
+        } else {
+            egui::Panel::right("right_rail")
+        };
+        panel
+            .resizable(false)
+            .exact_size(26.0)
+            .frame(egui::Frame::new().fill(self.pal.panel))
+            .show(ui, |ui| {
+                ui.add_space(6.0);
+                let (glyph, tip) = match left {
+                    true => ("»", "Show the page panel"),
+                    false => ("«", "Show the properties panel"),
+                };
+                if ui
+                    .add(egui::Button::new(RichText::new(glyph).size(15.0)).frame(false))
+                    .on_hover_text(tip)
+                    .clicked()
+                {
+                    if left {
+                        self.prefs.show_left_sidebar = true;
+                    } else {
+                        self.prefs.show_right_sidebar = true;
+                    }
+                    self.prefs_dirty = true;
+                }
+            });
+    }
+
     pub fn left_sidebar(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
         ui.add_space(4.0);
-        ui.horizontal(|ui| {
-            for (t, label) in [
-                (LeftTab::Thumbnails, "Pages"),
-                (LeftTab::Bookmarks, "Bookmarks"),
-                (LeftTab::Search, "Search"),
-            ] {
-                if ui.selectable_label(self.left_tab == t, label).clicked() {
-                    self.left_tab = t;
+        let mut hide = false;
+        egui::Sides::new().show(
+            ui,
+            |ui| {
+                for (t, label) in [
+                    (LeftTab::Thumbnails, "Pages"),
+                    (LeftTab::Bookmarks, "Bookmarks"),
+                    (LeftTab::Search, "Search"),
+                ] {
+                    if ui.selectable_label(self.left_tab == t, label).clicked() {
+                        self.left_tab = t;
+                    }
                 }
-            }
-        });
+            },
+            |ui| {
+                hide = Self::collapse_button(ui, "«", "Hide the page panel (View ▸ Left panel)");
+            },
+        );
+        if hide {
+            self.prefs.show_left_sidebar = false;
+            self.prefs_dirty = true;
+        }
         ui.separator();
         match self.left_tab {
             LeftTab::Thumbnails => self.thumbnails(ui, ctx),
@@ -450,24 +506,48 @@ impl App {
 
     pub fn right_sidebar(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
         ui.add_space(4.0);
-        ui.horizontal(|ui| {
-            for (t, label) in [
-                (RightTab::Properties, "Properties"),
-                (RightTab::Comments, "Comments"),
-                (RightTab::Measure, "Measure"),
-            ] {
-                if ui.selectable_label(self.right_tab == t, label).clicked() {
-                    self.right_tab = t;
-                }
-            }
-        });
+        let mut hide = false;
+        egui::Sides::new().show(
+            ui,
+            |ui| {
+                ui.horizontal_wrapped(|ui| {
+                    for (t, label) in [
+                        (RightTab::Properties, "Properties"),
+                        (RightTab::Comments, "Comments"),
+                        (RightTab::Measure, "Measure"),
+                        (RightTab::Copilot, "Copilot"),
+                    ] {
+                        if ui.selectable_label(self.right_tab == t, label).clicked() {
+                            self.right_tab = t;
+                        }
+                    }
+                });
+            },
+            |ui| {
+                hide = Self::collapse_button(
+                    ui,
+                    "»",
+                    "Hide the properties panel (View ▸ Right panel)",
+                );
+            },
+        );
+        if hide {
+            self.prefs.show_right_sidebar = false;
+            self.prefs_dirty = true;
+        }
         ui.separator();
+        if self.right_tab == RightTab::Copilot {
+            // The chat has its own scroll area and a fixed input row.
+            self.copilot_panel(ui, ctx);
+            return;
+        }
         egui::ScrollArea::vertical()
             .auto_shrink([false, false])
             .show(ui, |ui| match self.right_tab {
                 RightTab::Properties => self.properties(ui, ctx),
                 RightTab::Comments => self.comments(ui),
                 RightTab::Measure => self.measure_panel(ui, ctx),
+                RightTab::Copilot => {}
             });
     }
 

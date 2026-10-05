@@ -59,6 +59,11 @@ pub fn command_icon(c: C) -> Icon {
         C::FileExportImage => Icon::AddImage,
         C::SignDocument => Icon::Certificate,
         C::OcrDocument => Icon::Ocr,
+        C::ToggleSnap => Icon::Snap,
+        C::FileSaveOptimized => Icon::Optimize,
+        C::FileConvertPdfA => Icon::Archive,
+        C::ToggleCopilot | C::CopilotSummarize | C::CopilotSummarizeAnnotations => Icon::Sparkle,
+        C::TranslateDocument => Icon::Translate,
         C::ShowSignatures => Icon::Shield,
         C::DrawSignature => Icon::Pencil,
         C::FileProperties => Icon::Info,
@@ -221,6 +226,10 @@ impl App {
         for &id in ids {
             let sel = Tool::from_command(id).is_some_and(|t| t == self.tool)
                 || (id == C::ViewDarkPages && self.prefs.dark_page_filter)
+                || (id == C::ToggleSnap && self.prefs.snap_to_geometry)
+                || (id == C::ToggleCopilot
+                    && self.prefs.show_right_sidebar
+                    && self.right_tab == RightTab::Copilot)
                 || (id == C::ViewToggleLeftSidebar && self.prefs.show_left_sidebar)
                 || (id == C::ViewToggleRightSidebar && self.prefs.show_right_sidebar)
                 || self.view_mode_selected(id);
@@ -284,6 +293,7 @@ impl App {
                 v.push((RibbonTab::Forms, "Forms"));
             }
             v.push((RibbonTab::Sign, "Sign"));
+            v.push((RibbonTab::Copilot, "Copilot"));
             if !essential || self.tool_is_measure() {
                 v.push((RibbonTab::Measure, "Measure"));
             }
@@ -333,7 +343,7 @@ impl App {
             ui.set_min_height(height);
             ui.horizontal(|ui| match self.ribbon_tab {
                 RibbonTab::File => {
-                    self.group(ui, "Document", |s, ui| s.cmds(ui, ctx, &[C::FileOpen, C::FileSave, C::FileSaveAs, C::FileClose]));
+                    self.group(ui, "Document", |s, ui| s.cmds(ui, ctx, &[C::FileOpen, C::FileSave, C::FileSaveAs, C::FileSaveOptimized, C::FileConvertPdfA, C::FileClose]));
                     self.group(ui, "Recent", |s, ui| {
                         let recents = s.prefs.recent_files.clone();
                         if recents.is_empty() {
@@ -392,10 +402,19 @@ impl App {
                         ui.label(RichText::new("A digital signature proves the file is unchanged since signing.\nA handwritten signature is only a picture of your signature.").size(11.0).color(s_dim(&self.pal)));
                     });
                 }
+                RibbonTab::Copilot => {
+                    self.group(ui, "Ask", |s, ui| s.cmds(ui, ctx, &[C::ToggleCopilot, C::CopilotSummarize, C::CopilotSummarizeAnnotations]));
+                    self.group(ui, "Translate", |s, ui| s.cmds(ui, ctx, &[C::TranslateDocument]));
+                    ui.vertical(|ui| {
+                        ui.add_space(6.0);
+                        ui.label(RichText::new("Uses your own OpenAI or Anthropic key (Preferences).\nText is sent only when you press a button.").size(11.0).color(s_dim(&self.pal)));
+                    });
+                }
                 RibbonTab::Measure => {
                     self.group(ui, "Scale", |s, ui| s.cmds(ui, ctx, &[C::ToolCalibrate]));
                     self.group(ui, "Measure", |s, ui| s.cmds(ui, ctx, &[C::ToolMeasureDistance, C::ToolMeasurePerimeter, C::ToolMeasureArea, C::ToolMeasureRect, C::ToolMeasureRadius, C::ToolMeasureAngle]));
                     self.group(ui, "Count", |s, ui| s.cmds(ui, ctx, &[C::ToolCount]));
+                    self.group(ui, "Snap", |s, ui| s.cmds(ui, ctx, &[C::ToggleSnap]));
                     self.group(ui, "Report", |s, ui| s.cmds(ui, ctx, &[C::ExportMeasurements]));
                 }
                 RibbonTab::Organize => {
@@ -788,6 +807,13 @@ fn ribbon_label(id: C, title: &'static str) -> &'static str {
         C::ToolMeasureRect => "Rectangle",
         C::ExportMeasurements => "Export CSV",
         C::OcrDocument => "OCR",
+        C::ToggleSnap => "Snap",
+        C::FileSaveOptimized => "Optimize",
+        C::FileConvertPdfA => "PDF/A",
+        C::ToggleCopilot => "Copilot",
+        C::CopilotSummarize => "Summarize",
+        C::CopilotSummarizeAnnotations => "Summarize notes",
+        C::TranslateDocument => "Translate",
         C::SignDocument => "Sign",
         C::ShowSignatures => "Signatures",
         C::DrawSignature => "Draw Signature",

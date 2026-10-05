@@ -84,6 +84,13 @@ pub enum CommandId {
     ToolSignArea,
     SignDocument,
     OcrDocument,
+    ToggleSnap,
+    FileSaveOptimized,
+    FileConvertPdfA,
+    ToggleCopilot,
+    CopilotSummarize,
+    CopilotSummarizeAnnotations,
+    TranslateDocument,
     ShowSignatures,
     DrawSignature,
     ExportMeasurements,
@@ -890,6 +897,62 @@ pub static REGISTRY: &[CommandInfo] = &[
         "Set the drawing scale from a known length",
         C::Measure,
         "scale ratio units set",
+        []
+    ),
+    cmd!(
+        Id::ToggleSnap,
+        "Snap to Drawing Geometry",
+        "Snap measurements to line ends, corners, intersections and midpoints in the page",
+        C::Measure,
+        "snap magnet corner endpoint intersection midpoint cad drawing osnap",
+        []
+    ),
+    cmd!(
+        Id::FileSaveOptimized,
+        "Save As Optimized…",
+        "Save a smaller copy: removes unused objects, compresses streams, optionally shrinks images",
+        C::File,
+        "optimize optimise reduce compress file size shrink",
+        []
+    ),
+    cmd!(
+        Id::FileConvertPdfA,
+        "Convert to PDF/A…",
+        "Save an archival PDF/A-2b copy (checks and reports what cannot be converted)",
+        C::File,
+        "pdfa pdf/a archive archival long term iso 19005",
+        []
+    ),
+    cmd!(
+        Id::ToggleCopilot,
+        "PDF Copilot",
+        "Ask questions about this document with your own AI provider key",
+        C::View,
+        "ai assistant chat summarize openai claude anthropic copilot",
+        [(None, Shortcut::plain(F(6)))]
+    ),
+    cmd!(
+        Id::CopilotSummarize,
+        "Copilot: Summarize Document",
+        "Concise summary with page references and highlights",
+        C::Content,
+        "ai summary summarise main points",
+        []
+    ),
+    cmd!(
+        Id::CopilotSummarizeAnnotations,
+        "Copilot: Summarize Annotations",
+        "Summarize all comments and markup in this document",
+        C::Content,
+        "ai comments review annotations summary",
+        []
+    ),
+    cmd!(
+        Id::TranslateDocument,
+        "Translate Document…",
+        "Detect the language and translate the text with your AI provider",
+        C::Content,
+        "translate translation language dutch english german french spanish",
         []
     ),
     cmd!(

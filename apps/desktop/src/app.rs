@@ -62,6 +62,9 @@ impl App {
             sign_return: None,
             ocr_job: None,
             handwriting: App::load_handwriting(),
+            ctx_target: None,
+            snaps: crate::snap_ui::SnapService::new(),
+            ai: crate::copilot_ui::AiRuntime::default(),
         };
         app.dark_filter_applied = app.prefs.dark_page_filter;
         if !app.prefs.first_run_done {
@@ -298,6 +301,10 @@ impl eframe::App for App {
         self.handle_worker_results(ctx);
         self.poll_exports(ctx);
         self.poll_ocr(ctx);
+        self.poll_ai(ctx);
+        if self.snaps.poll() {
+            ctx.request_repaint_after(std::time::Duration::from_millis(60));
+        }
         let cmds = if self.dialog.is_none()
             || matches!(self.dialog, Some(Dialog::Shortcuts { capture: None, .. }))
         {
@@ -375,7 +382,7 @@ impl eframe::App for App {
                 .resizable(true)
                 .default_size(w)
                 .size_range(130.0..=480.0)
-                .frame(egui::Frame::new().fill(self.pal.panel))
+                .frame(self.side_frame())
                 .show(ui, |ui| self.left_sidebar(ui, &ctx));
             let nw = r.response.rect.width();
             if (nw - self.prefs.left_sidebar_width).abs() > 1.0 {
@@ -389,13 +396,19 @@ impl eframe::App for App {
                 .resizable(true)
                 .default_size(w)
                 .size_range(170.0..=520.0)
-                .frame(egui::Frame::new().fill(self.pal.panel))
+                .frame(self.side_frame())
                 .show(ui, |ui| self.right_sidebar(ui, &ctx));
             let nw = r.response.rect.width();
             if (nw - self.prefs.right_sidebar_width).abs() > 1.0 {
                 self.prefs.right_sidebar_width = nw;
                 self.prefs_dirty = true;
             }
+        }
+        if !self.prefs.show_left_sidebar && !self.tabs.is_empty() {
+            self.collapsed_rail(ui, true);
+        }
+        if !self.prefs.show_right_sidebar && !self.tabs.is_empty() {
+            self.collapsed_rail(ui, false);
         }
         egui::CentralPanel::default()
             .frame(egui::Frame::new().fill(self.pal.canvas))

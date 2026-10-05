@@ -830,3 +830,52 @@ pub fn vector_a0(n: usize) -> Vec<u8> {
     pdf.stream(content, &c.finish());
     pdf.finish()
 }
+
+/// A small floor-plan style drawing (A4 landscape): outer walls, an inner wall that crosses a
+/// diagonal, a door swing drawn as a curve, and a title. Vector geometry only, for snapping.
+pub fn floor_plan() -> Vec<u8> {
+    let mut pdf = Pdf::new();
+    let (catalog, tree, page, content, font) = (
+        Ref::new(1),
+        Ref::new(2),
+        Ref::new(3),
+        Ref::new(4),
+        Ref::new(5),
+    );
+    pdf.catalog(catalog).pages(tree);
+    pdf.pages(tree).kids([page]).count(1);
+    {
+        let mut p = pdf.page(page);
+        p.media_box(Rect::new(0.0, 0.0, 842.0, 595.0))
+            .parent(tree)
+            .contents(content);
+        p.resources().fonts().pair(Name(b"F1"), font);
+    }
+    pdf.type1_font(font).base_font(Name(b"Helvetica"));
+    let mut c = Content::new();
+    c.set_line_width(2.0).set_stroke_gray(0.0);
+    // Outer walls: 600 x 400 at (100, 100).
+    c.rect(100.0, 100.0, 600.0, 400.0).stroke();
+    // Inner wall: vertical at x = 400 from bottom wall up to 360.
+    c.move_to(400.0, 100.0).line_to(400.0, 360.0).stroke();
+    // Inner wall: horizontal at y = 300 from the left wall to x = 400 (a T-junction at (400,300)).
+    c.move_to(100.0, 300.0).line_to(400.0, 300.0).stroke();
+    // A diagonal that crosses the vertical wall at (400, 250).
+    c.set_line_width(0.75)
+        .move_to(300.0, 150.0)
+        .line_to(500.0, 350.0)
+        .stroke();
+    // Door swing: quarter circle with centre (500, 100) radius 60, drawn as one Bézier.
+    c.set_line_width(1.0)
+        .move_to(560.0, 100.0)
+        .cubic_to(560.0, 133.0, 533.0, 160.0, 500.0, 160.0)
+        .stroke();
+    c.move_to(500.0, 100.0).line_to(500.0, 160.0).stroke();
+    c.begin_text()
+        .set_font(Name(b"F1"), 14.0)
+        .next_line(100.0, 530.0)
+        .show(Str(b"Ground floor - scale 1:50"))
+        .end_text();
+    pdf.stream(content, &c.finish());
+    pdf.finish()
+}

@@ -4,6 +4,11 @@ use egui::{Color32, Painter, Pos2, Rect, Stroke, Vec2, epaint::PathShape};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Icon {
+    Snap,
+    Sparkle,
+    Translate,
+    Optimize,
+    Archive,
     Open,
     Save,
     SaveAs,
@@ -105,6 +110,52 @@ pub fn paint(p: &Painter, rect: Rect, icon: Icon, color: Color32) {
     let dim = color.gamma_multiply(0.35);
     let circle = |c: (f32, f32), r: f32| p.circle_stroke(pt(c.0, c.1), r * u, st);
     match icon {
+        Icon::Snap => {
+            circle((12.0, 12.0), 7.0);
+            line((12.0, 2.0), (12.0, 8.0));
+            line((12.0, 16.0), (12.0, 22.0));
+            line((2.0, 12.0), (8.0, 12.0));
+            line((16.0, 12.0), (22.0, 12.0));
+            rrect(10.0, 10.0, 14.0, 14.0);
+        }
+        Icon::Sparkle => {
+            poly(
+                &[
+                    (11.0, 2.0),
+                    (13.0, 9.0),
+                    (20.0, 11.0),
+                    (13.0, 13.0),
+                    (11.0, 20.0),
+                    (9.0, 13.0),
+                    (2.0, 11.0),
+                    (9.0, 9.0),
+                ],
+                true,
+            );
+            line((19.0, 16.0), (19.0, 21.0));
+            line((16.5, 18.5), (21.5, 18.5));
+        }
+        Icon::Translate => {
+            rrect(2.0, 3.0, 14.0, 15.0);
+            line((5.0, 7.0), (11.0, 7.0));
+            line((8.0, 5.0), (8.0, 7.0));
+            line((6.0, 12.0), (10.0, 8.0));
+            rrect(10.0, 11.0, 22.0, 21.0);
+            line((13.0, 19.0), (16.0, 13.0));
+            line((16.0, 13.0), (19.0, 19.0));
+            line((14.0, 17.0), (18.0, 17.0));
+        }
+        Icon::Optimize => {
+            rrect(5.0, 3.0, 19.0, 21.0);
+            line((12.0, 7.0), (12.0, 13.0));
+            poly(&[(8.0, 11.0), (12.0, 15.0), (16.0, 11.0)], false);
+            line((8.0, 18.0), (16.0, 18.0));
+        }
+        Icon::Archive => {
+            rrect(3.0, 4.0, 21.0, 9.0);
+            rrect(4.0, 9.0, 20.0, 21.0);
+            line((9.0, 13.0), (15.0, 13.0));
+        }
         Icon::Open => {
             poly(
                 &[

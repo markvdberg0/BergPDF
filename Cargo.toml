@@ -1,6 +1,7 @@
 [workspace]
 resolver = "3"
 members = [
+    "crates/ai-client",
     "crates/pdf-ocr",
     "crates/pdf-sign",
     "apps/desktop",
@@ -12,6 +13,7 @@ members = [
     "xtask",
 ]
 default-members = [
+    "crates/ai-client",
     "crates/pdf-ocr",
     "crates/pdf-sign",
     "apps/desktop",
@@ -36,6 +38,7 @@ hayro = { version = "0.8", default-features = false, features = ["embed-fonts", 
 lopdf = { version = "0.45", default-features = false }
 pdf-writer = "0.15"
 thiserror = "2"
+serde = { version = "1", features = ["derive"] }
 tracing = "0.1"
 proptest = "1"
 tempfile = "3"
@@ -47,6 +50,7 @@ test-support = { path = "crates/test-support" }
 brand = { path = "crates/brand" }
 pdf-sign = { path = "crates/pdf-sign" }
 pdf-ocr = { path = "crates/pdf-ocr" }
+ai-client = { path = "crates/ai-client" }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

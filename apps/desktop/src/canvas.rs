@@ -276,6 +276,7 @@ impl App {
 
         // Tool interaction (may consume the drag for panning, drawing, selecting…).
         self.canvas_interaction(ctx, &response, &mut vc);
+        self.canvas_context_menu(ctx, &response, &vc);
 
         // ---- current page from scroll ----
         {
@@ -295,6 +296,7 @@ impl App {
         let painter = ui.painter_at(rect);
         self.paint_pages(&painter, ctx, &vc);
         self.paint_overlays(&painter, &vc);
+        self.paint_snap_hover(&painter, &vc);
         self.paint_scrollbars(ui, &vc);
         self.canvas_cursor(ctx, &response);
     }

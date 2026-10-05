@@ -47,6 +47,16 @@ jobs:
           cargo xtask fetch-ocr-models "$RUNNER_TEMP/ocr-models"
           echo "BERG_OCR_MODELS=$RUNNER_TEMP/ocr-models" >> "$GITHUB_ENV"
           echo "BERG_REQUIRE_OCR=1" >> "$GITHUB_ENV"
+      - name: veraPDF (independent PDF/A validator for the tests; Linux job requires it)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          sudo apt-get install -y default-jre-headless maven
+          mkdir -p "$RUNNER_TEMP/verapdf" && cd "$RUNNER_TEMP/verapdf"
+          printf '<project xmlns="http://maven.apache.org/POM/4.0.0"><modelVersion>4.0.0</modelVersion><groupId>local</groupId><artifactId>vera-fetch</artifactId><version>1</version><dependencies><dependency><groupId>org.verapdf.apps</groupId><artifactId>greenfield-apps</artifactId><version>1.28.2</version></dependency></dependencies></project>' > pom.xml
+          mvn -q -B dependency:copy-dependencies -DoutputDirectory=lib
+          echo "BERG_VERAPDF=$RUNNER_TEMP/verapdf/lib" >> "$GITHUB_ENV"
+          echo "BERG_REQUIRE_VERAPDF=1" >> "$GITHUB_ENV"
       - name: Format
         run: cargo fmt --all -- --check
       - name: Clippy

@@ -8,8 +8,10 @@ audit. No external security review and no fuzzing campaign has been done (see â€
 * **Runs no document code.** No JavaScript, no XFA, no form calculations, no launch/URI/import
   actions on its own. Such content is *detected* and reported when a file opens (`caps.rs`,
   `forms::read_form`), never executed.
-* **Makes no network requests** in core flows and has **no telemetry**. The runtime dependency
-  graph contains no HTTP client (`cargo tree` shows none of reqwest/hyper/ureq/curl/tokio).
+* **Makes no network requests** in core flows and has **no telemetry**. The one exception is the
+  optional AI features (PDF Copilot, Translate), which exist only in the `ai-client` crate, run only
+  after a button press and a one-time consent per provider, and use the user's own key (see D-020 /
+  D-021). `cargo tree -p ai-client` shows the whole network stack; nothing else links it.
   On Linux, `rfd` talks to the desktop portal over local D-Bus.
 * **Opens external links only after explicit confirmation**, only for `http`, `https`, `mailto`,
   without control characters, under 2048 bytes (`platform::links`, unit-tested).
@@ -81,3 +83,14 @@ on macOS, rlimits/seccomp on Linux) is the intended next step and is **not imple
 * Signed documents: integrity is checked on request (digest + signature maths with the embedded
   certificate). Certificate trust, validity period, revocation, DocMDP permissions and signing time
   are **not** evaluated.
+
+## AI features: what to know
+
+* Text from your document leaves the machine when you press Send/Summarize/Explain/Translate, to the
+  provider you configured. For a server on your own computer pick the *Custom* provider.
+* The API key is stored unencrypted in a file only your account can read (Unix) / in your profile folder
+  (Windows). Use a key with a spending limit. It is never written to preferences, logs or error text.
+* Documents are untrusted input to the model: the prompt marks them as data, and every quotation in an
+  answer is verified against the real page text before it can be highlighted. A model can still be
+  misled; treat answers as drafts.
+* Redirects/proxies: system proxy variables are honoured; HTTPS only for OpenAI/Anthropic.

@@ -305,3 +305,104 @@ pub fn poppler_bbox(bytes: &[u8], page: usize) -> Option<Vec<BBoxWord>> {
     }
     Some(words)
 }
+
+/// Everything poppler's `pdftotext` writes to stderr while reading `bytes` (empty = it found
+/// nothing to complain about). `None` when the tool is missing.
+pub fn poppler_diagnostics(bytes: &[u8]) -> Option<String> {
+    if !have_tool("pdftotext") {
+        return None;
+    }
+    let dir = tempfile::tempdir().ok()?;
+    let p = dir.path().join("in.pdf");
+    std::fs::write(&p, bytes).ok()?;
+    let out = Command::new("pdftotext").arg(&p).arg("-").output().ok()?;
+    Some(String::from_utf8_lossy(&out.stderr).into_owned())
+}
+
+/// Result of a veraPDF validation.
+#[derive(Debug, Clone)]
+pub struct VeraReport {
+    /// veraPDF's verdict.
+    pub compliant: bool,
+    /// One line per failed rule: `clause-test (n checks): description`.
+    pub failures: Vec<String>,
+}
+
+/// Directory with the veraPDF jars (`BERG_VERAPDF`), if configured.
+pub fn verapdf_dir() -> Option<PathBuf> {
+    let d = PathBuf::from(std::env::var_os("BERG_VERAPDF")?);
+    d.is_dir().then_some(d)
+}
+
+/// True when veraPDF validation must really run (`BERG_REQUIRE_VERAPDF=1`).
+pub fn verapdf_required() -> bool {
+    std::env::var("BERG_REQUIRE_VERAPDF").is_ok_and(|v| v == "1")
+}
+
+fn attr<'a>(tag: &'a str, name: &str) -> Option<&'a str> {
+    let key = format!("{name}=\"");
+    let s = tag.find(&key)? + key.len();
+    let e = tag[s..].find('"')?;
+    Some(&tag[s..s + e])
+}
+
+/// Validate `bytes` against a PDF/A flavour (`"2b"`, `"1b"`…) with veraPDF, if it is installed
+/// (see `docs/EVIDENCE.md` for how it was obtained). `None` when it is not available.
+pub fn verapdf(bytes: &[u8], flavour: &str) -> Option<VeraReport> {
+    let dir = verapdf_dir()?;
+    if !have_tool("java") {
+        return None;
+    }
+    let tmp = tempfile::tempdir().ok()?;
+    let p = tmp.path().join("in.pdf");
+    std::fs::write(&p, bytes).ok()?;
+    let cp = format!("{}/*", dir.display());
+    let out = Command::new("java")
+        .env_remove("JAVA_TOOL_OPTIONS")
+        .args([
+            "-cp",
+            &cp,
+            "org.verapdf.apps.GreenfieldCliWrapper",
+            "--flavour",
+            flavour,
+            "--format",
+            "xml",
+        ])
+        .arg(&p)
+        .output()
+        .ok()?;
+    let xml = String::from_utf8_lossy(&out.stdout).into_owned();
+    let report_tag_start = xml.find("<validationReport")?;
+    let report_tag = &xml[report_tag_start..xml[report_tag_start..].find('>')? + report_tag_start];
+    let compliant = attr(report_tag, "isCompliant")? == "true";
+    let mut failures = Vec::new();
+    let mut rest = xml.as_str();
+    while let Some(i) = rest.find("<rule ") {
+        rest = &rest[i..];
+        let end = rest.find('>').unwrap_or(rest.len());
+        let tag = &rest[..end];
+        if attr(tag, "status") == Some("failed") {
+            let desc = rest
+                .find("<description>")
+                .and_then(|d| {
+                    let s = d + "<description>".len();
+                    rest[s..]
+                        .find("</description>")
+                        .map(|e| rest[s..s + e].to_string())
+                })
+                .unwrap_or_default();
+            failures.push(format!(
+                "{}-{} ({} checks): {}",
+                attr(tag, "clause").unwrap_or("?"),
+                attr(tag, "testNumber").unwrap_or("?"),
+                attr(tag, "failedChecks").unwrap_or("?"),
+                desc
+            ));
+        }
+        rest = &rest[end..];
+    }
+    Some(VeraReport {
+        compliant,
+        failures,
+    })
+}

@@ -131,8 +131,9 @@ impl App {
         })
     }
 
-    /// Snap a pointer position to nearby vertices (and optionally constrain the angle).
-    fn snap_point(
+    /// Snap a pointer position to nearby annotation vertices and to the page's own geometry
+    /// (line ends, corners, intersections, midpoints), or constrain the angle with Shift.
+    pub(crate) fn snap_point(
         &mut self,
         vc: &ViewCtx,
         i: usize,
@@ -140,7 +141,8 @@ impl App {
         extra: &[Point],
         prev: Option<Point>,
         shift: bool,
-    ) -> (Point, bool) {
+    ) -> (Point, Option<pdf_engine::snap::SnapKind>) {
+        use pdf_engine::snap::SnapKind;
         let page = vc.pages[i].id;
         let raw = vc.screen_to_pdf(i, pos);
         let mut best: Option<(f32, Point)> = None;
@@ -157,12 +159,18 @@ impl App {
             }
         }
         if let Some((_, p)) = best {
-            return (p, true);
+            return (p, Some(SnapKind::Endpoint));
+        }
+        if self.prefs.snap_to_geometry
+            && let Some(ix) = self.snap_index(i, vc)
+            && let Some(h) = ix.query(raw, f64::from(SNAP_PX) / vc.px_per_pt)
+        {
+            return (h.point, Some(h.kind));
         }
         if shift && let Some(p0) = prev {
-            return (crate::interaction::snap_angle(p0, raw), false);
+            return (crate::interaction::snap_angle(p0, raw), None);
         }
-        (raw, false)
+        (raw, None)
     }
 
     /// Pointer handling for the measurement tools and Count.
@@ -838,14 +846,10 @@ impl App {
         }
         let Some(kind) = tool_kind(tool) else { return };
         let mut pts = points.clone();
-        let mut snapped_at: Option<Pos2> = None;
         if let Some(h) = hover.0
             && vc.page_at(h) == Some(i)
         {
-            let (p, snapped) = self.snap_point(vc, i, h, &points, points.last().copied(), hover.1);
-            if snapped {
-                snapped_at = Some(vc.pdf_to_screen(i, p));
-            }
+            let (p, _) = self.snap_point(vc, i, h, &points, points.last().copied(), hover.1);
             pts.push(p);
         }
         let sp: Vec<Pos2> = pts.iter().map(|p| vc.pdf_to_screen(i, *p)).collect();
@@ -877,9 +881,6 @@ impl App {
         }
         for p in &sp[..points.len().min(sp.len())] {
             painter.circle_filled(*p, 3.5, accent);
-        }
-        if let Some(s) = snapped_at {
-            painter.circle_stroke(s, 7.0, Stroke::new(2.0, Color32::from_rgb(255, 140, 0)));
         }
         // Live value next to the cursor.
         if pts.len() >= kind.min_points() && kind != MeasureKind::Count {

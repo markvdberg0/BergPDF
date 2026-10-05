@@ -5,6 +5,8 @@ mod app;
 mod canvas;
 mod chrome;
 mod contentedit;
+mod copilot_ui;
+mod ctxmenu;
 mod dialogs;
 mod docops_ui;
 mod exec;
@@ -13,11 +15,15 @@ mod icons;
 mod interaction;
 mod measure_ui;
 mod ocr_ui;
+mod optimize_ui;
 mod pagefilter;
+mod pdfa_ui;
 mod sidebar;
 mod sign_ui;
+mod snap_ui;
 mod state;
 mod theme;
+mod translate_ui;
 
 use std::path::PathBuf;
 

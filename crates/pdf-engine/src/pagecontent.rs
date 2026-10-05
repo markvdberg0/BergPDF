@@ -979,7 +979,7 @@ pub fn add_resource(
 }
 
 /// Append a new content stream to a page (copy-on-write for the `/Contents` array).
-fn append_content(tx: &mut Tx<'_>, page: ObjectId, bytes: &[u8]) -> Result<()> {
+pub(crate) fn append_content(tx: &mut Tx<'_>, page: ObjectId, bytes: &[u8]) -> Result<()> {
     let mut stream = Stream::new(dictionary! { "Filter" => "FlateDecode" }, zlib(bytes));
     stream.allows_compression = false;
     let new_id = tx.add(Object::Stream(stream));

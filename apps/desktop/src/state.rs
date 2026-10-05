@@ -30,6 +30,7 @@ pub enum RightTab {
     Properties,
     Comments,
     Measure,
+    Copilot,
 }
 
 /// Ribbon tabs. Only tabs with working content are shown.
@@ -42,6 +43,7 @@ pub enum RibbonTab {
     Forms,
     Measure,
     Sign,
+    Copilot,
     Organize,
     View,
 }
@@ -99,6 +101,14 @@ pub enum Dialog {
     Properties(Box<PropsState>),
     /// Confirm flattening all form fields.
     ConfirmFlatten { fields: usize },
+    /// Consent to send text to the AI provider.
+    AiConsent,
+    /// Translate the document.
+    Translate(Box<crate::translate_ui::TranslateState>),
+    /// Convert to PDF/A.
+    PdfA(Box<crate::pdfa_ui::PdfaDialogState>),
+    /// Save As Optimized options.
+    Optimize(Box<crate::optimize_ui::OptimizeDialogState>),
     /// Recognise text (OCR) options.
     Ocr(Box<crate::ocr_ui::OcrDialogState>),
     /// OCR running.
@@ -196,6 +206,8 @@ pub struct TabState {
     pub pending_region: Option<(PageId, pdf_engine::measure::Scale)>,
     /// Category new count markers are filed under.
     pub count_category: String,
+    /// PDF Copilot conversation for this document.
+    pub copilot: crate::copilot_ui::CopilotChat,
 }
 
 /// Editable page objects of one page.
@@ -269,6 +281,12 @@ pub struct App {
     pub ocr_job: Option<crate::ocr_ui::OcrJob>,
     /// The saved handwritten signature (a drawing).
     pub handwriting: editor_core::handwriting::HandwrittenSignature,
+    /// What the right-click menu was opened on.
+    pub ctx_target: Option<crate::ctxmenu::CtxTarget>,
+    /// Snap-to-geometry indexes.
+    pub snaps: crate::snap_ui::SnapService,
+    /// PDF Copilot runtime (jobs, key, cached text).
+    pub ai: crate::copilot_ui::AiRuntime,
 }
 
 impl App {

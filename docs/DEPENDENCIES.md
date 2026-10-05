@@ -1,6 +1,6 @@
 # Dependencies
 
-Full machine-generated inventory (509 third-party crates across all targets, with declared SPDX
+Full machine-generated inventory (647 third-party crates across all targets, with declared SPDX
 licence): `THIRD_PARTY_LICENSES.md` (`cargo xtask licenses`). That file is an inventory, **not**
 a legal notice bundle. This file covers what a human has to look at.
 
@@ -27,6 +27,7 @@ a legal notice bundle. This file covers what a human has to look at.
 | p12-keystore 0.3 | | read PKCS#12 (.p12/.pfx) incl. legacy 3DES | pulls pre-release `cms 0.3.0-pre`, `pkcs12 0.2.0-pre`, `x509-parser`, newer `der`/`sha2` (duplicate versions of RustCrypto crates in the tree) |
 | ocrs 0.13, rten 0.26 | | offline OCR (text detection + recognition on CPU) | pure Rust; **models are separate files, not bundled** |
 | serde_json, png, sha2 | | xtask (licence report, icons, model checksum) | tooling only |
+| ureq 3 (rustls + ring, `platform-verifier`), whatlang 0.16, serde_json | | HTTP to the user's AI provider (`ai-client` only) and offline language detection | pulls `rustls`, `ring` (C/assembly crypto primitives), `rustls-platform-verifier` (OS certificate stores), `webpki-roots`/`webpki-root-certs` (**CDLA-Permissive-2.0**, Mozilla root lists — allowed in `deny.toml` with a reason). The only networking code in the workspace |
 | curl (external program) | | `cargo xtask fetch-ocr-models` only | not used by the application |
 
 ## Items needing attention before any distribution
@@ -80,3 +81,17 @@ a legal notice bundle. This file covers what a human has to look at.
 
 No new dependency is added without recording purpose, licence and maintenance state here.
 `unsafe_code = "forbid"` is set for all first-party crates.
+
+## AI client (added 2026-10-05)
+
+* `ai-client` is the only crate that opens sockets. It adds ~140 crates (rustls, ring, http parsing,
+  platform verifier). First-party code remains `unsafe_code = "forbid"`; `ring` contains C/assembly.
+* TLS trusts the **operating system's** certificate store (found necessary: this sandbox's proxy re-signs
+  traffic and a bundled-roots-only build failed with `UnknownIssuer`). The Windows/macOS verifiers have
+  not been compiled or run by the author.
+* `whatlang` (MIT) detects the document language locally; confidence is reported to the user.
+* Verified live only as far as: TLS handshake and a 401 from the real Anthropic endpoint with a
+  deliberately invalid key (`docs/evidence/tls-probe-anthropic-dummy-key.txt`). OpenAI's endpoint was
+  not reachable from the sandbox (egress policy). **No successful call with a real key has been made.**
+* veraPDF (Java, MPL-2.0/GPL-3.0 dual) is used **only by the test suite** as an oracle, fetched from Maven
+  Central into a scratch directory; it is not part of the product or its dependency graph.

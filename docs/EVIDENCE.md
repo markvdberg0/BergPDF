@@ -195,3 +195,61 @@ flatten/sign unit expectations (widgets are annotations too).
 Not exercised headless: the native certificate picker and the save dialog of the signing flow (the
 engine and session paths are tested), the native PNG/CSV save dialogs, OCR on Windows/macOS, any
 Windows/macOS behaviour at all.
+
+---
+
+## Addendum — third round (2026-10-05)
+
+Full gate on Linux with **every oracle required** (`BERG_REQUIRE_ORACLES=1 BERG_REQUIRE_OCR=1
+BERG_VERAPDF=<jars> BERG_REQUIRE_VERAPDF=1`): `cargo fmt --check` clean, `cargo clippy --workspace
+--all-targets -D warnings` clean, **217 tests passed, 0 failed** (per-binary lines in
+`evidence/test-run-2026-10-05-217-tests.txt`), `cargo deny check` → advisories ok, bans ok, licenses ok,
+sources ok (one more licence allowed with a reason: CDLA-Permissive-2.0 for Mozilla's root lists).
+
+**How veraPDF was obtained** (test oracle only; not in the product): `mvn dependency:copy-dependencies`
+of `org.verapdf.apps:greenfield-apps:1.28.2` from Maven Central into a scratch directory, run as
+`java -cp "<dir>/*" org.verapdf.apps.GreenfieldCliWrapper --flavour 2b --format xml file.pdf`
+(`test_support::verapdf`). veraPDF's own site was blocked by the sandbox egress policy; Maven Central was not.
+
+What the independent tools said:
+
+* **PDF/A** — before conversion veraPDF rejects the Chromium/Cairo/picture fixtures for exactly the reasons
+  expected (6.1.3 file ID, 6.6.2.1 XMP, 6.2.4.3 device colour without output intent, 6.2.11.4.1 unembedded
+  font, 6.2.11.3.2 CIDToGIDMap); after conversion it reports **compliant** for the documents listed in
+  FEATURE_MATRIX. A mutation test (output intent and `/ID` removed again) is rejected with 6.2.4.3 and 6.1.3.
+  The BergPDF-made embedded subset fonts (text added in the editor; the Translate export) validate too.
+* **Optimizer** — poppler `pdftotext`/`pdftoppm` identical (lossless: mean pixel difference 0.0); poppler
+  stderr empty. The test originally passed while poppler printed "incorrect stream length" because the
+  assertion looked only at `pdfinfo`; fixed by `test_support::poppler_diagnostics` and a real fix (update
+  `/Length` after recompressing).
+* **Snap** — GUI: two clicks on a snapped corner and a snapped T-junction measured 360.6 pt, the exact
+  √(300²+200²) (`evidence/18-…`); intersection and midpoint markers (`19-…`).
+* **Copilot / Translate** — GUI driven against `mock_ai_server` (Custom provider): consent dialog →
+  summary with passages, an invented quote flagged, "Highlight all" creating highlights over a passage
+  that wraps across two lines; Explain from the right-click menu sent only the neighbouring pages (1,568
+  system-prompt characters vs 1,720 for the whole document); Translate detected "English (100 % sure)",
+  warned that the target was the same language, then translated three pages with progress.
+  Key saved from Preferences: file mode `-rw-------`, 0 occurrences in `preferences.toml`.
+* **Live endpoint** — `cargo run -p ai-client --example tls_probe -- anthropic` (dummy key): TLS handshake
+  succeeded through the sandbox proxy and the real service answered `401 API key is invalid`, shown as a
+  readable message (`evidence/tls-probe-anthropic-dummy-key.txt`). This first failed with `UnknownIssuer`
+  (bundled roots only); switching to the operating-system certificate store fixed it. OpenAI's host is not
+  reachable from the sandbox.
+
+Found and fixed while doing this: the collapse buttons first appeared right next to the tab labels instead of
+at the panel edge (`ui.horizontal` does not span the panel; `egui::Sides` does); the first optimizer test
+passed while poppler printed stream-length errors (see above); clippy lints in the new code. Noted, not
+explained: in one early headless run a right-click on empty page area showed no menu right after pressing
+Escape; the next runs showed it every time, so it is recorded here as unexplained rather than as fixed.
+`pkill -f` killed its own shell once during GUI testing (harness only).
+
+**Not verified, and why it matters**
+
+* No successful AI call with a valid key; answer quality, token costs and each provider's exact error texts
+  are untested. Anthropic and OpenAI request shapes follow the vendors' documented formats and the mock
+  server checks our side of them.
+* The fit-page offset the owner saw on the NUC: not reproduced (fixtures, several window sizes, panels
+  open/collapsed all centre correctly). The open path now resets scroll/page and the first frame fits.
+* Native file pickers (optimize/PDF-A/translation saves, certificate picker) are not driven headless.
+* Windows and macOS: nothing was compiled or run; the OS certificate verifiers and the key-file permissions
+  there are untested (PLATFORM_CHECKLIST).

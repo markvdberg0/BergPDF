@@ -8,7 +8,7 @@ fn main() -> std::io::Result<()> {
         .nth(1)
         .map_or_else(|| PathBuf::from("."), PathBuf::from);
     std::fs::create_dir_all(&dir)?;
-    let all: [(&str, Vec<u8>); 8] = [
+    let all: [(&str, Vec<u8>); 9] = [
         ("helvetica_lines.pdf", helvetica_lines()),
         ("shared_content_stream.pdf", shared_content_stream()),
         ("image_page.pdf", image_page()),
@@ -17,6 +17,7 @@ fn main() -> std::io::Result<()> {
         ("existing_annotations.pdf", existing_annotations()),
         ("acroform_basic.pdf", acroform_basic()),
         ("form_rich.pdf", form_rich()),
+        ("floor_plan.pdf", floor_plan()),
     ];
     for (name, bytes) in all {
         std::fs::write(dir.join(name), bytes)?;

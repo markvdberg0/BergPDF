@@ -95,3 +95,11 @@ pub fn pick_certificate() -> Option<PathBuf> {
         .add_filter("Certificate with private key (PKCS#12)", &["p12", "pfx"])
         .pick_file()
 }
+
+/// Ask where to save a plain text file.
+pub fn pick_save_text(suggested: &str) -> Option<PathBuf> {
+    rfd::FileDialog::new()
+        .add_filter("Text", &["txt"])
+        .set_file_name(suggested)
+        .save_file()
+}

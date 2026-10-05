@@ -1,0 +1,1 @@
+Err(Status { code: 401, message: "The AI service rejected the API key (HTTP 401). Check the key in Preferences. (API key is invalid.)" })
