@@ -5,10 +5,7 @@ use crate::i18n::tr;
 use crate::state::*;
 use crate::tf;
 use editor_core::command::{self, CommandId as C, Key, PaletteItem, Shortcut};
-use editor_core::prefs::{
-    DefaultZoom, Density, GfxBackend, Language, PresentChoice, SETTINGS, ThemeChoice, UpdateCheck,
-    Workspace,
-};
+use editor_core::prefs::{SETTINGS, ThemeChoice, Workspace};
 use editor_core::tools::Tool;
 use egui::{Align2, Color32, RichText, Vec2};
 
@@ -540,173 +537,14 @@ impl App {
                 }
             }
             Dialog::Preferences { filter } => {
-                let mut close = false;
-                let mut changed = false;
-                let mut check_now = false;
-                let f = filter.to_lowercase();
-                let show = |key: &str| -> bool {
-                    f.is_empty()
-                        || SETTINGS.iter().any(|s| {
-                            s.key == key
-                                && format!(
-                                    "{} {} {} {} {}",
-                                    s.title,
-                                    tr(s.title),
-                                    s.description,
-                                    tr(s.description),
-                                    s.keywords
-                                )
-                                .to_lowercase()
-                                .contains(&f)
-                        })
-                };
-                egui::Window::new(tr("Preferences")).collapsible(false).resizable(true).default_width(520.0).anchor(Align2::CENTER_CENTER, Vec2::ZERO).show(ctx, |ui| {
-                    ui.add(egui::TextEdit::singleline(filter).hint_text(tr("Search settings")).desired_width(f32::INFINITY));
-                    ui.add_space(6.0);
-                    egui::ScrollArea::vertical().max_height(420.0).show(ui, |ui| {
-                        if show("language") {
-                            section(ui, tr("Language"), tr("Interface language: English, Nederlands or Deutsch (or follow the system)."));
-                            let shown = match self.prefs.language {
-                                Language::System => tr("System default"),
-                                Language::English => "English",
-                                Language::Dutch => "Nederlands",
-                                Language::German => "Deutsch",
-                            };
-                            egui::ComboBox::from_id_salt("language").selected_text(shown).show_ui(ui, |ui| {
-                                changed |= ui.selectable_value(&mut self.prefs.language, Language::System, tr("System default")).changed();
-                                changed |= ui.selectable_value(&mut self.prefs.language, Language::English, "English").changed();
-                                changed |= ui.selectable_value(&mut self.prefs.language, Language::Dutch, "Nederlands").changed();
-                                changed |= ui.selectable_value(&mut self.prefs.language, Language::German, "Deutsch").changed();
-                            });
-                        }
-                        if show("updates") {
-                            section(ui, tr("Updates"), tr("Let BergPDF look for a newer version when it starts (once a day). Only the program name and version are sent; nothing is downloaded or installed."));
-                            let mut on = self.prefs.update_check == UpdateCheck::On;
-                            if ui.checkbox(&mut on, tr("Look for updates when BergPDF starts")).changed() {
-                                self.prefs.update_check = if on { UpdateCheck::On } else { UpdateCheck::Off };
-                                self.prefs.last_update_check = 0;
-                                changed = true;
-                            }
-                            if ui.button(tr("Check for Updates…")).clicked() {
-                                check_now = true;
-                            }
-                        }
-                        if show("theme") {
-                            section(ui, tr("Application theme"), tr("Light, Dark or follow the system. Never changes document colours."));
-                            ui.horizontal(|ui| {
-                                changed |= ui.selectable_value(&mut self.prefs.theme, ThemeChoice::System, tr("System")).changed();
-                                changed |= ui.selectable_value(&mut self.prefs.theme, ThemeChoice::Light, tr("Light")).changed();
-                                changed |= ui.selectable_value(&mut self.prefs.theme, ThemeChoice::Dark, tr("Dark")).changed();
-                            });
-                        }
-                        if show("dark_page_filter") {
-                            section(ui, tr("Dark page view"), tr("Comfortable dark reading filter. Display only — saved PDFs are never changed."));
-                            changed |= ui.checkbox(&mut self.prefs.dark_page_filter, tr("Use dark page view")).changed();
-                        }
-                        if show("default_font") {
-                            section(ui, tr("Default font for new text"), tr("Font, bold and italic used when you add text or a text box. Text you add is stored with an embedded subset of the font, so it looks the same everywhere."));
-                            let mut st = self.prefs.tool_defaults.font_style();
-                            ui.horizontal(|ui| {
-                                if crate::fontpick::font_picker(ui, "default_font_pick", &mut st) {
-                                    self.prefs.tool_defaults.set_font_style(st);
-                                    changed = true;
-                                }
-                            });
-                        }
-                        if show("snap_to_geometry") {
-                            section(ui, tr("Snap to drawing geometry"), tr("Measurements jump to line ends, corners, intersections and midpoints of the page when the pointer is close."));
-                            changed |= ui.checkbox(&mut self.prefs.snap_to_geometry, tr("Snap to drawing geometry")).changed();
-                        }
-                        if show("graphics") {
-                            section(ui, tr("Graphics (drawing backend, frame pacing)"), tr("If resizing the window or zooming feels slow, try another drawing API (restart needed) or uncapped frames."));
-                            let adapter = self.gpu_info.clone().unwrap_or_else(|| "unknown".into());
-                            ui.label(RichText::new(tf!("In use: {}", adapter)).size(12.0));
-                            if adapter.contains("Cpu") || adapter.contains("llvmpipe") || adapter.contains("WARP") || adapter.contains("Basic Render") {
-                                ui.colored_label(self.pal.danger, tr("This is a software renderer, not a graphics card. Install the graphics driver of your computer's maker; drawing will stay slow until then."));
-                            }
-                            ui.horizontal(|ui| {
-                                ui.label(tr("Drawing API"));
-                                egui::ComboBox::from_id_salt("gfx_backend")
-                                    .selected_text(tr(self.prefs.graphics.backend.title()))
-                                    .show_ui(ui, |ui| {
-                                        for b in [GfxBackend::Auto, GfxBackend::Dx12, GfxBackend::Vulkan, GfxBackend::Gl] {
-                                            changed |= ui.selectable_value(&mut self.prefs.graphics.backend, b, tr(b.title())).changed();
-                                        }
-                                    });
-                                ui.label(RichText::new(tr("(applies after restart)")).size(11.0).color(self.pal.text_dim));
-                            });
-                            ui.horizontal(|ui| {
-                                ui.label(tr("Frame pacing"));
-                                egui::ComboBox::from_id_salt("gfx_present")
-                                    .selected_text(tr(self.prefs.graphics.present.title()))
-                                    .show_ui(ui, |ui| {
-                                        for p in [PresentChoice::Smooth, PresentChoice::LowLatency, PresentChoice::Uncapped] {
-                                            changed |= ui.selectable_value(&mut self.prefs.graphics.present, p, tr(p.title())).changed();
-                                        }
-                                    });
-                            });
-                        }
-                        if show("ai") {
-                            section(ui, tr("PDF Copilot (AI provider and key)"), tr("Use your own OpenAI or Anthropic account (or a server of your own) for Copilot and Translate."));
-                            changed |= self.ai_prefs_section(ui, ctx);
-                        }
-                        if show("density") {
-                            section(ui, tr("Interface density"), tr("Compact, Comfortable or Touch/Pen hit targets."));
-                            ui.horizontal(|ui| {
-                                changed |= ui.selectable_value(&mut self.prefs.density, Density::Compact, tr("Compact")).changed();
-                                changed |= ui.selectable_value(&mut self.prefs.density, Density::Comfortable, tr("Comfortable")).changed();
-                                changed |= ui.selectable_value(&mut self.prefs.density, Density::Touch, tr("Touch / Pen")).changed();
-                            });
-                        }
-                        if show("ui_scale") {
-                            section(ui, tr("Interface scale"), tr("Scales toolbar icons, text and hit targets. Page rendering stays sharp at any scale."));
-                            let r = ui.add(egui::Slider::new(&mut self.prefs.ui_scale, 0.75..=2.5).text("scale"));
-                            // Rescaling re-renders every page, so it is applied when the slider is released.
-                            changed |= (r.changed() && !r.dragged()) || r.drag_stopped();
-                        }
-                        if show("workspace") {
-                            section(ui, tr("Workspace"), tr("Essential shows the common tools; Professional shows everything. Both can reach every command via search."));
-                            ui.horizontal(|ui| {
-                                changed |= ui.selectable_value(&mut self.prefs.workspace, Workspace::Essential, tr("Essential")).changed();
-                                changed |= ui.selectable_value(&mut self.prefs.workspace, Workspace::Professional, tr("Professional")).changed();
-                            });
-                        }
-                        if show("default_zoom") {
-                            section(ui, tr("Zoom when opening a document"), tr("Applies to documents you open from now on; you can still zoom freely."));
-                            ui.horizontal(|ui| {
-                                changed |= ui.selectable_value(&mut self.prefs.default_zoom, DefaultZoom::FitPage, tr("Fit page")).changed();
-                                changed |= ui.selectable_value(&mut self.prefs.default_zoom, DefaultZoom::FitWidth, tr("Fit width")).changed();
-                                changed |= ui.selectable_value(&mut self.prefs.default_zoom, DefaultZoom::Actual, "100 %").changed();
-                            });
-                        }
-                        if show("author") {
-                            section(ui, tr("Author name"), tr("Stored on comments and markup you create."));
-                            changed |= ui.text_edit_singleline(&mut self.prefs.author).changed();
-                        }
-                        if show("render_cache_mb") {
-                            section(ui, tr("Render cache size"), tr("Memory budget for cached page tiles."));
-                            changed |= ui.add(egui::Slider::new(&mut self.prefs.render_cache_mb, 64..=4096).suffix(" MiB")).changed();
-                        }
-                        if show("shortcuts") {
-                            section(ui, tr("Keyboard shortcuts"), tr("View and change shortcuts; conflicts are flagged."));
-                            if ui.button(tr("Customize shortcuts…")).clicked() {
-                                close = true;
-                                self.dialog_next = Some(Dialog::Shortcuts { filter: String::new(), capture: None });
-                            }
-                        }
-                    });
-                    ui.add_space(8.0);
-                    if ui.button(tr("Done")).clicked() {
-                        close = true;
-                    }
-                });
-                if changed {
+                let out = self.preferences_ui(ctx, filter);
+                if out.changed {
                     self.restyle(ctx);
                 }
-                if close {
+                if out.close {
                     keep = false;
                 }
-                if check_now {
+                if out.check_now {
                     keep = false;
                     self.start_update_check(true);
                 }
@@ -1108,12 +946,6 @@ impl App {
             });
         ctx.request_repaint_after(std::time::Duration::from_millis(500));
     }
-}
-
-fn section(ui: &mut egui::Ui, title: &str, desc: &str) {
-    ui.add_space(8.0);
-    ui.label(RichText::new(title).strong());
-    ui.label(RichText::new(desc).size(12.0).weak());
 }
 
 pub(crate) fn modal(ctx: &egui::Context, id: &str, add: impl FnOnce(&mut egui::Ui)) {

@@ -11,7 +11,6 @@ use egui::{Color32, Pos2, Rect, Sense, Vec2};
 use pdf_engine::doc::PageInfo;
 use pdf_engine::geom::{Affine, Point, Rotation, Size};
 use std::sync::Arc;
-use std::sync::atomic::AtomicBool;
 
 /// Everything needed to map between PDF space and the screen for one frame.
 #[derive(Clone)]
@@ -80,6 +79,9 @@ impl ViewCtx {
 }
 
 const PREFETCH_PX: f32 = 400.0;
+/// How many frames of the current scroll speed the prefetch band reaches ahead, and its limit.
+const PREFETCH_FRAMES: f32 = 40.0;
+const PREFETCH_MAX_LEAD: f32 = 1200.0;
 
 /// Conversions between the core's f64 scroll vector and egui's f32 one.
 pub trait ScrollExt {
@@ -313,17 +315,52 @@ impl App {
     fn paint_pages(&mut self, painter: &egui::Painter, ctx: &egui::Context, vc: &ViewCtx) {
         let ti = self.active;
         let (doc, revision) = (self.tabs[ti].session.id, self.tabs[ti].session.revision());
-        let band_top = f64::from(vc.scroll.y - PREFETCH_PX);
-        let band_bottom = f64::from(vc.scroll.y + vc.viewport.height() + PREFETCH_PX);
         let zoom_settling = self.tabs[ti]
             .ui
             .last_zoom_change
-            .is_some_and(|t| t.elapsed() < std::time::Duration::from_millis(140));
+            .is_some_and(|t| t.elapsed() < std::time::Duration::from_millis(110));
         if zoom_settling {
-            ctx.request_repaint_after(std::time::Duration::from_millis(160));
+            ctx.request_repaint_after(std::time::Duration::from_millis(130));
         }
+        // Prefetch further ahead in the direction the view is moving: the scroll speed is smoothed
+        // over a few frames and extends the band on that side only. A zoom moves the scroll offset
+        // too, so it does not count as motion.
+        let (last, speed) = self.scroll_motion;
+        let delta = vc.scroll - last;
+        let speed = if zoom_settling || delta.length() > 3000.0 {
+            Vec2::ZERO
+        } else {
+            speed * 0.85 + delta * 0.15
+        };
+        self.scroll_motion = (vc.scroll, speed);
+        let lead = Vec2::new(
+            (speed.x * PREFETCH_FRAMES).clamp(-PREFETCH_MAX_LEAD, PREFETCH_MAX_LEAD),
+            (speed.y * PREFETCH_FRAMES).clamp(-PREFETCH_MAX_LEAD, PREFETCH_MAX_LEAD),
+        );
+        let band_top = f64::from(vc.scroll.y - PREFETCH_PX - (-lead.y).max(0.0));
+        let band_bottom =
+            f64::from(vc.scroll.y + vc.viewport.height() + PREFETCH_PX + lead.y.max(0.0));
         let visible_pages = vc.layout.pages_in_band(band_top, band_bottom);
-        let expanded = vc.viewport.expand(PREFETCH_PX);
+        let expanded = Rect::from_min_max(
+            vc.viewport.min
+                - Vec2::new(
+                    PREFETCH_PX + (-lead.x).max(0.0),
+                    PREFETCH_PX + (-lead.y).max(0.0),
+                ),
+            vc.viewport.max
+                + Vec2::new(PREFETCH_PX + lead.x.max(0.0), PREFETCH_PX + lead.y.max(0.0)),
+        );
+        // A new render scale makes every queued tile of the old one pointless: tell the workers to
+        // skip them so the tiles for the new zoom level are not stuck behind them.
+        if !zoom_settling {
+            let scale_now = quantize_scale(vc.px_per_pt * f64::from(vc.ppp));
+            if scale_now != self.tile_scale {
+                self.tile_cancel
+                    .store(true, std::sync::atomic::Ordering::Relaxed);
+                self.tile_cancel = Arc::new(std::sync::atomic::AtomicBool::new(false));
+                self.tile_scale = scale_now;
+            }
+        }
         let snapshot = if zoom_settling {
             None
         } else {
@@ -366,7 +403,6 @@ impl App {
                 f64::from((vis.max.x - slot.min.x) * vc.ppp),
                 f64::from((vis.max.y - slot.min.y) * vc.ppp),
             );
-            let in_view = slot.intersects(vc.viewport);
             let plans = plan_tiles(w_px, h_px, rel, 1);
             let scale_milli = quantize_scale(scale);
             let key_of = |plan: &TilePlan| TileKey {
@@ -385,10 +421,16 @@ impl App {
                 self.paint_placeholder(painter, vc, i, slot);
                 self.paint_standin_tiles(painter, vc, i, slot, expanded, revision);
             }
+            // Tiles are rendered at the exact device scale; drawn at a fractional pixel offset they
+            // would be resampled and look soft, so the page origin is snapped to whole device pixels.
+            let origin = Pos2::new(
+                (slot.min.x * vc.ppp).round() / vc.ppp,
+                (slot.min.y * vc.ppp).round() / vc.ppp,
+            );
             for plan in plans {
                 let key = key_of(&plan);
                 let dest = Rect::from_min_size(
-                    slot.min + Vec2::new(plan.x as f32 / vc.ppp, plan.y as f32 / vc.ppp),
+                    origin + Vec2::new(plan.x as f32 / vc.ppp, plan.y as f32 / vc.ppp),
                     Vec2::new(plan.w as f32 / vc.ppp, plan.h as f32 / vc.ppp),
                 );
                 if let Some(tex) = self.tiles.get(&key) {
@@ -399,15 +441,15 @@ impl App {
                         Color32::WHITE,
                     );
                 } else if !zoom_settling {
-                    self.request_tile(
-                        key,
-                        plan,
-                        i,
-                        page,
-                        if in_view { 100 } else { 40 },
-                        doc,
-                        revision,
-                    );
+                    // Tiles on screen first, those nearest the middle of the view before the edges;
+                    // the band that is only prefetched ranks below (and below text jobs at 90).
+                    let d = (dest.center() - vc.viewport.center()).length();
+                    let priority = if dest.intersects(vc.viewport) {
+                        199 - (d / 8.0).min(99.0) as i32
+                    } else {
+                        79 - (d / 16.0).min(39.0) as i32
+                    };
+                    self.request_tile(key, plan, i, page, priority, doc, revision);
                 }
             }
         }
@@ -540,7 +582,7 @@ impl App {
             revision,
             request: 0,
             priority,
-            cancel: Arc::new(AtomicBool::new(false)),
+            cancel: self.tile_cancel.clone(),
             kind: JobKind::Tile {
                 key,
                 plan,

@@ -213,7 +213,7 @@ dependencies = [
 
 [[package]]
 name = "ai-client"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "serde",
  "serde_json",
@@ -571,7 +571,7 @@ checksum = "2af50177e190e07a26ab74f8b1efbfe2ef87da2116221318cb1c2e82baf7de06"
 
 [[package]]
 name = "bergpdf"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "ai-client",
  "brand",
@@ -699,7 +699,7 @@ dependencies = [
 
 [[package]]
 name = "brand"
-version = "0.2.0"
+version = "0.2.1"
 
 [[package]]
 name = "brotli"
@@ -1369,7 +1369,7 @@ dependencies = [
 
 [[package]]
 name = "editor-core"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "pdf-engine",
  "pdf-ocr",
@@ -3428,7 +3428,7 @@ dependencies = [
 
 [[package]]
 name = "pdf-engine"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "flate2",
  "hayro",
@@ -3450,7 +3450,7 @@ dependencies = [
 
 [[package]]
 name = "pdf-ocr"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "ocrs",
  "png",
@@ -3460,7 +3460,7 @@ dependencies = [
 
 [[package]]
 name = "pdf-sign"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "cms 0.2.3",
  "der 0.7.10",
@@ -3695,7 +3695,7 @@ checksum = "b4596b6d070b27117e987119b4dac604f3c58cfb0b191112e24771b2faeac1a6"
 
 [[package]]
 name = "platform"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "rfd",
  "tempfile",
@@ -5047,7 +5047,7 @@ dependencies = [
 
 [[package]]
 name = "test-support"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "pdf-writer",
  "png",
@@ -6569,7 +6569,7 @@ checksum = "e450f9b2ed1dff33c94c12589a87338689467b9c4f5d8a5710bd09a847d2c8a7"
 
 [[package]]
 name = "xtask"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "ai-client",
  "brand",

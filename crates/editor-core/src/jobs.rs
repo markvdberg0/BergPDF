@@ -555,7 +555,7 @@ impl WorkerHub {
     pub fn new(wake: Wake) -> Self {
         let (tx, rx) = channel();
         let threads = std::thread::available_parallelism()
-            .map_or(2, |n| n.get().saturating_sub(1).clamp(1, 4));
+            .map_or(2, |n| n.get().saturating_sub(1).clamp(1, 6));
         Self {
             pools: HashMap::new(),
             tx,

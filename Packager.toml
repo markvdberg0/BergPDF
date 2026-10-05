@@ -6,7 +6,7 @@ name = "bergpdf"
 product-name = "BergPDF"
 # Reverse-domain identifier; change it to one you own before distributing.
 identifier = "app.bergpdf.desktop"
-version = "0.2.0"
+version = "0.2.1"
 description = "Offline PDF editor"
 authors = ["BergPDF"]
 out-dir = "dist/packages"

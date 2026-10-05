@@ -1,4 +1,4 @@
-//! Original Berg visual identity: slate chrome with a copper accent.
+//! Berg visual identity: warm neutral chrome with a terracotta accent.
 //! Applies light/dark chrome, density and UI scale. It never touches page colours.
 
 use editor_core::prefs::{Density, Preferences, ThemeChoice};
@@ -23,30 +23,31 @@ pub struct Palette {
 }
 
 impl Palette {
+    // Warm neutrals and a terracotta accent, close to the Claude desktop app.
     pub const LIGHT: Palette = Palette {
-        chrome: Color32::from_rgb(0xEC, 0xEE, 0xF2),
-        panel: Color32::from_rgb(0xF7, 0xF8, 0xFA),
-        canvas: Color32::from_rgb(0xC9, 0xCE, 0xD6),
-        text: Color32::from_rgb(0x1D, 0x23, 0x30),
-        text_dim: Color32::from_rgb(0x5B, 0x64, 0x76),
-        accent: Color32::from_rgb(0xB9, 0x55, 0x24),
-        accent_soft: Color32::from_rgb(0xF4, 0xDC, 0xCD),
-        border: Color32::from_rgb(0xD0, 0xD5, 0xDD),
-        hover: Color32::from_rgb(0xE0, 0xE4, 0xEA),
-        page_shadow: Color32::from_black_alpha(60),
+        chrome: Color32::from_rgb(0xF0, 0xEE, 0xE6),
+        panel: Color32::from_rgb(0xFA, 0xF9, 0xF5),
+        canvas: Color32::from_rgb(0xDD, 0xDA, 0xCF),
+        text: Color32::from_rgb(0x14, 0x14, 0x13),
+        text_dim: Color32::from_rgb(0x6B, 0x6A, 0x64),
+        accent: Color32::from_rgb(0xC9, 0x64, 0x42),
+        accent_soft: Color32::from_rgb(0xF3, 0xDD, 0xD2),
+        border: Color32::from_rgb(0xE3, 0xE0, 0xD5),
+        hover: Color32::from_rgb(0xE8, 0xE5, 0xDA),
+        page_shadow: Color32::from_black_alpha(50),
         danger: Color32::from_rgb(0xB4, 0x2B, 0x2B),
         dark: false,
     };
     pub const DARK: Palette = Palette {
-        chrome: Color32::from_rgb(0x1F, 0x23, 0x2B),
-        panel: Color32::from_rgb(0x27, 0x2C, 0x36),
-        canvas: Color32::from_rgb(0x12, 0x15, 0x1A),
-        text: Color32::from_rgb(0xE6, 0xE9, 0xEF),
-        text_dim: Color32::from_rgb(0x9A, 0xA3, 0xB5),
-        accent: Color32::from_rgb(0xE8, 0x80, 0x4A),
-        accent_soft: Color32::from_rgb(0x4A, 0x2E, 0x20),
-        border: Color32::from_rgb(0x3A, 0x41, 0x4D),
-        hover: Color32::from_rgb(0x33, 0x3A, 0x47),
+        chrome: Color32::from_rgb(0x1F, 0x1E, 0x1D),
+        panel: Color32::from_rgb(0x26, 0x26, 0x24),
+        canvas: Color32::from_rgb(0x14, 0x14, 0x13),
+        text: Color32::from_rgb(0xF5, 0xF4, 0xEF),
+        text_dim: Color32::from_rgb(0xA3, 0xA1, 0x97),
+        accent: Color32::from_rgb(0xD9, 0x77, 0x57),
+        accent_soft: Color32::from_rgb(0x4A, 0x30, 0x27),
+        border: Color32::from_rgb(0x3A, 0x39, 0x36),
+        hover: Color32::from_rgb(0x33, 0x32, 0x30),
         page_shadow: Color32::from_black_alpha(140),
         danger: Color32::from_rgb(0xE0, 0x6A, 0x6A),
         dark: true,
@@ -125,7 +126,7 @@ pub fn apply(ctx: &egui::Context, prefs: &Preferences, pal: &Palette) {
     v.panel_fill = pal.panel;
     v.window_fill = pal.panel;
     v.extreme_bg_color = if pal.dark {
-        Color32::from_rgb(0x1A, 0x1E, 0x25)
+        Color32::from_rgb(0x1B, 0x1B, 0x1A)
     } else {
         Color32::WHITE
     };
@@ -135,9 +136,9 @@ pub fn apply(ctx: &egui::Context, prefs: &Preferences, pal: &Palette) {
     v.selection.bg_fill = pal.accent_soft;
     v.selection.stroke = Stroke::new(1.0, pal.accent);
     v.window_stroke = Stroke::new(1.0, pal.border);
-    v.window_corner_radius = CornerRadius::same(8);
-    v.menu_corner_radius = CornerRadius::same(6);
-    let r = CornerRadius::same(5);
+    v.window_corner_radius = CornerRadius::same(12);
+    v.menu_corner_radius = CornerRadius::same(10);
+    let r = CornerRadius::same(8);
     v.widgets.noninteractive.bg_fill = pal.chrome;
     v.widgets.noninteractive.bg_stroke = Stroke::new(1.0, pal.border);
     v.widgets.noninteractive.fg_stroke = Stroke::new(1.0, pal.text);
@@ -145,9 +146,9 @@ pub fn apply(ctx: &egui::Context, prefs: &Preferences, pal: &Palette) {
     // Buttons use `weak_bg_fill` (transparent until hovered); input controls (sliders,
     // checkboxes, text fields) use `bg_fill`/`bg_stroke` and must stay visible.
     v.widgets.inactive.bg_fill = if pal.dark {
-        Color32::from_rgb(0x3A, 0x41, 0x4D)
+        Color32::from_rgb(0x3A, 0x39, 0x36)
     } else {
-        Color32::from_rgb(0xD7, 0xDC, 0xE4)
+        Color32::from_rgb(0xE3, 0xE0, 0xD5)
     };
     v.widgets.inactive.weak_bg_fill = Color32::TRANSPARENT;
     v.widgets.inactive.bg_stroke = Stroke::new(1.0, pal.border);

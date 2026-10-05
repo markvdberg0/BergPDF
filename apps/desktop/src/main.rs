@@ -23,6 +23,7 @@ mod ocr_ui;
 mod optimize_ui;
 mod pagefilter;
 mod pdfa_ui;
+mod prefs_ui;
 mod sidebar;
 mod sign_ui;
 mod snap_ui;

@@ -270,6 +270,13 @@ pub struct App {
     pub hub: WorkerHub,
     pub tiles: ByteLru<TileKey, egui::TextureHandle>,
     pub in_flight: HashSet<TileKey>,
+    /// Shared by every queued tile job of the current render scale; set when the scale changes so
+    /// workers skip the tiles of a zoom level that is already gone.
+    pub tile_cancel: std::sync::Arc<std::sync::atomic::AtomicBool>,
+    /// Render scale (milli) the jobs behind `tile_cancel` were queued for.
+    pub tile_scale: u32,
+    /// Previous scroll offset and its smoothed speed (px per frame), to prefetch ahead of the motion.
+    pub scroll_motion: (egui::Vec2, egui::Vec2),
     pub failed: HashSet<TileKey>,
     pub text: HashMap<(DocId, PageId), (u64, Arc<TextPage>)>,
     pub text_pending: HashSet<(DocId, PageId, u64)>,

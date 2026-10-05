@@ -115,6 +115,8 @@ pub static ENTRIES: &[(&str, &str)] = &[
     ("Annotation summary", "Samenvatting van annotaties"),
     ("Answer language", "Antwoordtaal"),
     ("Anthropic (Claude)", "Anthropic (Claude)"),
+    ("General", "Algemeen"),
+    ("Performance", "Prestaties"),
     ("Appearance", "Weergave"),
     (
         "Append pages from other PDF files",
