@@ -1,0 +1,31 @@
+# Installer configuration for cargo-packager (https://github.com/crabnebula-dev/cargo-packager).
+# Build the program folder first (cargo xtask dist), then:  cargo packager --release
+# Windows: an NSIS installer (.exe); macOS: .dmg; Linux: .deb / AppImage. Output: dist/packages.
+# See README ("Shipping notes") before handing the result to anyone.
+name = "bergpdf"
+product-name = "BergPDF"
+# Reverse-domain identifier; change it to one you own before distributing.
+identifier = "app.bergpdf.desktop"
+version = "0.1.0"
+description = "Offline PDF editor"
+authors = ["BergPDF"]
+out-dir = "dist/packages"
+binaries-dir = "target/dist"
+binaries = [{ path = "bergpdf", main = true }]
+icons = ["assets/icons/bergpdf.ico", "assets/icons/bergpdf.icns", "assets/icons/bergpdf-256.png"]
+resources = [
+  { src = "README.md", target = "README.md" },
+  { src = "docs/THIRD_PARTY_LICENSES.md", target = "THIRD_PARTY_LICENSES.md" },
+  { src = "docs/DEPENDENCIES.md", target = "DEPENDENCIES.md" },
+]
+
+[[file-associations]]
+extensions = ["pdf"]
+mime-type = "application/pdf"
+description = "PDF document"
+role = "editor"
+
+[nsis]
+# Per user, no administrator rights needed.
+installer-mode = "currentUser"
+compression = "lzma"

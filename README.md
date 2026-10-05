@@ -70,7 +70,13 @@ jars (see docs/EVIDENCE.md for how they were fetched) and `BERG_REQUIRE_VERAPDF=
   The trained weights come from a CC BY-SA 4.0 dataset and the model repository has no licence file, so whether
   you may **redistribute** them (option 2, or even hosting them yourself) is **unverified** and is the owner's
   decision. Option 1 does not redistribute anything; the user fetches the files from their author.
-* **Windows installer.** `packaging/windows/bergpdf.iss` is an Inno Setup script for the `cargo xtask dist` folder
+* **Installer with cargo-packager.** `Packager.toml` configures [cargo-packager](https://github.com/crabnebula-dev/cargo-packager):
+  `cargo install cargo-packager --locked`, `cargo xtask dist`, then `cargo packager --release -f nsis` on Windows
+  (an NSIS `.exe`, per user, "Open with" entry for PDF, icon, uninstaller; output in `dist/packages`; the tool
+  downloads NSIS itself on first use), `-f dmg` on macOS, `-f deb` on Linux. The `.deb` was built and inspected here;
+  the Windows and macOS packages were not. Unsigned. Keep `version` in `Packager.toml` equal to the workspace
+  version (a test checks it).
+* **Windows installer (alternative).** `packaging/windows/bergpdf.iss` is an Inno Setup script for the `cargo xtask dist` folder
   (`winget install --id JRSoftware.InnoSetup`, then `ISCC.exe packaging\windows\bergpdf.iss /DAppVersion=0.1.0`).
   Unsigned and not yet tried on Windows.
 * **Windows packaging.** `cargo xtask dist` links the C runtime statically on Windows/MSVC (no Visual C++

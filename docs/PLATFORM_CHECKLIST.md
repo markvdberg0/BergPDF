@@ -77,3 +77,4 @@ on that OS (with notes), nothing in `FEATURE_MATRIX.md` may be marked “Verifie
 * [ ] **Translate → Save as PDF/text** pickers; non-Latin target languages (the PDF replaces characters
       outside Latin/Greek/Cyrillic with "?" and says so).
 - [ ] Windows installer: `packaging/windows/bergpdf.iss` builds with Inno Setup, installs per user, Start-menu entry and uninstall work, "Open with" lists BergPDF, the icon shows, SmartScreen behaviour noted (unsigned)
+- [ ] cargo-packager: `cargo packager --release -f nsis` on Windows produces an installer that installs per user, starts BergPDF with the icon, lists it under "Open with" for PDF, and uninstalls cleanly; `-f dmg` on macOS (needs signing/notarisation before others can open it without warnings)

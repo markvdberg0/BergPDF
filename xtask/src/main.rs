@@ -228,3 +228,23 @@ fn main() -> ExitCode {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::unwrap_used)]
+
+    /// `Packager.toml` repeats the version; it must not drift from the workspace's.
+    #[test]
+    fn the_installer_config_has_the_workspace_version() {
+        let cfg = std::fs::read_to_string(super::root().join("Packager.toml")).unwrap();
+        let line = cfg
+            .lines()
+            .find(|l| l.starts_with("version = "))
+            .expect("Packager.toml has a version");
+        assert_eq!(
+            line.trim_start_matches("version = ").trim_matches('"'),
+            env!("CARGO_PKG_VERSION"),
+            "update Packager.toml when the workspace version changes"
+        );
+    }
+}

@@ -210,3 +210,11 @@ choice resized smoothly with DirectX 12 (reported by the owner; one machine, cau
 "Automatic" therefore tries DirectX 12 first on Windows and, if the window cannot be created that way, starts
 again with the library default. `WGPU_BACKEND` and an explicit choice in Preferences still win. Not verified on
 other Windows machines or GPUs.
+
+## D-028 — Installers with cargo-packager
+Installers are produced by cargo-packager from `Packager.toml` on top of the `cargo xtask dist` build (which keeps
+the static CRT and the optional OCR bundle). A tool that wraps NSIS/WiX/dmg was chosen over writing our own
+installer: those formats bring uninstall, upgrade and "Open with" behaviour for free. Only the Linux `.deb` has
+been produced and inspected; the NSIS run needs to download its toolchain from GitHub, which the authoring
+sandbox cannot reach. The Inno Setup script stays as an alternative. Signing and notarisation need the owner's
+certificates and are not done.
