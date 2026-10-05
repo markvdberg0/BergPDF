@@ -1,11 +1,19 @@
-# Quality gate on the three first-class build targets. Nothing here publishes or uploads a
-# release; artefacts are short-lived workflow artefacts of *unsigned* development builds.
+# Quality gate on the three first-class build targets: format, clippy, tests, licence check.
+# It builds no installers and publishes nothing; installers come from release.yml (tags or a
+# manual run).
 name: ci
 
 on:
   push:
     branches: [main]
+    paths-ignore: ["**.md", "docs/**", "LICENSE", ".gitignore"]
   pull_request:
+    paths-ignore: ["**.md", "docs/**", "LICENSE", ".gitignore"]
+
+# A newer push to the same branch replaces a run that is still going.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -63,15 +71,6 @@ jobs:
         run: cargo clippy --workspace --all-targets -- -D warnings
       - name: Tests
         run: cargo test --workspace
-      - name: Release build
-        run: cargo build --release -p bergpdf
-      - name: Unsigned distribution folder
-        run: cargo xtask dist
-      - uses: actions/upload-artifact@v4
-        with:
-          name: bergpdf-dev-${{ matrix.os }}
-          path: dist/
-          retention-days: 7
 
   supply-chain:
     runs-on: ubuntu-latest
