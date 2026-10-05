@@ -39,6 +39,10 @@ on that OS (with notes), nothing in `FEATURE_MATRIX.md` may be marked “Verifie
       they say about the signature (expect "not trusted" unless the certificate is installed there)
 - [ ] Sign on Windows with a certificate that has a long chain (signature size limit 16 KB)
 - [ ] OCR on Windows and Apple Silicon: speed, memory (`rten` CPU kernels), models folder location
+- [ ] OCR models: the dialog's download button works through the OS certificate store (Windows/macOS); a bundled `ocr-models/` next to the exe (Windows) / inside the .app (macOS) is found
+- [ ] Windows: release exe opens **no console window**; the exe shows the BergPDF icon in Explorer, taskbar and shortcuts; `rc.exe` was found at build time (no `embedding the icon failed` warning)
+- [ ] Windows: resizing the window in Fit page / Fit width stays responsive (zoom changes during a resize are treated as settling, tiles re-render after ~150 ms)
+- [ ] Windows: `cargo xtask dist` (static CRT) builds and starts on a machine without Visual C++ redistributable; SmartScreen behaviour noted
 - [ ] Open JPEG photos straight from a phone (EXIF rotation) and PNG screenshots
 
 ## Accessibility

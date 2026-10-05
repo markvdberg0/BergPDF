@@ -31,6 +31,7 @@ cargo xtask fixtures   # write generated fixtures to target/fixtures
 cargo xtask bench      # release-mode performance numbers
 cargo xtask licenses   # regenerate docs/THIRD_PARTY_LICENSES.md
 cargo xtask dist       # release build + UNSIGNED distribution folder (macOS: .app layout)
+cargo xtask dist --with-ocr-models   # same, plus verified OCR models in ocr-models/ (see Shipping notes)
 ```
 
 ## Orientation
@@ -58,9 +59,19 @@ jars (see docs/EVIDENCE.md for how they were fetched) and `BERG_REQUIRE_VERAPDF=
 
 ## Shipping notes
 
-* **OCR models are not part of the build.** The OCR command is present in every build, but the recognition
-  models (≈12 MB) are neither in the repository nor in `cargo xtask dist` output. Without them the OCR dialog
-  says where to put them and nothing else happens. The trained weights come from a CC BY-SA 4.0 dataset whose
-  redistribution terms have not been reviewed (docs/DECISIONS.md D-015), so bundling them is the owner's call.
+* **OCR models (D-023).** The models (≈12 MB) are not in the repository or the binary. Two ways to make OCR
+  work without the user doing anything by hand:
+  1. *Download button* (default): the OCR dialog offers "Download the OCR models", fetched from the model
+     author's public host, checked against pinned SHA-256 hashes, and only installed when the hash matches.
+     Needs internet once; stored in the per-user data folder.
+  2. *Bundled*: `cargo xtask dist --with-ocr-models` downloads and verifies them into `ocr-models/` next to the
+     program (macOS: `BergPDF.app/Contents/Resources/ocr-models`), together with `NOTICE-OCR.txt`. The app looks
+     there first, so OCR works offline from the first start.
+  The trained weights come from a CC BY-SA 4.0 dataset and the model repository has no licence file, so whether
+  you may **redistribute** them (option 2, or even hosting them yourself) is **unverified** and is the owner's
+  decision. Option 1 does not redistribute anything; the user fetches the files from their author.
+* **Windows packaging.** `cargo xtask dist` links the C runtime statically on Windows/MSVC (no Visual C++
+  redistributable needed) and the exe carries the BergPDF icon and version info. It is **not** an installer and
+  **not** code-signed, so Windows SmartScreen will warn on first start. None of this has been run on Windows yet.
 * **Fonts**: 14 font files are embedded in the binary (Liberation — SIL OFL 1.1; DejaVu — Bitstream Vera licence);
   ship their licence texts (`crates/pdf-engine/assets/fonts/LICENSE-*.txt`) with the app.

@@ -1,4 +1,6 @@
 //! BergPDF desktop entry point.
+// Release builds on Windows are GUI-subsystem programs, so no console window opens beside the app.
+#![cfg_attr(all(not(debug_assertions), windows), windows_subsystem = "windows")]
 #![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used, clippy::panic))]
 
 mod app;

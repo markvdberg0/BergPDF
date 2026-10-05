@@ -276,3 +276,20 @@ veraPDF required (`evidence/test-run-2026-10-05-fonts.txt`); `cargo deny check` 
   (it scrolled to page 3 once); the final runs screenshot before typing. `xdotool` also cannot type `é`.
 
 Not covered: system fonts, CJK, mixed fonts inside one text run, Windows/macOS.
+
+## Addendum — OCR distribution, Windows packaging (2026-10-05)
+
+* `cargo test --workspace` with `BERG_REQUIRE_ORACLES=1 BERG_REQUIRE_OCR=1 BERG_REQUIRE_VERAPDF=1` and the models taken
+  from the bundled folder: 40 test suites, 231 passed, 0 failed (summed from the `test result` lines). `cargo fmt`,
+  `cargo clippy --workspace --all-targets -D warnings` and `cargo deny check` were clean.
+* Downloader: unit/mock-server tests for a right checksum (with progress), a wrong checksum (file discarded, an
+  existing good file kept), HTTP 404, cancel and a non-https address.
+* `cargo xtask dist --with-ocr-models` on Linux produced `dist/bergpdf-0.1.0-linux-x86_64/` with `ocr-models/` holding
+  both files (downloaded from the real host, hashes verified) and `NOTICE-OCR.txt`.
+* Windows items reported by the owner (console window, slow resize, no exe icon): addressed by
+  `windows_subsystem = "windows"` in release builds, treating fit-mode zoom changes during a resize as settling
+  (old tiles are drawn scaled; no new tile jobs until it settles), and `apps/desktop/build.rs` embedding the icon
+  and version info. **None of this was run on Windows**: the build script was only type-checked and run on Linux
+  (it generates the resource script; `embed-resource` reports "not Windows"), and the resize improvement is
+  reasoned from the code, not measured.
+* Not covered: the GUI download button end to end, anything on Windows/macOS, code signing, an installer.

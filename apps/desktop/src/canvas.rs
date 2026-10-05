@@ -111,6 +111,7 @@ impl App {
         v.current_page = v.current_page.min(pages.len() - 1);
         let cur_size = sizes[v.current_page];
         // Fit modes derive the zoom.
+        let zoom_before = v.zoom;
         match v.zoom_mode {
             ZoomMode::FitWidth => {
                 v.zoom = (view::fit_width_zoom(cur_size, vp.width, m.margin) * ui_scale)
@@ -121,6 +122,11 @@ impl App {
                     .clamp(view::MIN_ZOOM, view::MAX_ZOOM)
             }
             ZoomMode::Custom => {}
+        }
+        // While the window is being resized a fit mode changes the zoom every frame. Treat that like
+        // an explicit zoom: keep drawing the old tiles scaled and render new ones once it settles.
+        if (v.zoom - zoom_before).abs() > 1e-9 {
+            tab.ui.last_zoom_change = Some(std::time::Instant::now());
         }
         // `fit_*` return a zoom relative to the 96-dpi scale with *logical* px; convert for UI scale.
         let scale_of = |z: f64| z * PX_PER_PT_AT_100 / ui_scale;

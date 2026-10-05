@@ -13,6 +13,8 @@ png = "0.18"
 brand.workspace = true
 platform.workspace = true
 sha2 = "0.10"
+ai-client.workspace = true
+pdf-ocr.workspace = true
 
 [lints]
 workspace = true

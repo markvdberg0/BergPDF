@@ -447,3 +447,97 @@ fn translation_splits_long_pages_reports_progress_and_can_be_cancelled() {
     assert_eq!(e, AiError::Cancelled);
     assert_eq!(calls.lock().unwrap().len(), before);
 }
+
+// ---- verified downloads ---------------------------------------------------------------------
+
+use ai_client::download::{DownloadError, fetch_verified, sha256_hex};
+
+fn file_server(body: Vec<u8>, code: u16) -> Server {
+    // The mock server answers text; for binary bodies use a Latin-1-safe payload.
+    let text = String::from_utf8(body).unwrap();
+    serve(Box::new(move |_| (code, text.clone())))
+}
+
+#[test]
+fn a_download_with_the_right_checksum_is_stored_and_reports_progress() {
+    let payload = "model-bytes-".repeat(5000);
+    let srv = file_server(payload.clone().into_bytes(), 200);
+    let dir = tempfile::tempdir().unwrap();
+    let dest = dir.path().join("sub/m.rten");
+    let seen = Mutex::new(Vec::new());
+    fetch_verified(
+        &format!("{}/m.rten", srv.url),
+        &sha256_hex(payload.as_bytes()),
+        &dest,
+        &|g, t| seen.lock().unwrap().push((g, t)),
+        &AtomicBool::new(false),
+    )
+    .unwrap();
+    assert_eq!(std::fs::read_to_string(&dest).unwrap(), payload);
+    assert!(!dest.with_extension("partial").exists());
+    let seen = seen.lock().unwrap();
+    assert_eq!(seen.last().unwrap().0 as usize, payload.len());
+    assert_eq!(seen.last().unwrap().1, Some(payload.len() as u64));
+}
+
+#[test]
+fn a_wrong_checksum_discards_the_file_and_never_replaces_a_good_one() {
+    let srv = file_server(b"tampered".to_vec(), 200);
+    let dir = tempfile::tempdir().unwrap();
+    let dest = dir.path().join("m.rten");
+    std::fs::write(&dest, "good existing file").unwrap();
+    let e = fetch_verified(
+        &format!("{}/m.rten", srv.url),
+        &sha256_hex(b"what we expected"),
+        &dest,
+        &|_, _| {},
+        &AtomicBool::new(false),
+    )
+    .unwrap_err();
+    assert_eq!(e, DownloadError::BadChecksum);
+    assert_eq!(
+        std::fs::read_to_string(&dest).unwrap(),
+        "good existing file"
+    );
+    assert!(!dest.with_extension("partial").exists());
+}
+
+#[test]
+fn http_errors_cancel_and_non_https_addresses_are_handled() {
+    let srv = file_server(b"nope".to_vec(), 404);
+    let dir = tempfile::tempdir().unwrap();
+    let dest = dir.path().join("m.rten");
+    assert_eq!(
+        fetch_verified(
+            &format!("{}/x", srv.url),
+            "00",
+            &dest,
+            &|_, _| {},
+            &AtomicBool::new(false)
+        ),
+        Err(DownloadError::Status(404))
+    );
+    let ok = file_server(b"data".to_vec(), 200);
+    assert_eq!(
+        fetch_verified(
+            &format!("{}/x", ok.url),
+            &sha256_hex(b"data"),
+            &dest,
+            &|_, _| {},
+            &AtomicBool::new(true)
+        ),
+        Err(DownloadError::Cancelled)
+    );
+    assert!(!dest.exists() && !dest.with_extension("partial").exists());
+    // Plain http to a non-loopback host is refused before any connection.
+    assert!(matches!(
+        fetch_verified(
+            "http://example.invalid/m",
+            "00",
+            &dest,
+            &|_, _| {},
+            &AtomicBool::new(false)
+        ),
+        Err(DownloadError::Url(_))
+    ));
+}

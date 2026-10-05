@@ -6,7 +6,8 @@
 //! * `bench`    — release-mode performance measurements (see docs/PERFORMANCE.md)
 //! * `fetch-ocr-models [dir]` — download + verify the OCR models (explicit, opt-in network use)
 //! * `icons`    — regenerate `assets/icons` (PNG, ICO, ICNS) from the vector logo
-//! * `dist`     — release build and an *unsigned* distribution folder (macOS: `.app` bundle)
+//! * `dist [--with-ocr-models]` — release build and an *unsigned* distribution folder (macOS:
+//!   `.app` bundle); the flag downloads, verifies and bundles the OCR models
 //!
 //! Nothing here publishes, uploads, signs or notarises anything.
 
@@ -93,8 +94,36 @@ fn licenses() -> Result<(), String> {
     Ok(())
 }
 
-fn dist() -> Result<(), String> {
-    cargo(&["build", "--profile", "dist", "-p", "bergpdf"])?;
+/// Environment for the dist build. On Windows/MSVC the C runtime is linked statically, so the
+/// program does not need the Visual C++ redistributable on the target machine.
+fn dist_rustflags() -> Option<String> {
+    if !cfg!(all(windows, target_env = "msvc")) {
+        return None;
+    }
+    let mut f = std::env::var("RUSTFLAGS").unwrap_or_default();
+    if !f.contains("crt-static") {
+        if !f.is_empty() {
+            f.push(' ');
+        }
+        f.push_str("-C target-feature=+crt-static");
+    }
+    Some(f)
+}
+
+fn dist(with_ocr_models: bool) -> Result<(), String> {
+    let mut build = Command::new(std::env::var("CARGO").unwrap_or_else(|_| "cargo".into()));
+    build
+        .args(["build", "--profile", "dist", "-p", "bergpdf"])
+        .current_dir(root());
+    if let Some(flags) = dist_rustflags() {
+        build.env("RUSTFLAGS", flags);
+    }
+    let status = build
+        .status()
+        .map_err(|e| format!("could not run cargo: {e}"))?;
+    if !status.success() {
+        return Err(format!("the dist build failed ({status})"));
+    }
     let (os, arch) = (std::env::consts::OS, std::env::consts::ARCH);
     let exe = if os == "windows" {
         "bergpdf.exe"
@@ -138,6 +167,21 @@ fn dist() -> Result<(), String> {
             std::fs::copy(&src, dir.join(name)).map_err(|e| e.to_string())?;
         }
     }
+    if with_ocr_models {
+        // Next to the program on Windows/Linux; inside the bundle on macOS. The app looks in both.
+        let models = if os == "macos" {
+            dir.join("BergPDF.app/Contents/Resources/ocr-models")
+        } else {
+            dir.join("ocr-models")
+        };
+        ocr_models::fetch_into(&models)?;
+        std::fs::write(models.join("NOTICE-OCR.txt"), pdf_ocr::MODEL_NOTICE)
+            .map_err(|e| e.to_string())?;
+        println!("OCR models bundled in {}", models.display());
+        println!(
+            "WARNING: the redistribution terms of the model weights are unverified (docs/DECISIONS.md D-023)."
+        );
+    }
     println!("unsigned distribution folder: {}", dir.display());
     println!("(not signed, not notarised, not an installer — see docs/PLATFORM_CHECKLIST.md)");
     Ok(())
@@ -161,10 +205,17 @@ fn main() -> ExitCode {
         "bench" => cargo(&["run", "--release", "-p", "pdf-engine", "--example", "bench"]),
         "fetch-ocr-models" => ocr_models::fetch(std::env::args().nth(2).map(PathBuf::from)),
         "icons" => icons::write_all(&root().join("assets/icons")).map_err(|e| e.to_string()),
-        "dist" => dist(),
+        "dist" => {
+            let flag = std::env::args().nth(2);
+            match flag.as_deref() {
+                None => dist(false),
+                Some("--with-ocr-models") => dist(true),
+                Some(other) => Err(format!("unknown option {other}")),
+            }
+        }
         _ => {
             eprintln!(
-                "usage: cargo xtask <check|licenses|fixtures|bench|icons|fetch-ocr-models [dir]|dist>"
+                "usage: cargo xtask <check|licenses|fixtures|bench|icons|fetch-ocr-models [dir]|dist [--with-ocr-models]>"
             );
             return ExitCode::from(2);
         }

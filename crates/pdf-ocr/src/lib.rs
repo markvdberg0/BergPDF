@@ -16,6 +16,35 @@ use std::path::{Path, PathBuf};
 /// File names expected in the model directory: `(detection, recognition)`.
 pub const MODEL_FILES: (&str, &str) = ("text-detection.rten", "text-recognition.rten");
 
+/// Where the stock models are published (the `ocrs` author's bucket) and the SHA-256 of each file
+/// as downloaded on 2026-10-05. Everything that fetches or bundles the models (the app's download
+/// button, `cargo xtask fetch-ocr-models`, `cargo xtask dist --with-ocr-models`) uses this one list
+/// and refuses a file whose hash differs.
+pub const MODEL_BASE_URL: &str = "https://ocrs-models.s3-accelerate.amazonaws.com/";
+
+/// `(file name, expected SHA-256 in lower-case hex)` for the detection and recognition models.
+pub const MODEL_SOURCES: [(&str, &str); 2] = [
+    (
+        "text-detection.rten",
+        "f15cfb56bd02c4bf478a20343986504a1f01e1665c2b3a0ad66340f054b1b5ca",
+    ),
+    (
+        "text-recognition.rten",
+        "e484866d4cce403175bd8d00b128feb08ab42e208de30e42cd9889d8f1735a6e",
+    ),
+];
+
+/// Attribution text shipped next to bundled or downloaded models.
+pub const MODEL_NOTICE: &str = "OCR models for BergPDF\n\
+======================\n\n\
+The text-detection and text-recognition models are the stock models of the `ocrs` project\n\
+(https://github.com/robertknight/ocrs, engine under MIT / Apache-2.0), published at\n\
+https://github.com/robertknight/ocrs-models. According to that project they were trained\n\
+exclusively on the HierText dataset (https://github.com/google-research-datasets/hiertext),\n\
+which is licensed CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/).\n\n\
+The model files are not modified by BergPDF. Their own redistribution terms are those of the\n\
+model authors; see the links above.\n";
+
 /// Largest image (pixels) accepted in one call; keeps memory bounded.
 pub const MAX_PIXELS: u64 = 40_000_000;
 
@@ -141,6 +170,21 @@ impl Engine {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_shared_model_list_matches_the_expected_file_names() {
+        assert_eq!(MODEL_SOURCES[0].0, MODEL_FILES.0);
+        assert_eq!(MODEL_SOURCES[1].0, MODEL_FILES.1);
+        for (_, h) in MODEL_SOURCES {
+            assert_eq!(h.len(), 64);
+            assert!(
+                h.bytes()
+                    .all(|b| b.is_ascii_hexdigit() && !b.is_ascii_uppercase())
+            );
+        }
+        assert!(MODEL_BASE_URL.starts_with("https://") && MODEL_BASE_URL.ends_with('/'));
+        assert!(MODEL_NOTICE.contains("CC BY-SA 4.0"));
+    }
 
     #[test]
     fn missing_models_are_reported_not_panicked() {

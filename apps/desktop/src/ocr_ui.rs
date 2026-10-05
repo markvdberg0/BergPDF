@@ -13,11 +13,101 @@ use pdf_engine::pagecontent::{OcrWord, add_ocr_text_layers, page_has_text};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, mpsc};
 
-/// Where the model files are looked for: `BERG_OCR_MODELS` if set, else the data directory.
+/// Where the model files are looked for, in order: `BERG_OCR_MODELS`; an `ocr-models` folder next
+/// to the program (how a distribution that bundles them ships them); `../Resources/ocr-models`
+/// inside a macOS `.app`; the per-user data directory.
+fn candidate_dirs() -> Vec<std::path::PathBuf> {
+    let mut v = Vec::new();
+    if let Some(d) = std::env::var_os("BERG_OCR_MODELS") {
+        v.push(std::path::PathBuf::from(d));
+    }
+    if let Ok(exe) = std::env::current_exe()
+        && let Some(dir) = exe.parent()
+    {
+        v.push(dir.join("ocr-models"));
+        v.push(dir.join("../Resources/ocr-models"));
+    }
+    v.push(platform::dirs::ocr_models_dir());
+    v
+}
+
+/// First candidate that holds both model files, else `fallback`.
+fn pick_dir(
+    candidates: &[std::path::PathBuf],
+    fallback: std::path::PathBuf,
+    present: impl Fn(&std::path::Path) -> bool,
+) -> std::path::PathBuf {
+    candidates
+        .iter()
+        .find(|d| present(d))
+        .cloned()
+        .unwrap_or(fallback)
+}
+
+/// The folder the models are loaded from (or, when there are none yet, where they would go).
 pub fn model_dir() -> std::path::PathBuf {
+    pick_dir(&candidate_dirs(), install_dir(), pdf_ocr::models_present)
+}
+
+/// Where a download puts the models: the `BERG_OCR_MODELS` folder if set, else the per-user data
+/// directory (always writable, unlike the program folder).
+pub fn install_dir() -> std::path::PathBuf {
     std::env::var_os("BERG_OCR_MODELS")
         .map(std::path::PathBuf::from)
         .unwrap_or_else(platform::dirs::ocr_models_dir)
+}
+
+/// A running model download.
+pub struct ModelDownload {
+    rx: mpsc::Receiver<Result<(), String>>,
+    bytes: Arc<std::sync::atomic::AtomicU64>,
+    total: Arc<std::sync::atomic::AtomicU64>,
+    cancel: Arc<AtomicBool>,
+}
+
+fn start_model_download() -> ModelDownload {
+    let (tx, rx) = mpsc::channel();
+    let bytes = Arc::new(std::sync::atomic::AtomicU64::new(0));
+    let total = Arc::new(std::sync::atomic::AtomicU64::new(0));
+    let cancel = Arc::new(AtomicBool::new(false));
+    let (b2, t2, c2) = (bytes.clone(), total.clone(), cancel.clone());
+    let dir = install_dir();
+    std::thread::spawn(move || {
+        let r = std::panic::catch_unwind(|| -> Result<(), String> {
+            let mut done_before = 0u64;
+            for (name, sha) in pdf_ocr::MODEL_SOURCES {
+                let dest = dir.join(name);
+                if ai_client::download::file_matches(&dest, sha) {
+                    continue;
+                }
+                let base = done_before;
+                ai_client::download::fetch_verified(
+                    &format!("{}{name}", pdf_ocr::MODEL_BASE_URL),
+                    sha,
+                    &dest,
+                    &|got, tot| {
+                        b2.store(base + got, Ordering::Relaxed);
+                        // Total of this file plus what is already done (the other file is
+                        // counted once its size is known).
+                        t2.store(base + tot.unwrap_or(got), Ordering::Relaxed);
+                    },
+                    &c2,
+                )
+                .map_err(|e| e.to_string())?;
+                done_before = b2.load(Ordering::Relaxed);
+            }
+            // Attribution travels with the files.
+            let _ = std::fs::write(dir.join("NOTICE-OCR.txt"), pdf_ocr::MODEL_NOTICE);
+            Ok(())
+        });
+        let _ = tx.send(r.unwrap_or_else(|_| Err("The download stopped unexpectedly.".into())));
+    });
+    ModelDownload {
+        rx,
+        bytes,
+        total,
+        cancel,
+    }
 }
 
 type OcrResult = Result<Vec<(PageId, Vec<OcrWord>)>, String>;
@@ -40,6 +130,7 @@ pub enum OcrScope {
 
 /// State of the OCR dialog.
 pub struct OcrDialogState {
+    pub download: Option<ModelDownload>,
     pub scope: OcrScope,
     pub include_pages_with_text: bool,
     pub models_ok: bool,
@@ -61,6 +152,7 @@ impl App {
             return;
         }
         self.dialog = Some(Dialog::Ocr(Box::new(OcrDialogState {
+            download: None,
             scope: OcrScope::All,
             include_pages_with_text: false,
             models_ok: pdf_ocr::models_present(&model_dir()),
@@ -72,7 +164,38 @@ impl App {
     pub fn dialog_ocr(&mut self, ctx: &egui::Context, st: &mut OcrDialogState) -> bool {
         let mut start = false;
         let mut cancel = false;
+        let mut begin_download = false;
+        let mut cancel_download = false;
+        // Collect the result of a running download.
+        if let Some(d) = &st.download {
+            match d.rx.try_recv() {
+                Ok(r) => {
+                    st.download = None;
+                    match r {
+                        Ok(()) => {
+                            st.models_ok = pdf_ocr::models_present(&model_dir());
+                            st.error = None;
+                            self.notify("OCR models installed.");
+                        }
+                        Err(e) => st.error = Some(e),
+                    }
+                }
+                Err(mpsc::TryRecvError::Empty) => {
+                    ctx.request_repaint_after(std::time::Duration::from_millis(100));
+                }
+                Err(mpsc::TryRecvError::Disconnected) => {
+                    st.download = None;
+                    st.error = Some("The download stopped unexpectedly.".into());
+                }
+            }
+        }
         let dir = model_dir();
+        let host = pdf_ocr::MODEL_BASE_URL
+            .split("://")
+            .nth(1)
+            .unwrap_or("")
+            .trim_end_matches('/')
+            .to_string();
         modal(ctx, "ocr_dialog", |ui| {
             ui.heading("Recognize text (OCR)");
             ui.label(
@@ -86,10 +209,36 @@ impl App {
                     self.pal.danger,
                     "The text-recognition models are not installed.",
                 );
+                match &st.download {
+                    Some(d) => {
+                        let (got, tot) = (
+                            d.bytes.load(Ordering::Relaxed),
+                            d.total.load(Ordering::Relaxed).max(1),
+                        );
+                        ui.add(
+                            egui::ProgressBar::new((got as f32 / tot as f32).min(1.0))
+                                .text(format!("{:.1} MB", got as f64 / 1_048_576.0)),
+                        );
+                        if ui.button("Cancel download").clicked() {
+                            cancel_download = true;
+                        }
+                    }
+                    None => {
+                        ui.label(
+                            RichText::new(format!(
+                                "One click installs them: BergPDF will connect to {host}, download the two model files (about 12 MB) and check them against built-in checksums. Nothing else is sent. After that OCR works offline."
+                            ))
+                            .size(12.0),
+                        );
+                        if ui.button("Download the OCR models").clicked() {
+                            begin_download = true;
+                        }
+                    }
+                }
+                ui.add_space(6.0);
                 ui.label(
                     RichText::new(
-                        "BergPDF works offline and does not download anything by itself. Put the two model files \
-                         (about 12 MB) in this folder:",
+                        "Or install them yourself (no network needed): put the two model files in this folder:",
                     )
                     .size(12.0),
                 );
@@ -161,7 +310,17 @@ impl App {
                 }
             });
         });
+        if begin_download {
+            st.error = None;
+            st.download = Some(start_model_download());
+        }
+        if cancel_download && let Some(d) = st.download.take() {
+            d.cancel.store(true, Ordering::Relaxed);
+        }
         if cancel {
+            if let Some(d) = st.download.take() {
+                d.cancel.store(true, Ordering::Relaxed);
+            }
             return false;
         }
         if start {
@@ -316,5 +475,35 @@ impl App {
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
+
+    #[test]
+    fn the_first_folder_with_both_models_wins() {
+        let c = [
+            PathBuf::from("/a"),
+            PathBuf::from("/b"),
+            PathBuf::from("/c"),
+        ];
+        let fb = PathBuf::from("/install");
+        assert_eq!(
+            pick_dir(&c, fb.clone(), |d| d == std::path::Path::new("/b")),
+            PathBuf::from("/b")
+        );
+        assert_eq!(pick_dir(&c, fb.clone(), |_| true), PathBuf::from("/a"));
+        assert_eq!(pick_dir(&c, fb.clone(), |_| false), fb);
+    }
+
+    #[test]
+    fn a_bundle_next_to_the_program_is_among_the_candidates() {
+        let c = candidate_dirs();
+        assert!(c.iter().any(|d| d.ends_with("ocr-models")));
+        // The per-user directory is always the last resort.
+        assert_eq!(c.last().unwrap(), &platform::dirs::ocr_models_dir());
     }
 }

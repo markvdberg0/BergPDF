@@ -168,3 +168,15 @@ text keeps its position, there is still no reflow). Editing an existing run with
 keeps its original font. The last choice becomes the default for new text (Preferences ▸ Default font).
 Not offered: system fonts, font upload, per-character formatting inside one run, CJK (no bundled font has it —
 text with such characters is refused with the font named, never silently replaced).
+
+## D-023 — OCR out of the box: verified download first, optional bundling (amends D-015)
+D-015 kept the OCR models out of the build. To let a distributed build do OCR without manual steps there are
+now two routes, both ending in the same verification: the OCR dialog's **Download** button (background thread,
+https only, the OS certificate store, file size cap, SHA-256 pinned in `pdf-ocr`, written to `.partial` and
+renamed only on a match) and `cargo xtask dist --with-ocr-models`, which places the verified files in
+`ocr-models/` next to the program (macOS: inside the bundle) with `NOTICE-OCR.txt`. The app searches
+`BERG_OCR_MODELS`, the folder next to the program, the bundle's Resources, then the per-user data folder.
+**Open point for the owner:** the weights are CC BY-SA 4.0-trained, the repository has no licence file for them
+and the model card could not be read, so redistribution (bundling, or hosting the files yourself) is not
+cleared; the download route only fetches from the author's host. Unchanged: ASCII-only recognition alphabet;
+the download is the one more place (besides the opt-in AI client) that uses the network, and only on a click.

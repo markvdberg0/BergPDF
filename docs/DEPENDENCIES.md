@@ -25,10 +25,10 @@ a legal notice bundle. This file covers what a human has to look at.
 | cms 0.2, x509-cert 0.2, der 0.7, spki 0.7 | | build the PKCS#7/CMS signature | RustCrypto "formats"; `cms` 0.2 is the stable line |
 | rsa 0.9, p256 0.13, sha2 0.10, pkcs8 0.10 | | RSA/ECDSA signing, SHA-256 | **rsa 0.9 has RUSTSEC-2023-0071 (Marvin), no fixed release** — see below |
 | p12-keystore 0.3 | | read PKCS#12 (.p12/.pfx) incl. legacy 3DES | pulls pre-release `cms 0.3.0-pre`, `pkcs12 0.2.0-pre`, `x509-parser`, newer `der`/`sha2` (duplicate versions of RustCrypto crates in the tree) |
-| ocrs 0.13, rten 0.26 | | offline OCR (text detection + recognition on CPU) | pure Rust; **models are separate files, not bundled** |
+| ocrs 0.13, rten 0.26 | | offline OCR (text detection + recognition on CPU) | pure Rust; **models are separate files; optional download or opt-in bundling, see D-023** |
 | serde_json, png, sha2 | | xtask (licence report, icons, model checksum) | tooling only |
 | ureq 3 (rustls + ring, `platform-verifier`), whatlang 0.16, serde_json | | HTTP to the user's AI provider (`ai-client` only) and offline language detection | pulls `rustls`, `ring` (C/assembly crypto primitives), `rustls-platform-verifier` (OS certificate stores), `webpki-roots`/`webpki-root-certs` (**CDLA-Permissive-2.0**, Mozilla root lists — allowed in `deny.toml` with a reason). The only networking code in the workspace |
-| curl (external program) | | `cargo xtask fetch-ocr-models` only | not used by the application |
+| embed-resource 3 | | Windows build only: embeds the icon and version info in the exe | MIT; build dependency, needs the Windows SDK resource compiler (`rc.exe`) |
 
 ## Items needing attention before any distribution
 
@@ -79,10 +79,12 @@ a legal notice bundle. This file covers what a human has to look at.
   Key material is held only in memory while signing; the password field is cleared when the dialog
   closes. Certificates are not trusted or validated by BergPDF.
 * **OCR models** (`text-detection.rten` 2.4 MB, `text-recognition.rten` 9.3 MB; SHA-256 pinned in
-  `xtask/src/ocr_models.rs`) are from https://github.com/robertknight/ocrs-models, trained on HierText
+  `crates/pdf-ocr/src/lib.rs`) are from https://github.com/robertknight/ocrs-models, trained on HierText
   (**CC BY-SA 4.0**). The *code* is MIT/Apache-2.0; the licence status of the trained weights has
   **not** been established (the Hugging Face model card could not be read from the authoring
-  sandbox). They are deliberately not committed or bundled; decide before shipping them.
+  sandbox). They are not committed. The app can download them (verified) and `cargo xtask dist --with-ocr-models`
+  can bundle them; whether redistributing them is allowed is the owner's decision (D-023). The attribution
+  text shipped with them is `pdf_ocr::MODEL_NOTICE` (written to `NOTICE-OCR.txt`).
 * Test certificates in `crates/pdf-sign/tests/fixtures` are throw-away keys published on purpose.
 
 ## Policy
