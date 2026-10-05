@@ -725,6 +725,38 @@ impl PageContent {
         self.replace_span(tx, g.span.clone(), s.as_bytes())
     }
 
+    /// Delete several text runs at once (stale references are skipped). Returns how many were
+    /// removed. All edits to one content stream are applied together, back to front.
+    pub fn delete_texts(&self, tx: &mut Tx<'_>, runs: &[ObjRef]) -> Result<usize> {
+        let mut per_stream: std::collections::BTreeMap<usize, Vec<(Range<usize>, String)>> =
+            std::collections::BTreeMap::new();
+        let mut n = 0;
+        for r in runs {
+            let Ok(gi) = self.group_by_ref(*r) else {
+                continue;
+            };
+            let g = &self.groups[gi];
+            let last = &self.walk.runs[g.runs.end - 1];
+            let mut s = self.restore_state(g, last);
+            s.push(' ');
+            let Ok((si, local)) = self.stream_for_span(&g.span) else {
+                continue;
+            };
+            per_stream.entry(si).or_default().push((local, s));
+            n += 1;
+        }
+        for (si, mut edits) in per_stream {
+            let (sid, srange) = &self.streams[si];
+            let mut bytes = self.buf[srange.clone()].to_vec();
+            edits.sort_by_key(|e| std::cmp::Reverse(e.0.start));
+            for (local, rep) in edits {
+                bytes.splice(local, rep.bytes());
+            }
+            commit_stream(tx, self.page, *sid, bytes)?;
+        }
+        Ok(n)
+    }
+
     /// Delete an image placement (`/Name Do`).
     pub fn delete_image(&self, tx: &mut Tx<'_>, img: ObjRef) -> Result<()> {
         let d = self.do_by_ref(img)?;
@@ -996,6 +1028,22 @@ pub fn add_text(
     color: (f32, f32, f32),
     font: FontStyle,
 ) -> Result<()> {
+    add_text_rotated(tx, page, at, text, size_pt, color, font, 0)
+}
+
+/// Like [`add_text`], with the text rotated `rotation` degrees counter-clockwise (a multiple of 90)
+/// around `at`; use `crate::annot::upright_for(shown_cw)` to read upright on a rotated page.
+#[allow(clippy::too_many_arguments)]
+pub fn add_text_rotated(
+    tx: &mut Tx<'_>,
+    page: PageId,
+    at: Point,
+    text: &str,
+    size_pt: f64,
+    color: (f32, f32, f32),
+    font: FontStyle,
+    rotation: i32,
+) -> Result<()> {
     if !(1.0..=500.0).contains(&size_pt) || text.trim().is_empty() {
         return Err(EngineError::InvalidArgument(
             "text is empty or the size is out of range".into(),
@@ -1022,8 +1070,25 @@ pub fn add_text(
     let mut body = String::new();
     for (i, line) in text.split('\n').enumerate() {
         let codes = fb.encode_str(line)?;
-        let (dx, dy) = if i == 0 { (at.x, at.y) } else { (0.0, -lh) };
-        body.push_str(&format!("{} {} Td\n", fmt_num_prec(dx), fmt_num_prec(dy)));
+        if i == 0 && rotation.rem_euclid(360) != 0 {
+            let m = match rotation.rem_euclid(360) {
+                90 => [0.0, 1.0, -1.0, 0.0],
+                180 => [-1.0, 0.0, 0.0, -1.0],
+                _ => [0.0, -1.0, 1.0, 0.0],
+            };
+            body.push_str(&format!(
+                "{} {} {} {} {} {} Tm\n",
+                m[0],
+                m[1],
+                m[2],
+                m[3],
+                fmt_num_prec(at.x),
+                fmt_num_prec(at.y)
+            ));
+        } else {
+            let (dx, dy) = if i == 0 { (at.x, at.y) } else { (0.0, -lh) };
+            body.push_str(&format!("{} {} Td\n", fmt_num_prec(dx), fmt_num_prec(dy)));
+        }
         if !codes.is_empty() {
             body.push_str(&format!("{} Tj\n", pdf_string(&codes, 2)));
         }

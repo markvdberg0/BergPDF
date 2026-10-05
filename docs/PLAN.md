@@ -90,6 +90,16 @@ Copilot/Translate were exercised against a mock server and a real endpoint only 
 a valid key; PDF/A is validated by veraPDF in tests but the app ships no validator; D-012's "no HTTP
 client" is replaced by "one, isolated, opt-in".
 
+## Additions after the third review (2026-10-05)
+
+Requested after testing on Windows: calmer resizing, no flashes while zooming, properties sliders that apply
+on release, an AI model dropdown, inline translation, two-click callouts, upright text on rotated pages (with
+rotation), and installed fonts. All implemented (FEATURE_MATRIX "Fourth round", DECISIONS D-024…D-026). Honest
+gaps: the Windows resize slowness could not be reproduced here — the application's own work per frame measured
+about 0.5–0.8 ms, so the likely cause is the graphics path (a software renderer, or the DirectX swap-chain), and
+the build now reports the adapter and offers other APIs/pacing instead of guessing; installed fonts and inline
+translation have only been run on Linux and against a mock AI server.
+
 ## Quality gate (what “green” means here)
 
 `cargo xtask check` = `cargo fmt --check`, `cargo clippy --workspace --all-targets -D warnings`,

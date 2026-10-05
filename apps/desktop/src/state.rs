@@ -7,7 +7,7 @@ use editor_core::prefs::Preferences;
 use editor_core::session::{DocId, DocumentSession};
 use editor_core::tiles::{ByteLru, TileKey};
 use editor_core::tools::Tool;
-use pdf_engine::annot::{AnnotId, AnnotationInfo};
+use pdf_engine::annot::{AnnotId, AnnotationInfo, AnnotationSpec};
 use pdf_engine::doc::PageId;
 use pdf_engine::geom::{Point, Rect};
 use pdf_engine::pagecontent::{EditReport, ImageInfo, ObjRef, TextRunInfo};
@@ -88,6 +88,8 @@ pub enum Dialog {
         tool: Tool,
         rect: Rect,
         text: String,
+        /// Leader line of a callout (tip first), when the entry is for one.
+        callout: Option<Vec<Point>>,
     },
     /// New page text (real content, not an annotation).
     AddText {
@@ -96,6 +98,8 @@ pub enum Dialog {
         text: String,
         size: f64,
         font: pdf_engine::fontembed::FontStyle,
+        /// Extra quarter turns counter-clockwise on screen, on top of "upright".
+        turns: i32,
     },
     /// Document properties.
     Properties(Box<PropsState>),
@@ -181,6 +185,8 @@ pub struct TabState {
     /// Page index requested by an explicit "go to page" (applied next frame).
     pub goto: Option<usize>,
     pub last_zoom_change: Option<Instant>,
+    /// Properties-panel edit in progress (selected annotations, spec); applied on release.
+    pub props_draft: Option<(Vec<AnnotId>, AnnotationSpec)>,
     pub thumb_scroll_to_current: bool,
     pub polygon_points: Vec<Point>,
     /// Pending zoom change (new zoom factor, optional anchor in viewport coordinates).
@@ -247,6 +253,12 @@ pub struct Tab {
 
 /// Everything the UI needs.
 pub struct App {
+    /// The model dropdown is on "Other…" (a typed model id).
+    pub ai_custom_model: bool,
+    /// Graphics adapter in use (filled on the first frame).
+    pub gpu_info: Option<String>,
+    /// The presentation choice last applied to the surface.
+    pub applied_present: Option<editor_core::prefs::PresentChoice>,
     pub prefs: Preferences,
     pub pal: Palette,
     pub tabs: Vec<Tab>,

@@ -3,7 +3,9 @@
 use crate::app::OS;
 use crate::state::*;
 use editor_core::command::{self, CommandId as C, Key, PaletteItem, Shortcut};
-use editor_core::prefs::{DefaultZoom, Density, SETTINGS, ThemeChoice, Workspace};
+use editor_core::prefs::{
+    DefaultZoom, Density, GfxBackend, PresentChoice, SETTINGS, ThemeChoice, Workspace,
+};
 use editor_core::tools::Tool;
 use egui::{Align2, Color32, RichText, Vec2};
 
@@ -243,8 +245,10 @@ impl App {
                 tool,
                 rect,
                 text,
+                callout,
             } => {
                 let (page, tool, rect) = (*page, *tool, *rect);
+                let callout = callout.clone();
                 let mut choice: Option<bool> = None;
                 let title = match tool {
                     Tool::Note => "Sticky note",
@@ -313,7 +317,7 @@ impl App {
                     keep = false;
                     if c {
                         let t = text.clone();
-                        self.commit_text_entry(page, tool, rect, t);
+                        self.commit_text_entry(page, tool, rect, t, callout);
                     }
                 }
             }
@@ -323,6 +327,7 @@ impl App {
                 text,
                 size,
                 font,
+                turns,
             } => {
                 let (page, at) = (*page, *at);
                 let mut choice: Option<bool> = None;
@@ -354,6 +359,28 @@ impl App {
                     ui.horizontal(|ui| {
                         ui.label("Size");
                         ui.add(egui::DragValue::new(size).range(4.0..=200.0).suffix(" pt"));
+                        ui.separator();
+                        ui.label("Direction");
+                        if ui
+                            .button("⟲")
+                            .on_hover_text("Rotate 90° counter-clockwise")
+                            .clicked()
+                        {
+                            *turns = (*turns + 1).rem_euclid(4);
+                        }
+                        if ui
+                            .button("⟳")
+                            .on_hover_text("Rotate 90° clockwise")
+                            .clicked()
+                        {
+                            *turns = (*turns + 3).rem_euclid(4);
+                        }
+                        ui.label(match *turns {
+                            0 => "horizontal",
+                            1 => "up",
+                            2 => "upside down",
+                            _ => "down",
+                        });
                     });
                     ui.add_space(8.0);
                     ui.horizontal(|ui| {
@@ -373,11 +400,11 @@ impl App {
                 if let Some(c) = choice {
                     keep = false;
                     if c {
-                        let (t, s, f) = (text.clone(), *size, *font);
+                        let (t, s, f, tn) = (text.clone(), *size, *font, *turns);
                         // Remember the choice for the next piece of text.
                         self.prefs.tool_defaults.set_font_style(f);
                         self.prefs_dirty = true;
-                        self.commit_add_text(page, at, &t, s, f);
+                        self.commit_add_text(page, at, &t, s, f, tn);
                     }
                 }
             }
@@ -542,6 +569,35 @@ impl App {
                             section(ui, "Snap to drawing geometry", "Measurements jump to line ends, corners, intersections and midpoints of the page when the pointer is close.");
                             changed |= ui.checkbox(&mut self.prefs.snap_to_geometry, "Snap to drawing geometry").changed();
                         }
+                        if show("graphics") {
+                            section(ui, "Graphics (drawing backend, frame pacing)", "If resizing the window or zooming feels slow, try another drawing API (restart needed) or uncapped frames.");
+                            let adapter = self.gpu_info.clone().unwrap_or_else(|| "unknown".into());
+                            ui.label(RichText::new(format!("In use: {adapter}")).size(12.0));
+                            if adapter.contains("Cpu") || adapter.contains("llvmpipe") || adapter.contains("WARP") || adapter.contains("Basic Render") {
+                                ui.colored_label(self.pal.danger, "This is a software renderer, not a graphics card. Install the graphics driver of your computer's maker; drawing will stay slow until then.");
+                            }
+                            ui.horizontal(|ui| {
+                                ui.label("Drawing API");
+                                egui::ComboBox::from_id_salt("gfx_backend")
+                                    .selected_text(self.prefs.graphics.backend.title())
+                                    .show_ui(ui, |ui| {
+                                        for b in [GfxBackend::Auto, GfxBackend::Dx12, GfxBackend::Vulkan, GfxBackend::Gl] {
+                                            changed |= ui.selectable_value(&mut self.prefs.graphics.backend, b, b.title()).changed();
+                                        }
+                                    });
+                                ui.label(RichText::new("(applies after restart)").size(11.0).color(self.pal.text_dim));
+                            });
+                            ui.horizontal(|ui| {
+                                ui.label("Frame pacing");
+                                egui::ComboBox::from_id_salt("gfx_present")
+                                    .selected_text(self.prefs.graphics.present.title())
+                                    .show_ui(ui, |ui| {
+                                        for p in [PresentChoice::Smooth, PresentChoice::LowLatency, PresentChoice::Uncapped] {
+                                            changed |= ui.selectable_value(&mut self.prefs.graphics.present, p, p.title()).changed();
+                                        }
+                                    });
+                            });
+                        }
                         if show("ai") {
                             section(ui, "PDF Copilot (AI provider and key)", "Use your own OpenAI or Anthropic account (or a server of your own) for Copilot and Translate.");
                             changed |= self.ai_prefs_section(ui, ctx);
@@ -556,7 +612,9 @@ impl App {
                         }
                         if show("ui_scale") {
                             section(ui, "Interface scale", "Scales toolbar icons, text and hit targets. Page rendering stays sharp at any scale.");
-                            changed |= ui.add(egui::Slider::new(&mut self.prefs.ui_scale, 0.75..=2.5).text("scale")).changed();
+                            let r = ui.add(egui::Slider::new(&mut self.prefs.ui_scale, 0.75..=2.5).text("scale"));
+                            // Rescaling re-renders every page, so it is applied when the slider is released.
+                            changed |= (r.changed() && !r.dragged()) || r.drag_stopped();
                         }
                         if show("workspace") {
                             section(ui, "Workspace", "Essential shows the common tools; Professional shows everything. Both can reach every command via search.");

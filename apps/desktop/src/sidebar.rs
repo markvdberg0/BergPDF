@@ -608,11 +608,25 @@ impl App {
             }
         }
         ui.add_space(6.0);
-        let Some(mut spec) = first.spec.clone() else {
+        let Some(base_spec) = first.spec.clone() else {
             ui.label(RichText::new("This annotation type was created by another program. It is displayed and can be moved or deleted, but its appearance cannot be edited here.").color(self.pal.text_dim).size(12.0));
             return;
         };
+        // While a slider or colour is being dragged the edit lives in a draft; the document (and so
+        // the page render) only changes once the mouse button / key is released.
+        let held = ui.input(|i| i.pointer.any_down() || !i.keys_down.is_empty());
+        let draft = self.tabs[ti]
+            .ui
+            .props_draft
+            .as_ref()
+            .filter(|(d, _)| *d == ids)
+            .map(|(_, s)| s.clone());
+        let mut spec = draft.unwrap_or_else(|| base_spec.clone());
         let before = spec.clone();
+        let upright = sel
+            .annotations
+            .first()
+            .map_or(0, |(p, _)| self.upright_rotation(*p));
         ui.add_enabled_ui(can_edit, |ui| {
             egui::Grid::new("props")
                 .num_columns(2)
@@ -648,6 +662,43 @@ impl App {
                                     spec.fill = Some(Rgb(fc[0], fc[1], fc[2]));
                                 }
                             }
+                        });
+                        ui.end_row();
+                    }
+                    if matches!(
+                        spec.kind,
+                        AnnotationKind::FreeText { .. } | AnnotationKind::StampText { .. }
+                    ) {
+                        ui.label("Rotation");
+                        ui.horizontal(|ui| {
+                            if ui
+                                .button("⟲")
+                                .on_hover_text("Rotate 90° counter-clockwise")
+                                .clicked()
+                            {
+                                turn_text(&mut spec, 90);
+                            }
+                            if ui
+                                .button("⟳")
+                                .on_hover_text("Rotate 90° clockwise")
+                                .clicked()
+                            {
+                                turn_text(&mut spec, -90);
+                            }
+                            if ui
+                                .add_enabled(spec.rotation != upright, egui::Button::new("Upright"))
+                                .on_hover_text("Make the text read horizontally on screen")
+                                .clicked()
+                            {
+                                let delta = upright - spec.rotation;
+                                turn_text(&mut spec, delta);
+                            }
+                            let off = (spec.rotation - upright).rem_euclid(360);
+                            ui.label(if off == 0 {
+                                "upright".to_string()
+                            } else {
+                                format!("{off}° turned")
+                            });
                         });
                         ui.end_row();
                     }
@@ -736,6 +787,20 @@ impl App {
             );
         });
         if spec != before && can_edit {
+            self.tabs[ti].ui.props_draft = Some((ids.clone(), spec.clone()));
+        }
+        let pending = self.tabs[ti]
+            .ui
+            .props_draft
+            .as_ref()
+            .is_some_and(|(d, _)| *d == ids);
+        if pending && held {
+            ui.ctx().request_repaint();
+        }
+        if pending && !held {
+            self.tabs[ti].ui.props_draft = None;
+        }
+        if pending && !held && spec != base_spec && can_edit {
             // Edits from the panel apply to every selected annotation of the same kind.
             let targets: Vec<(annot::AnnotId, AnnotationSpec)> = infos
                 .iter()
@@ -1029,4 +1094,27 @@ pub fn pretty_subtype(s: &str) -> String {
         "Ink" => "Drawing".into(),
         other => other.to_string(),
     }
+}
+
+/// Turn a text box or stamp by `delta` degrees counter-clockwise (multiples of 90). A quarter turn
+/// also swaps the box's width and height around its centre, so the box turns with its text.
+fn turn_text(spec: &mut AnnotationSpec, delta: i32) {
+    let delta = delta.rem_euclid(360);
+    if delta == 0 {
+        return;
+    }
+    if delta % 180 != 0 {
+        let swap = |r: &mut pdf_engine::geom::Rect| {
+            let c = pdf_engine::geom::Point::new((r.x0 + r.x1) / 2.0, (r.y0 + r.y1) / 2.0);
+            let (hw, hh) = (r.width().abs() / 2.0, r.height().abs() / 2.0);
+            *r = pdf_engine::geom::Rect::new(c.x - hh, c.y - hw, c.x + hh, c.y + hw);
+        };
+        match &mut spec.kind {
+            AnnotationKind::FreeText { rect, .. } | AnnotationKind::StampText { rect, .. } => {
+                swap(rect);
+            }
+            _ => {}
+        }
+    }
+    spec.rotation = (spec.rotation + delta).rem_euclid(360);
 }

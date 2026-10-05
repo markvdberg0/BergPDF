@@ -32,6 +32,8 @@ pub enum FontFamily {
     LiberationSerif,
     /// Liberation Mono — metric-compatible with Courier New.
     LiberationMono,
+    /// A font installed on this computer (an index into [`crate::sysfonts`]).
+    System(u32),
 }
 
 impl FontFamily {
@@ -52,6 +54,9 @@ impl FontFamily {
             FontFamily::LiberationSans => "Liberation Sans (Arial-like)",
             FontFamily::LiberationSerif => "Liberation Serif (Times-like)",
             FontFamily::LiberationMono => "Liberation Mono (Courier-like)",
+            FontFamily::System(id) => {
+                crate::sysfonts::with_family(id, |f| f.name).unwrap_or("Unavailable system font")
+            }
         }
     }
 
@@ -63,21 +68,43 @@ impl FontFamily {
             FontFamily::LiberationSans => "LiberationSans",
             FontFamily::LiberationSerif => "LiberationSerif",
             FontFamily::LiberationMono => "LiberationMono",
+            FontFamily::System(id) => crate::sysfonts::with_family(id, |f| f.key).unwrap_or("sys:"),
         }
     }
 
-    /// Inverse of [`FontFamily::key`].
+    /// Inverse of [`FontFamily::key`]. System fonts are found by name (`sys:Arial`) and only
+    /// resolve once they have been scanned on this computer.
     pub fn from_key(k: &str) -> Option<FontFamily> {
+        if let Some(name) = k.strip_prefix("sys:") {
+            return crate::sysfonts::find_by_name(name).map(FontFamily::System);
+        }
         FontFamily::ALL.into_iter().find(|f| f.key() == k)
     }
 
     /// Whether the family has an italic face. (DejaVu Sans/Serif are offered upright and bold
     /// only; Liberation has all four styles.)
     pub fn has_italic(self) -> bool {
-        matches!(
-            self,
-            FontFamily::LiberationSans | FontFamily::LiberationSerif | FontFamily::LiberationMono
-        )
+        match self {
+            FontFamily::System(id) => {
+                crate::sysfonts::with_family(id, |f| f.has_italic()).unwrap_or(false)
+            }
+            _ => matches!(
+                self,
+                FontFamily::LiberationSans
+                    | FontFamily::LiberationSerif
+                    | FontFamily::LiberationMono
+            ),
+        }
+    }
+
+    /// Whether the family has a real bold face (system fonts may not; bundled ones always do).
+    pub fn has_bold(self) -> bool {
+        match self {
+            FontFamily::System(id) => {
+                crate::sysfonts::with_family(id, |f| f.has_bold()).unwrap_or(false)
+            }
+            _ => true,
+        }
     }
 }
 
@@ -117,6 +144,9 @@ impl FontStyle {
             (false, true) => "-Italic",
             (true, true) => "-BoldItalic",
         };
+        if let FontFamily::System(_) = self.family {
+            return format!("{}{suffix}", self.family.key());
+        }
         match (self.family, suffix) {
             (
                 FontFamily::LiberationSans
@@ -132,6 +162,21 @@ impl FontStyle {
 
     /// Inverse of [`FontStyle::base_name`] (also accepts names without `-Regular`).
     pub fn from_base_name(n: &str) -> Option<FontStyle> {
+        if let Some(rest) = n.strip_prefix("sys:") {
+            for (suffix, b, i) in [
+                ("-BoldItalic", true, true),
+                ("-Bold", true, false),
+                ("-Italic", false, true),
+                ("", false, false),
+            ] {
+                if let Some(name) = rest.strip_suffix(suffix)
+                    && let Some(id) = crate::sysfonts::find_by_name(name)
+                {
+                    return Some(FontStyle::new(FontFamily::System(id), b, i));
+                }
+            }
+            return None;
+        }
         FontFamily::ALL.into_iter().find_map(|f| {
             let rest = n.strip_prefix(f.key())?;
             let (b, i) = match rest {
@@ -145,9 +190,37 @@ impl FontStyle {
         })
     }
 
-    /// The font program's bytes.
+    /// Index of the face inside its file (non-zero only for system fonts in collections).
+    pub fn face_index(self) -> u32 {
+        match self.family {
+            FontFamily::System(id) => crate::sysfonts::with_family(id, |f| {
+                f.face(self.bold, self.italic).map_or(0, |x| x.index)
+            })
+            .unwrap_or(0),
+            _ => 0,
+        }
+    }
+
+    /// Name used inside the PDF font objects (no `sys:` prefix, no spaces).
+    pub fn pdf_name(self) -> String {
+        self.base_name()
+            .trim_start_matches("sys:")
+            .chars()
+            .filter(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.'))
+            .collect()
+    }
+
+    /// The font program's bytes. A system font that cannot be read falls back to DejaVu Sans.
     pub fn data(self) -> &'static [u8] {
         use FontFamily::*;
+        if let System(id) = self.family {
+            return crate::sysfonts::with_family(id, |f| {
+                f.face(self.bold, self.italic)
+                    .and_then(crate::sysfonts::SysFace::data)
+            })
+            .flatten()
+            .unwrap_or(DEJAVU_SANS);
+        }
         match (self.family, self.bold, self.italic) {
             (DejaVuSans, false, _) => DEJAVU_SANS,
             (DejaVuSans, true, _) => DEJAVU_SANS_BOLD,
@@ -189,6 +262,7 @@ impl FontStyle {
             (LiberationMono, true, true) => {
                 include_bytes!("../assets/fonts/LiberationMono-BoldItalic.ttf")
             }
+            (System(_), _, _) => DEJAVU_SANS,
         }
     }
 }
@@ -221,8 +295,11 @@ impl BundledFace {
     fn data(self) -> &'static [u8] {
         self.style().data()
     }
+    fn index(self) -> u32 {
+        self.style().face_index()
+    }
     fn base_name(self) -> String {
-        self.style().base_name()
+        self.style().pdf_name()
     }
 }
 
@@ -242,7 +319,7 @@ pub struct FontBuilder {
 impl FontBuilder {
     /// Create a builder for a bundled face.
     pub fn new(kind: BundledFace) -> Result<Self> {
-        let face = Face::parse(kind.data(), 0)
+        let face = Face::parse(kind.data(), kind.index())
             .map_err(|e| EngineError::Unsupported(format!("bundled font unreadable: {e}")))?;
         Ok(Self {
             face_kind: kind,
@@ -332,7 +409,7 @@ impl FontBuilder {
 
     /// Write the font objects into the document and return the Type0 font's id.
     pub fn finish(self, tx: &mut Tx<'_>) -> Result<ObjectId2> {
-        let sub = subsetter::subset(self.face_kind.data(), 0, &self.remap)
+        let sub = subsetter::subset(self.face_kind.data(), self.face_kind.index(), &self.remap)
             .map_err(|e| EngineError::Unsupported(format!("font subsetting failed: {e:?}")))?;
         let tag = subset_tag(&self.cids);
         let base = format!("{tag}+{}", self.face_kind.base_name());

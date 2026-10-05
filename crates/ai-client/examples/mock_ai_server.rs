@@ -3,7 +3,7 @@
 //! choose "Custom", address `http://127.0.0.1:8099/v1`, any model name.
 //!
 //! It answers the document-question prompts with a fixed JSON answer that quotes a sentence from
-//! the repository's report fixtures, and translates by tagging each line. It understands both the
+//! the repository's report fixtures, and translates by tagging each line (or each block, for inline translation). It understands both the
 //! OpenAI and Anthropic wire formats, and logs what it received (never real data).
 use std::io::{Read, Write};
 use std::net::TcpListener;
@@ -78,7 +78,12 @@ fn main() {
             user.len()
         );
         std::thread::sleep(std::time::Duration::from_millis(600));
-        let text = if system.contains("professional translator") {
+        let text = if system.contains("JSON array of text blocks") {
+            // Block translation: a JSON list in, a JSON list out (each block tagged).
+            let blocks: Vec<String> = serde_json::from_str(&user).unwrap_or_default();
+            let tagged: Vec<String> = blocks.iter().map(|b| format!("[EN] {b}")).collect();
+            serde_json::to_string(&tagged).unwrap_or_default()
+        } else if system.contains("professional translator") {
             user.lines()
                 .map(|l| {
                     if l.trim().is_empty() {

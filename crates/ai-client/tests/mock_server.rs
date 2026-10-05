@@ -448,6 +448,79 @@ fn translation_splits_long_pages_reports_progress_and_can_be_cancelled() {
     assert_eq!(calls.lock().unwrap().len(), before);
 }
 
+#[test]
+fn block_translation_batches_requests_and_falls_back_for_mangled_replies() {
+    let requests = Arc::new(Mutex::new(Vec::<String>::new()));
+    let r2 = requests.clone();
+    let srv = serve(Box::new(move |req| {
+        let body: serde_json::Value = serde_json::from_str(&req.body).unwrap();
+        let user = body["messages"][1]["content"].as_str().unwrap().to_string();
+        r2.lock().unwrap().push(user.clone());
+        // A JSON list in → a JSON list out, except when a block says "BREAK": then the reply
+        // has the wrong length, which must trigger the one-by-one fallback.
+        match serde_json::from_str::<Vec<String>>(&user) {
+            Ok(list) if list.iter().any(|b| b.contains("BREAK")) => {
+                (200, openai_body("[\"only one\"]"))
+            }
+            Ok(list) => {
+                let t: Vec<String> = list.iter().map(|b| format!("EN:{b}")).collect();
+                (200, openai_body(&serde_json::to_string(&t).unwrap()))
+            }
+            Err(_) => (200, openai_body(&format!("EN:{user}"))),
+        }
+    }));
+    let c = cfg(Provider::Custom, &format!("{}/v1", srv.url));
+    let cancel = AtomicBool::new(false);
+    let blocks: Vec<String> = (0..5).map(|i| format!("blok {i}")).collect();
+    let progress = Mutex::new(Vec::new());
+    let out =
+        translate::translate_blocks(&c, &blocks, Some("Dutch"), "English", &cancel, &|d, t| {
+            progress.lock().unwrap().push((d, t));
+        })
+        .unwrap();
+    assert_eq!(
+        out,
+        (0..5).map(|i| format!("EN:blok {i}")).collect::<Vec<_>>()
+    );
+    assert_eq!(
+        requests.lock().unwrap().len(),
+        1,
+        "five short blocks, one request"
+    );
+    assert_eq!(*progress.lock().unwrap(), vec![(5, 5)]);
+
+    // A bad reply for a batch: every block of it is translated on its own.
+    requests.lock().unwrap().clear();
+    let blocks = vec![
+        "één".to_string(),
+        "BREAK twee".to_string(),
+        "drie".to_string(),
+    ];
+    let out =
+        translate::translate_blocks(&c, &blocks, None, "English", &cancel, &|_, _| {}).unwrap();
+    assert_eq!(out, vec!["EN:één", "EN:BREAK twee", "EN:drie"]);
+    assert_eq!(requests.lock().unwrap().len(), 1 + 3);
+
+    // Many blocks are split over several requests.
+    requests.lock().unwrap().clear();
+    let many: Vec<String> = (0..95).map(|i| format!("b{i}")).collect();
+    let out = translate::translate_blocks(&c, &many, None, "English", &cancel, &|_, _| {}).unwrap();
+    assert_eq!(out.len(), 95);
+    assert!(
+        out.iter()
+            .enumerate()
+            .all(|(i, t)| *t == format!("EN:b{i}"))
+    );
+    assert_eq!(requests.lock().unwrap().len(), 3);
+    // Cancelling stops before the next request.
+    cancel.store(true, Ordering::Relaxed);
+    let before = requests.lock().unwrap().len();
+    let e =
+        translate::translate_blocks(&c, &many, None, "English", &cancel, &|_, _| {}).unwrap_err();
+    assert_eq!(e, AiError::Cancelled);
+    assert_eq!(requests.lock().unwrap().len(), before);
+}
+
 // ---- verified downloads ---------------------------------------------------------------------
 
 use ai_client::download::{DownloadError, fetch_verified, sha256_hex};

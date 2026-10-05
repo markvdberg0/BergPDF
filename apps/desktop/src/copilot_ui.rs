@@ -1220,6 +1220,7 @@ impl App {
     pub fn ai_prefs_section(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) -> bool {
         let pal = self.pal;
         let mut changed = false;
+        let previous_provider = self.prefs.ai.provider;
         ui.horizontal(|ui| {
             ui.label("Provider");
             for p in [
@@ -1233,18 +1234,83 @@ impl App {
             }
         });
         let provider = self.prefs.ai.provider;
+        if provider != previous_provider {
+            // A model id of one provider means nothing to another.
+            self.prefs.ai.model.clear();
+            self.ai_custom_model = false;
+        }
         egui::Grid::new("ai_grid")
             .num_columns(2)
             .spacing([8.0, 6.0])
             .show(ui, |ui| {
                 ui.label("Model");
-                changed |= ui
-                    .add(
-                        egui::TextEdit::singleline(&mut self.prefs.ai.model)
-                            .hint_text(provider.default_model())
-                            .desired_width(260.0),
-                    )
-                    .changed();
+                ui.vertical(|ui| {
+                    let models = provider.models();
+                    if !models.is_empty() {
+                        let current = self.prefs.ai.model().to_string();
+                        let known = models.iter().any(|(id, _)| *id == current);
+                        let shown = if self.ai_custom_model || !known {
+                            "Other…".to_string()
+                        } else {
+                            let d = models
+                                .iter()
+                                .find(|(id, _)| *id == current)
+                                .map_or("", |m| m.1);
+                            let tag = if self.prefs.ai.model.trim().is_empty() {
+                                " (default)"
+                            } else {
+                                ""
+                            };
+                            format!("{current} — {d}{tag}")
+                        };
+                        egui::ComboBox::from_id_salt("ai_model")
+                            .selected_text(shown)
+                            .width(300.0)
+                            .show_ui(ui, |ui| {
+                                for (id, desc) in models {
+                                    let label = if *id == provider.default_model() {
+                                        format!("{id} — {desc} (default)")
+                                    } else {
+                                        format!("{id} — {desc}")
+                                    };
+                                    if ui
+                                        .selectable_label(
+                                            known && !self.ai_custom_model && current == *id,
+                                            label,
+                                        )
+                                        .clicked()
+                                    {
+                                        // The default is stored as "empty" so it follows future default changes.
+                                        self.prefs.ai.model = if *id == provider.default_model() {
+                                            String::new()
+                                        } else {
+                                            (*id).to_string()
+                                        };
+                                        self.ai_custom_model = false;
+                                        changed = true;
+                                    }
+                                }
+                                if ui
+                                    .selectable_label(self.ai_custom_model || !known, "Other…")
+                                    .clicked()
+                                {
+                                    self.ai_custom_model = true;
+                                }
+                            });
+                    }
+                    if models.is_empty()
+                        || self.ai_custom_model
+                        || !models.iter().any(|(id, _)| *id == self.prefs.ai.model())
+                    {
+                        changed |= ui
+                            .add(
+                                egui::TextEdit::singleline(&mut self.prefs.ai.model)
+                                    .hint_text(provider.default_model())
+                                    .desired_width(300.0),
+                            )
+                            .changed();
+                    }
+                });
                 ui.end_row();
                 ui.label("Server address");
                 changed |= ui

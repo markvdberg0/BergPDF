@@ -18,6 +18,14 @@ pub const OS: OsKind = OsKind::current();
 impl App {
     pub fn new_app(cc: &eframe::CreationContext<'_>, files: Vec<PathBuf>) -> Self {
         theme::install_fonts(&cc.egui_ctx);
+        crate::fontpick::init(&cc.egui_ctx);
+        // Installed fonts are looked up in the background (only names and flags are read).
+        let repaint = cc.egui_ctx.clone();
+        std::thread::spawn(move || {
+            let n = pdf_engine::sysfonts::scan_and_register();
+            tracing::info!("{n} installed font families found");
+            repaint.request_repaint();
+        });
         let mut prefs = platform::dirs::read_text(&platform::dirs::prefs_file())
             .and_then(|s| Preferences::from_toml(&s).ok())
             .unwrap_or_default();
@@ -29,6 +37,9 @@ impl App {
         theme::apply(&cc.egui_ctx, &prefs, &pal);
         let budget = prefs.render_cache_mb as usize * 1024 * 1024;
         let mut app = App {
+            ai_custom_model: false,
+            gpu_info: None,
+            applied_present: None,
             prefs,
             pal,
             tabs: Vec::new(),
@@ -291,9 +302,51 @@ impl App {
     }
 }
 
+/// `BERG_FRAME_LOG=1` prints how long the application's own per-frame work takes (not the GPU).
+mod frame_log {
+    use std::cell::RefCell;
+    use std::time::{Duration, Instant};
+
+    thread_local! {
+        static STATE: RefCell<(Option<Instant>, Vec<Duration>)> = const { RefCell::new((None, Vec::new())) };
+    }
+
+    fn enabled() -> bool {
+        static ON: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+        *ON.get_or_init(|| std::env::var_os("BERG_FRAME_LOG").is_some())
+    }
+
+    pub fn begin() {
+        if enabled() {
+            STATE.with(|s| s.borrow_mut().0 = Some(Instant::now()));
+        }
+    }
+
+    pub fn end() {
+        if !enabled() {
+            return;
+        }
+        STATE.with(|s| {
+            let mut s = s.borrow_mut();
+            if let Some(t) = s.0.take() {
+                s.1.push(t.elapsed());
+            }
+            if s.1.len() >= 30 {
+                let n = s.1.len() as f64;
+                let avg = s.1.iter().map(Duration::as_secs_f64).sum::<f64>() / n * 1000.0;
+                let max = s.1.iter().map(Duration::as_secs_f64).fold(0.0, f64::max) * 1000.0;
+                eprintln!("frame-log: app work per frame over {n} frames: avg {avg:.2} ms, max {max:.2} ms");
+                s.1.clear();
+            }
+        });
+    }
+}
+
 impl eframe::App for App {
     fn logic(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        frame_log::begin();
         self.frame_counter += 1;
+        crate::fontpick::flush_pending(ctx);
         // Follow OS theme changes when the preference is System.
         let sys_dark = ctx.global_style().visuals.dark_mode;
         let _ = sys_dark;
@@ -350,8 +403,26 @@ impl eframe::App for App {
         }
     }
 
-    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+    fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame) {
         let ctx = ui.ctx().clone();
+        if self.gpu_info.is_none()
+            && let Some(rs) = frame.wgpu_render_state()
+        {
+            let info = crate::gpu::describe(rs);
+            if rs.adapter.get_info().device_type == eframe::wgpu::DeviceType::Cpu {
+                self.notify_error(
+                    "BergPDF is drawing with a software renderer (no graphics card driver found), so resizing and zooming will be slow. Install your computer's graphics driver; see Preferences ▸ Graphics.",
+                );
+            }
+            self.gpu_info = Some(info);
+        }
+        if self.applied_present != Some(self.prefs.graphics.present) {
+            // Not applied on the very first frame: the start-up configuration already matches.
+            if self.applied_present.is_some() {
+                frame.set_wgpu_surface_config(crate::gpu::surface(self.prefs.graphics.present));
+            }
+            self.applied_present = Some(self.prefs.graphics.present);
+        }
         egui::Panel::top("quick_access")
             .frame(
                 egui::Frame::new()
@@ -422,6 +493,7 @@ impl eframe::App for App {
         self.dialogs(&ctx);
         self.palette_ui(&ctx);
         self.notices_ui(&ctx);
+        frame_log::end();
     }
 }
 

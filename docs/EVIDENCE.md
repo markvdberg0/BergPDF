@@ -293,3 +293,18 @@ Not covered: system fonts, CJK, mixed fonts inside one text run, Windows/macOS.
   (it generates the resource script; `embed-resource` reports "not Windows"), and the resize improvement is
   reasoned from the code, not measured.
 * Not covered: the GUI download button end to end, anything on Windows/macOS, code signing, an installer.
+
+## Addendum — fourth round (2026-10-05)
+
+* Full suite with poppler, OpenSSL, OCR models and veraPDF required: 250 tests passed, 0 failed (summed from the
+  `test result` lines); `cargo fmt`, `cargo clippy --workspace --all-targets -D warnings`, `cargo deny check` clean.
+* New tests: `m9_rotation` (7), `m10_sysfonts` (3), `m11_inline_translate` (4), scanner unit tests (3), block
+  translation (1 mock-server test, 1 parser test).
+* Per-frame application work on the Chromium fixture while the window was resized (`BERG_FRAME_LOG=1`, release
+  build, software Vulkan): average 0.5–0.8 ms, maximum 3–7 ms. This excludes tessellation and the GPU, which is
+  where the reported Windows slowness must be; it was not reproduced.
+* GUI (Xvfb, Mesa lavapipe, debug build) `33-…`–`36-…`: live callout preview on a landscape page, the placed
+  callout upright with the Rotation row, the font picker with installed fonts, the inline translation opened as a
+  copy (mock AI server: every paragraph tagged "[EN]"). Typing needed the window focused (`xdotool windowfocus`).
+* Not covered: any Windows/macOS run, a real AI provider, translation quality, tables and multi-column layouts
+  on real documents, slider timing on a real pointer, Graphics settings on a real GPU.

@@ -88,6 +88,7 @@ impl App {
                         text: String::new(),
                         size: self.prefs.tool_defaults.font_size.max(8.0),
                         font: self.prefs.tool_defaults.font_style(),
+                        turns: 0,
                     });
                 }
             }
@@ -453,15 +454,26 @@ impl App {
         text: &str,
         size: f64,
         font: pdf_engine::fontembed::FontStyle,
+        turns: i32,
     ) {
         let ti = self.active;
         let col = (0.0f32, 0.0f32, 0.0f32);
+        // Upright on screen (also on rotated pages), plus the quarter turns the user asked for.
+        let rotation = (self.upright_rotation(page) + 90 * turns).rem_euclid(360);
         let r = self.tabs[ti].session.execute("Add text", |tx| {
-            pagecontent::add_text(tx, page, at, text, size, col, font)
+            pagecontent::add_text_rotated(tx, page, at, text, size, col, font, rotation)
         });
         match r {
             Ok(()) => {
-                self.reselect_near(page, Point::new(at.x + 20.0, at.y + size / 3.0), true);
+                // A point inside the new text, whichever way it runs.
+                let (dx, dy) = (20.0, size / 3.0);
+                let (ox, oy) = match rotation {
+                    90 => (-dy, dx),
+                    180 => (-dx, -dy),
+                    270 => (dy, -dx),
+                    _ => (dx, dy),
+                };
+                self.reselect_near(page, Point::new(at.x + ox, at.y + oy), true);
                 self.set_tool(Tool::EditText);
             }
             Err(EngineError::MissingGlyphs { chars, .. }) => {
@@ -806,16 +818,18 @@ impl App {
                                 None => format!("Keep ({})", short_font_name(&d.original_font)),
                                 Some(s) => s.family.title().to_string(),
                             };
-                            egui::ComboBox::from_id_salt("edit_font").selected_text(label).width(190.0).show_ui(ui, |ui| {
+                            egui::ComboBox::from_id_salt("edit_font").selected_text(label).width(190.0).height(470.0).show_ui(ui, |ui| {
                                 if ui.selectable_label(d.font.is_none(), "Keep the original font").clicked() {
                                     d.font = None;
                                 }
-                                for f in pdf_engine::fontembed::FontFamily::ALL {
-                                    let sel = d.font.is_some_and(|s| s.family == f);
-                                    let t = egui::RichText::new(f.title()).family(crate::fontpick::egui_family(pdf_engine::fontembed::FontStyle::new(f, false, false)));
-                                    if ui.selectable_label(sel, t).clicked() && !sel {
-                                        d.font = Some(pdf_engine::fontembed::FontStyle::new(f, orig.contains("bold"), orig.contains("italic") || orig.contains("oblique")));
-                                    }
+                                let mut fam = d.font.map_or(pdf_engine::fontembed::FontFamily::DejaVuSans, |s| s.family);
+                                let before = d.font.map(|s| s.family);
+                                if crate::fontpick::family_menu(ui, &mut fam, egui::Id::new("edit_font_search")) && before != Some(fam) {
+                                    d.font = Some(pdf_engine::fontembed::FontStyle::new(
+                                        fam,
+                                        orig.contains("bold") && fam.has_bold(),
+                                        orig.contains("italic") || orig.contains("oblique"),
+                                    ));
                                 }
                             });
                         });

@@ -146,9 +146,39 @@ impl App {
         }
     }
 
+    /// Text rotation (degrees counter-clockwise in user space) that reads upright on screen for
+    /// `page` as it is displayed now (its own `/Rotate` plus the temporary view rotation).
+    pub(crate) fn upright_rotation(&mut self, page: PageId) -> i32 {
+        let Some(tab) = self.tabs.get_mut(self.active) else {
+            return 0;
+        };
+        let view = tab.session.view.rotation;
+        let shown = tab
+            .session
+            .pages()
+            .ok()
+            .and_then(|pages| {
+                pages
+                    .iter()
+                    .find(|p| p.id == page)
+                    .map(|p| p.geometry.rotate)
+            })
+            .unwrap_or_default()
+            .plus(view);
+        annot::upright_for(shown.degrees())
+    }
+
     /// Finish a free-text/note/stamp dialog.
-    pub fn commit_text_entry(&mut self, page: PageId, tool: Tool, rect: PRect, text: String) {
+    pub fn commit_text_entry(
+        &mut self,
+        page: PageId,
+        tool: Tool,
+        rect: PRect,
+        text: String,
+        callout: Option<Vec<Point>>,
+    ) {
         let d = self.prefs.tool_defaults.clone();
+        let rotation = self.upright_rotation(page);
         let kind = match tool {
             Tool::Note => AnnotationKind::Note {
                 pos: Point::new(rect.x0, rect.y1),
@@ -157,18 +187,14 @@ impl App {
                 rect,
                 label: text.clone(),
             },
-            Tool::Callout => {
-                let tip = Point::new(rect.x0 - 40.0, rect.y0 - 30.0);
-                let knee = Point::new(rect.x0, (rect.y0 + rect.y1) / 2.0);
-                AnnotationKind::FreeText {
-                    rect,
-                    font_size: d.font_size,
-                    text_color: Rgb::BLACK,
-                    align: Align::Left,
-                    font: d.font_style(),
-                    callout: Some(vec![tip, knee]),
-                }
-            }
+            Tool::Callout => AnnotationKind::FreeText {
+                rect,
+                font_size: d.font_size,
+                text_color: Rgb::BLACK,
+                align: Align::Left,
+                font: d.font_style(),
+                callout: callout.filter(|c| c.len() >= 2),
+            },
             _ => AnnotationKind::FreeText {
                 rect,
                 font_size: d.font_size,
@@ -180,6 +206,9 @@ impl App {
         };
         let mut spec = self.new_spec(kind);
         spec.contents = text;
+        if matches!(tool, Tool::FreeText | Tool::Callout | Tool::Stamp) {
+            spec.rotation = rotation;
+        }
         if matches!(tool, Tool::FreeText | Tool::Callout) {
             spec.fill = Some(Rgb(1.0, 1.0, 0.85));
             spec.border_width = 1.0;
@@ -190,12 +219,14 @@ impl App {
                 font,
                 ..
             } = &mut spec.kind
-                && let Ok(h) =
-                    annot::freetext_required_height(&contents, *font_size, rect.width(), *font)
-                && h > rect.height()
             {
-                // Grow the box so the text is not clipped.
-                rect.y0 = rect.y1 - h;
+                let (local_w, _) = annot::local_size(*rect, rotation);
+                if let Ok(h) =
+                    annot::freetext_required_height(&contents, *font_size, local_w, *font)
+                {
+                    // Grow the box so the text is not clipped.
+                    *rect = annot::grow_box(*rect, rotation, h);
+                }
             }
         }
         let label = match tool {
@@ -205,6 +236,70 @@ impl App {
             _ => "Add text box",
         };
         self.add_annotation(page, spec, label);
+    }
+
+    /// A box of `w_pt × h_pt` points whose top-left corner *on screen* is at `a`.
+    fn screen_box_at(vc: &ViewCtx, i: usize, a: Point, w_pt: f64, h_pt: f64) -> PRect {
+        let sa = vc.pdf_to_screen(i, a);
+        let size = Vec2::new((w_pt * vc.px_per_pt) as f32, (h_pt * vc.px_per_pt) as f32);
+        Self::screen_rect_to_pdf(vc, i, Rect::from_min_size(sa, size))
+    }
+
+    /// The default callout box centred on `at` (screen), and the middle of the side nearest `tip`.
+    pub(crate) fn callout_box_screen(vc: &ViewCtx, tip: Pos2, at: Pos2) -> (Rect, Pos2) {
+        let size = Vec2::new(170.0, 48.0) * vc.px_per_pt as f32;
+        let r = Rect::from_center_size(at, size);
+        let knee = [
+            r.left_center(),
+            r.right_center(),
+            r.center_top(),
+            r.center_bottom(),
+        ]
+        .into_iter()
+        .min_by(|a, b| a.distance(tip).total_cmp(&b.distance(tip)))
+        .unwrap_or(r.left_center());
+        (r, knee)
+    }
+
+    /// Callout: click the point to mark, then click where the box goes (with a live preview).
+    fn callout_tool(&mut self, response: &egui::Response, vc: &ViewCtx, pos: Option<Pos2>) {
+        let ti = self.active;
+        let Some(pos) = pos else { return };
+        if !response.clicked_by(egui::PointerButton::Primary) {
+            return;
+        }
+        let tip = match &self.tabs[ti].ui.interaction {
+            Interaction::Draw { page, points, .. } if points.len() == 1 => Some((*page, points[0])),
+            _ => None,
+        };
+        match tip {
+            None => {
+                let Some(i) = vc.page_at(pos) else { return };
+                let p = vc.screen_to_pdf(i, pos);
+                self.tabs[ti].session.selection.clear_content();
+                self.tabs[ti].ui.interaction = Interaction::Draw {
+                    page: vc.pages[i].id,
+                    tool: Tool::Callout,
+                    points: vec![p],
+                };
+            }
+            Some((page, tip)) => {
+                let Some(i) = vc.pages.iter().position(|p| p.id == page) else {
+                    return;
+                };
+                let (r, knee) = Self::callout_box_screen(vc, vc.pdf_to_screen(i, tip), pos);
+                let rect = Self::screen_rect_to_pdf(vc, i, r);
+                let knee = vc.screen_to_pdf(i, knee);
+                self.tabs[ti].ui.interaction = Interaction::None;
+                self.dialog = Some(Dialog::TextEntry {
+                    page,
+                    tool: Tool::Callout,
+                    rect,
+                    text: String::new(),
+                    callout: Some(vec![tip, knee]),
+                });
+            }
+        }
     }
 
     fn finish_draw(
@@ -252,8 +347,12 @@ impl App {
                         "Add ellipse",
                     ),
                     Tool::FreeText => {
-                        let r = if r.width() < 40.0 || r.height() < 16.0 {
-                            PRect::new(r.x0, r.y1 - 40.0, r.x0 + 180.0, r.y1)
+                        // Sizes are judged on screen, so a rotated page behaves like an upright one.
+                        let sr = Self::rect_screen(vc, page_index, r);
+                        let tiny = f64::from(sr.width()) < 40.0 * vc.px_per_pt
+                            || f64::from(sr.height()) < 16.0 * vc.px_per_pt;
+                        let r = if tiny {
+                            Self::screen_box_at(vc, page_index, a, 180.0, 40.0)
                         } else {
                             r
                         };
@@ -262,11 +361,15 @@ impl App {
                             tool,
                             rect: r,
                             text: String::new(),
+                            callout: None,
                         });
                     }
                     _ => {
-                        let r = if r.width() < 40.0 || r.height() < 16.0 {
-                            PRect::new(r.x0, r.y1 - 36.0, r.x0 + 140.0, r.y1)
+                        let sr = Self::rect_screen(vc, page_index, r);
+                        let tiny = f64::from(sr.width()) < 40.0 * vc.px_per_pt
+                            || f64::from(sr.height()) < 16.0 * vc.px_per_pt;
+                        let r = if tiny {
+                            Self::screen_box_at(vc, page_index, a, 140.0, 36.0)
                         } else {
                             r
                         };
@@ -275,20 +378,10 @@ impl App {
                             tool,
                             rect: r,
                             text: "APPROVED".into(),
+                            callout: None,
                         });
                     }
                 }
-            }
-            Tool::Callout => {
-                let Some((_, b)) = two(&pts) else { return };
-                // The leader points back toward where the drag started; the box sits where it ended.
-                let r = PRect::new(b.x, b.y - 24.0, b.x + 170.0, b.y + 24.0);
-                self.dialog = Some(Dialog::TextEntry {
-                    page,
-                    tool,
-                    rect: r,
-                    text: String::new(),
-                });
             }
             Tool::Line | Tool::Arrow => {
                 let Some((a, mut b)) = two(&pts) else { return };
@@ -439,6 +532,7 @@ impl App {
                         tool: Tool::Note,
                         rect: PRect::new(pt.x, pt.y, pt.x, pt.y),
                         text: String::new(),
+                        callout: None,
                     });
                 }
             }
@@ -449,10 +543,10 @@ impl App {
             | Tool::Arrow
             | Tool::Ink
             | Tool::FreeText
-            | Tool::Callout
             | Tool::Stamp => {
                 self.drag_draw_tool(response, vc, pos, tool, mods);
             }
+            Tool::Callout => self.callout_tool(response, vc, pos),
             Tool::EditText | Tool::AddText | Tool::AddImage => {
                 self.content_tool(response, vc, pos, tool)
             }
@@ -1029,7 +1123,30 @@ impl App {
                             dashed_rect(painter, r, st);
                         }
                     }
-                    Tool::Line | Tool::Arrow | Tool::Callout if sp.len() >= 2 => {
+                    Tool::Callout if sp.len() == 1 => {
+                        // Live preview: the box follows the pointer until the second click.
+                        if let Some(h) = painter.ctx().input(|inp| inp.pointer.hover_pos()) {
+                            let (r, knee) = Self::callout_box_screen(vc, sp[0], h);
+                            painter.rect_filled(
+                                r,
+                                0.0,
+                                Color32::from_rgba_unmultiplied(255, 255, 217, 215),
+                            );
+                            painter.rect_stroke(r, 0.0, st, egui::StrokeKind::Middle);
+                            painter.line_segment([sp[0], knee], st);
+                            painter.circle_filled(sp[0], 3.5, accent);
+                            painter.text(
+                                r.left_top() + Vec2::new(5.0, 3.0),
+                                egui::Align2::LEFT_TOP,
+                                "Callout text",
+                                egui::FontId::proportional(
+                                    (12.0 * vc.px_per_pt as f32).clamp(8.0, 40.0),
+                                ),
+                                Color32::from_gray(90),
+                            );
+                        }
+                    }
+                    Tool::Line | Tool::Arrow if sp.len() >= 2 => {
                         painter.line_segment([sp[0], sp[sp.len() - 1]], st);
                     }
                     Tool::Ink | Tool::Polyline | Tool::Polygon => {

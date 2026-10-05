@@ -181,7 +181,7 @@ impl Tool {
             Tool::Note => "Click where the note should be placed.",
             Tool::FreeText => "Drag a box, then type your text.",
             Tool::Callout => {
-                "Press where the callout should point, drag to where the text box should go."
+                "Click the point to mark, then click where the text box should go (it follows the pointer)."
             }
             Tool::Rectangle | Tool::Ellipse => "Drag to draw. Hold Shift for a square/circle.",
             Tool::Line | Tool::Arrow => "Drag to draw. Hold Shift to snap to 15° angles.",

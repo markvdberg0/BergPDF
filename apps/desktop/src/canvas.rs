@@ -2,7 +2,9 @@
 
 use crate::state::*;
 use editor_core::jobs::{Job, JobKind};
-use editor_core::tiles::{TileKey, TilePlan, plan_tiles, quantize_scale};
+use editor_core::tiles::{
+    TILE_PX, TileKey, TilePlan, dequantize_scale, plan_tiles, quantize_scale,
+};
 use editor_core::view::{self, Layout, LayoutMetrics, PX_PER_PT_AT_100, ViewMode, ZoomMode};
 use egui::{Color32, Pos2, Rect, Sense, Vec2};
 use pdf_engine::doc::PageInfo;
@@ -366,18 +368,24 @@ impl App {
             let in_view = slot.intersects(vc.viewport);
             let plans = plan_tiles(w_px, h_px, rel, 1);
             let scale_milli = quantize_scale(scale);
-            let mut drew_any = false;
+            let key_of = |plan: &TilePlan| TileKey {
+                doc,
+                revision,
+                page: page.id,
+                rotation: vc.rotation,
+                scale_milli,
+                tx: plan.tx,
+                ty: plan.ty,
+                whole: plan.whole,
+            };
+            // Anything still missing at this scale/revision is covered by the best stand-ins from
+            // the cache (other zoom, or the revision before an edit) so the page never goes blank.
+            if plans.iter().any(|p| self.tiles.peek(&key_of(p)).is_none()) {
+                self.paint_placeholder(painter, vc, i, slot);
+                self.paint_standin_tiles(painter, vc, i, slot, expanded, revision);
+            }
             for plan in plans {
-                let key = TileKey {
-                    doc,
-                    revision,
-                    page: page.id,
-                    rotation: vc.rotation,
-                    scale_milli,
-                    tx: plan.tx,
-                    ty: plan.ty,
-                    whole: plan.whole,
-                };
+                let key = key_of(&plan);
                 let dest = Rect::from_min_size(
                     slot.min + Vec2::new(plan.x as f32 / vc.ppp, plan.y as f32 / vc.ppp),
                     Vec2::new(plan.w as f32 / vc.ppp, plan.h as f32 / vc.ppp),
@@ -389,27 +397,94 @@ impl App {
                         Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)),
                         Color32::WHITE,
                     );
-                    drew_any = true;
-                } else {
-                    if !drew_any {
-                        self.paint_placeholder(painter, vc, i, slot);
-                        drew_any = true;
-                    }
-                    if !zoom_settling {
-                        self.request_tile(
-                            key,
-                            plan,
-                            i,
-                            page,
-                            if in_view { 100 } else { 40 },
-                            doc,
-                            revision,
-                        );
-                    }
+                } else if !zoom_settling {
+                    self.request_tile(
+                        key,
+                        plan,
+                        i,
+                        page,
+                        if in_view { 100 } else { 40 },
+                        doc,
+                        revision,
+                    );
                 }
             }
         }
         // Thumbnails of visible pages keep the placeholder path warm.
+    }
+
+    /// Draw the cached tiles of the closest other scale (newest revision first) scaled to the
+    /// current zoom. They sit under the real tiles and are replaced as those arrive.
+    fn paint_standin_tiles(
+        &mut self,
+        painter: &egui::Painter,
+        vc: &ViewCtx,
+        i: usize,
+        slot: Rect,
+        within: Rect,
+        revision: u64,
+    ) {
+        let ti = self.active;
+        let page = vc.pages[i].id;
+        let doc = self.tabs[ti].session.id;
+        let scale = vc.px_per_pt * f64::from(vc.ppp);
+        let target = quantize_scale(scale);
+        let best = self
+            .tiles
+            .keys()
+            .filter(|k| {
+                k.doc == doc
+                    && k.page == page
+                    && k.rotation == vc.rotation
+                    && (k.scale_milli != target || k.revision != revision)
+            })
+            .min_by_key(|k| {
+                (
+                    (i64::from(k.scale_milli) - i64::from(target)).abs(),
+                    std::cmp::Reverse(k.revision),
+                )
+            })
+            .map(|k| (k.scale_milli, k.revision));
+        let Some((scale_milli, rev)) = best else {
+            return;
+        };
+        let factor = (scale / dequantize_scale(scale_milli)) as f32;
+        let keys: Vec<TileKey> = self
+            .tiles
+            .keys()
+            .filter(|k| {
+                k.doc == doc
+                    && k.page == page
+                    && k.rotation == vc.rotation
+                    && k.scale_milli == scale_milli
+                    && k.revision == rev
+            })
+            .copied()
+            .collect();
+        for k in keys {
+            let Some(tex) = self.tiles.peek(&k) else {
+                continue;
+            };
+            let [w, h] = tex.size();
+            let (x, y) = if k.whole {
+                (0.0, 0.0)
+            } else {
+                ((k.tx * TILE_PX) as f32, (k.ty * TILE_PX) as f32)
+            };
+            let dest = Rect::from_min_size(
+                slot.min + Vec2::new(x, y) * factor / vc.ppp,
+                Vec2::new(w as f32, h as f32) * factor / vc.ppp,
+            );
+            if !dest.intersects(within) {
+                continue;
+            }
+            painter.image(
+                tex.id(),
+                dest,
+                Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)),
+                Color32::WHITE,
+            );
+        }
     }
 
     /// Draw the best cached stand-in for a page that is not rendered at the right scale yet.

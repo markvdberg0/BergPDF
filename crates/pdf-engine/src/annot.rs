@@ -181,6 +181,9 @@ pub struct AnnotationSpec {
     pub name: Option<String>,
     /// Measurement data (`Some` for measurement annotations).
     pub measure: Option<crate::measure::MeasureData>,
+    /// Text rotation for FreeText and text stamps: degrees counter-clockwise in page user space, a
+    /// multiple of 90. A page shown with `/Rotate 90` needs 90 to read upright; see [`upright_for`].
+    pub rotation: i32,
 }
 
 impl AnnotationSpec {
@@ -204,6 +207,7 @@ impl AnnotationSpec {
             modified: None,
             name: None,
             measure: None,
+            rotation: 0,
         }
     }
 
@@ -843,26 +847,33 @@ fn build(tx: &mut Tx<'_>, spec: &AnnotationSpec) -> Result<(Dictionary, Stream)>
                     "stamp text contains characters not in the bundled font: {missing:?}"
                 )));
             }
+            let rot = norm_rot(spec.rotation);
+            if rot != 0 {
+                dict.set("BergRot", i64::from(rot));
+            }
+            let (bw_, bh_) = local_size(r, rot);
+            let lr = Rect::new(0.0, 0.0, bw_, bh_);
             let pad = 4.0;
             let wem = (fb.text_width(label, 1.0)).max(0.1);
-            let fs = ((r.width() - 2.0 * pad) / wem)
-                .min((r.height() - 2.0 * pad) * 0.8)
+            let fs = ((lr.width() - 2.0 * pad) / wem)
+                .min((lr.height() - 2.0 * pad) * 0.8)
                 .max(1.0);
             let tw = wem * fs;
             let bw = lw.max(1.0);
-            let x = r.x0 + (r.width() - tw) / 2.0;
-            let y = r.y0 + (r.height() - fs * (fb.ascent_em() + fb.descent_em())) / 2.0;
+            let x = lr.x0 + (lr.width() - tw) / 2.0;
+            let y = lr.y0 + (lr.height() - fs * (fb.ascent_em() + fb.descent_em())) / 2.0;
             let codes = fb.encode_str(label)?;
             let font_id = fb.finish(tx)?;
             ap.resources = gs_resources(opacity, false);
             ap.resources.set("Font", dictionary! { "F1" => font_id });
             ap.content.push_str(&format!(
-                "/GS gs\n{c} RG {c} rg\n{} w\n{} {} {} {} re S\nBT /F1 {} Tf {} {} Td {} Tj ET\n",
+                "/GS gs\nq\n{}{c} RG {c} rg\n{} w\n{} {} {} {} re S\nBT /F1 {} Tf {} {} Td {} Tj ET\nQ\n",
+                cm_op(rotated_frame(r, rot)),
                 fmt_num(bw),
-                fmt_num(r.x0 + bw / 2.0),
-                fmt_num(r.y0 + bw / 2.0),
-                fmt_num(r.width() - bw),
-                fmt_num(r.height() - bw),
+                fmt_num(lr.x0 + bw / 2.0),
+                fmt_num(lr.y0 + bw / 2.0),
+                fmt_num(lr.width() - bw),
+                fmt_num(lr.height() - bw),
                 fmt_num(fs),
                 fmt_num(x),
                 fmt_num(y),
@@ -1047,6 +1058,68 @@ fn lerp(a: Point, b: Point, t: f64) -> Point {
     Point::new(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t)
 }
 
+/// Rotation (counter-clockwise degrees in user space) that makes text read upright for a page
+/// that is displayed rotated clockwise by `shown_cw` degrees.
+pub fn upright_for(shown_cw: i64) -> i32 {
+    shown_cw.rem_euclid(360) as i32
+}
+
+fn norm_rot(rot: i32) -> i32 {
+    let r = rot.rem_euclid(360);
+    (r / 90) * 90
+}
+
+/// Size of a text block in its own upright frame (width and height swap for 90/270).
+pub fn local_size(r: Rect, rot: i32) -> (f64, f64) {
+    let r = r.abs();
+    if norm_rot(rot) % 180 == 0 {
+        (r.width(), r.height())
+    } else {
+        (r.height(), r.width())
+    }
+}
+
+/// Matrix `[a b c d e f]` taking a block's own upright frame (origin bottom-left, x along the
+/// text) to user space inside `r`, for text rotated `rot` degrees counter-clockwise.
+pub fn rotated_frame(r: Rect, rot: i32) -> [f64; 6] {
+    let r = r.abs();
+    match norm_rot(rot) {
+        90 => [0.0, 1.0, -1.0, 0.0, r.x1, r.y0],
+        180 => [-1.0, 0.0, 0.0, -1.0, r.x1, r.y1],
+        270 => [0.0, -1.0, 1.0, 0.0, r.x0, r.y1],
+        _ => [1.0, 0.0, 0.0, 1.0, r.x0, r.y0],
+    }
+}
+
+pub(crate) fn cm_op(m: [f64; 6]) -> String {
+    format!(
+        "{} {} {} {} {} {} cm\n",
+        fmt_num(m[0]),
+        fmt_num(m[1]),
+        fmt_num(m[2]),
+        fmt_num(m[3]),
+        fmt_num(m[4]),
+        fmt_num(m[5])
+    )
+}
+
+/// `r` made tall enough (in the block's own frame) for `needed` points, keeping the top edge of
+/// the text where it is.
+pub fn grow_box(r: Rect, rot: i32, needed: f64) -> Rect {
+    let mut r = r.abs();
+    let (_, h) = local_size(r, rot);
+    if needed <= h {
+        return r;
+    }
+    match norm_rot(rot) {
+        90 => r.x1 = r.x0 + needed,
+        180 => r.y1 = r.y0 + needed,
+        270 => r.x0 = r.x1 - needed,
+        _ => r.y0 = r.y1 - needed,
+    }
+    r
+}
+
 /// Required height for FreeText content at a given width (for auto-sizing the box).
 pub fn freetext_required_height(
     text: &str,
@@ -1163,22 +1236,36 @@ fn build_freetext(
         dict.set("CL", num_array(&v));
         dict.set("LE", name("OpenArrow"));
     }
+    // The box is laid out in its own upright frame (`lr`, origin bottom-left) and placed into user
+    // space with a rotation matrix, so text reads upright on rotated pages.
+    let rot = norm_rot(spec.rotation);
+    if rot != 0 {
+        dict.set("BergRot", i64::from(rot));
+    }
+    if callout.is_some() {
+        // /Rect also covers the leader line; keep the text box itself for re-editing.
+        dict.set("BergBox", num_array(&[r.x0, r.y0, r.x1, r.y1]));
+    }
+    let (bw, bh) = local_size(r, rot);
+    let lr = Rect::new(0.0, 0.0, bw, bh);
+    let frame = cm_op(rotated_frame(r, rot));
     let lines = wrap_lines(
         &fb,
         &spec.contents,
         font_size,
-        (r.width() - 2.0 * FT_PAD - lw).max(1.0),
+        (lr.width() - 2.0 * FT_PAD - lw).max(1.0),
     );
     let lh = fb.line_height_em() * font_size;
-    let mut content = String::from("/GS gs\n");
+    let mut content = String::from("/GS gs\nq\n");
+    content.push_str(&frame);
     if let Some(f) = spec.fill {
         content.push_str(&format!(
             "{} rg\n{} {} {} {} re f\n",
             f.ops(),
-            fmt_num(r.x0),
-            fmt_num(r.y0),
-            fmt_num(r.width()),
-            fmt_num(r.height())
+            fmt_num(lr.x0),
+            fmt_num(lr.y0),
+            fmt_num(lr.width()),
+            fmt_num(lr.height())
         ));
     }
     if lw > 0.0 {
@@ -1187,12 +1274,13 @@ fn build_freetext(
             spec.color.ops(),
             fmt_num(lw),
             dash_op(spec.border_style, lw),
-            fmt_num(r.x0 + lw / 2.0),
-            fmt_num(r.y0 + lw / 2.0),
-            fmt_num(r.width() - lw),
-            fmt_num(r.height() - lw)
+            fmt_num(lr.x0 + lw / 2.0),
+            fmt_num(lr.y0 + lw / 2.0),
+            fmt_num(lr.width() - lw),
+            fmt_num(lr.height() - lw)
         ));
     }
+    content.push_str("Q\n");
     if let Some(c) = callout.filter(|c| c.len() >= 2) {
         content.push_str(&format!(
             "{} RG {} w\n",
@@ -1213,24 +1301,26 @@ fn build_freetext(
         content.push_str(&head);
         pts.clear();
     }
+    content.push_str("q\n");
+    content.push_str(&frame);
     content.push_str(&format!(
-        "q\n{} {} {} {} re W n\nBT\n/F1 {} Tf {} rg\n",
-        fmt_num(r.x0),
-        fmt_num(r.y0),
-        fmt_num(r.width()),
-        fmt_num(r.height()),
+        "{} {} {} {} re W n\nBT\n/F1 {} Tf {} rg\n",
+        fmt_num(lr.x0),
+        fmt_num(lr.y0),
+        fmt_num(lr.width()),
+        fmt_num(lr.height()),
         fmt_num(font_size),
         text_color.ops()
     ));
     let mut cursor_x = 0.0;
     let mut first = true;
-    let mut y = r.y1 - FT_PAD - lw - fb.ascent_em() * font_size;
+    let mut y = lr.y1 - FT_PAD - lw - fb.ascent_em() * font_size;
     for line in &lines {
         let w = fb.text_width(line, font_size);
         let x = match align {
-            Align::Left => r.x0 + FT_PAD + lw,
-            Align::Center => r.x0 + (r.width() - w) / 2.0,
-            Align::Right => r.x1 - FT_PAD - lw - w,
+            Align::Left => lr.x0 + FT_PAD + lw,
+            Align::Center => lr.x0 + (lr.width() - w) / 2.0,
+            Align::Right => lr.x1 - FT_PAD - lw - w,
         };
         let codes = fb.encode_str(line)?;
         // Td is relative to the start of the previous line.
@@ -1357,6 +1447,14 @@ fn parse_spec(doc: &Document, d: &Dictionary) -> Option<AnnotationSpec> {
                 _ => Align::Left,
             };
             let callout = nums(b"CL").map(|v| pts(&v)).filter(|c| c.len() >= 2);
+            // With a leader, /Rect also covers the leader; the text box is kept separately.
+            let rect = if callout.is_some() {
+                nums(b"BergBox")
+                    .filter(|b| b.len() == 4)
+                    .map_or(rect, |b| Rect::new(b[0], b[1], b[2], b[3]))
+            } else {
+                rect
+            };
             let font = d
                 .get(b"BergFont")
                 .ok()
@@ -1427,6 +1525,7 @@ fn parse_spec(doc: &Document, d: &Dictionary) -> Option<AnnotationSpec> {
     spec.name = Some(text(b"NM")).filter(|s| !s.is_empty());
     spec.measure = crate::measure::from_pdf(doc, d)
         .filter(|m| crate::measure::points_of(m.kind, &spec.kind).is_some());
+    spec.rotation = objutil::dict_num(doc, d, b"BergRot").map_or(0, |v| norm_rot(v as i32));
     Some(spec)
 }
 

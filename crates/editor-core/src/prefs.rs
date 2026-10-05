@@ -43,6 +43,63 @@ pub enum DefaultZoom {
     Actual,
 }
 
+/// Which graphics API the window draws with (applied at the next start).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum GfxBackend {
+    /// Let the graphics library choose (the `WGPU_BACKEND` environment variable still works).
+    #[default]
+    Auto,
+    /// Direct3D 12 (Windows).
+    Dx12,
+    /// Vulkan.
+    Vulkan,
+    /// OpenGL, the most compatible and often the slowest.
+    Gl,
+}
+
+impl GfxBackend {
+    /// Display name.
+    pub fn title(self) -> &'static str {
+        match self {
+            GfxBackend::Auto => "Automatic",
+            GfxBackend::Dx12 => "DirectX 12",
+            GfxBackend::Vulkan => "Vulkan",
+            GfxBackend::Gl => "OpenGL",
+        }
+    }
+}
+
+/// How finished frames are handed to the screen (applied immediately).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum PresentChoice {
+    /// Wait for the screen refresh, two frames in flight.
+    #[default]
+    Smooth,
+    /// Wait for the screen refresh, one frame in flight (least input lag).
+    LowLatency,
+    /// Do not wait for the screen refresh (can tear; sometimes much smoother while resizing).
+    Uncapped,
+}
+
+impl PresentChoice {
+    /// Display name.
+    pub fn title(self) -> &'static str {
+        match self {
+            PresentChoice::Smooth => "Smooth (vsync)",
+            PresentChoice::LowLatency => "Low latency (vsync)",
+            PresentChoice::Uncapped => "Uncapped (no vsync)",
+        }
+    }
+}
+
+/// Graphics settings; they only change how the window is drawn, never documents.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(default)]
+pub struct GraphicsPrefs {
+    pub backend: GfxBackend,
+    pub present: PresentChoice,
+}
+
 /// Defaults applied to newly created annotations.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
@@ -130,12 +187,33 @@ impl AiProvider {
         }
     }
 
-    /// Default model name (the user can change it).
+    /// Default model name: a relatively cheap one (the user can change it).
     pub fn default_model(self) -> &'static str {
         match self {
             AiProvider::OpenAi => "gpt-4.1-mini",
-            AiProvider::Anthropic => "claude-sonnet-5-5",
+            AiProvider::Anthropic => "claude-haiku-4-5-20251001",
             AiProvider::Custom => "llama3.1",
+        }
+    }
+
+    /// Models offered in the dropdown: (id, short description). Any other id can be typed in.
+    pub fn models(self) -> &'static [(&'static str, &'static str)] {
+        match self {
+            AiProvider::OpenAi => &[
+                ("gpt-4.1-nano", "lowest cost"),
+                ("gpt-4.1-mini", "low cost"),
+                ("gpt-4o-mini", "low cost"),
+                ("gpt-4.1", "more capable"),
+                ("gpt-5-mini", "reasoning, slower"),
+                ("gpt-5", "reasoning, most capable, slower"),
+            ],
+            AiProvider::Anthropic => &[
+                ("claude-haiku-4-5-20251001", "Haiku 4.5 - fast, low cost"),
+                ("claude-sonnet-5-5", "Sonnet 5.5 - balanced"),
+                ("claude-opus-5-5", "Opus 5.5 - most capable"),
+                ("claude-fable-5-1", "Fable 5.1"),
+            ],
+            AiProvider::Custom => &[],
         }
     }
 }
@@ -220,6 +298,8 @@ pub struct Preferences {
     pub right_sidebar_width: f32,
     /// Render cache budget in MiB.
     pub render_cache_mb: u32,
+    /// Graphics API and frame presentation.
+    pub graphics: GraphicsPrefs,
     /// Snap measurement points to line ends, corners, intersections and midpoints of the page.
     pub snap_to_geometry: bool,
     /// Whether the PDF Copilot panel is open.
@@ -255,6 +335,7 @@ impl Default for Preferences {
             left_sidebar_width: 190.0,
             right_sidebar_width: 300.0,
             render_cache_mb: 384,
+            graphics: GraphicsPrefs::default(),
             snap_to_geometry: true,
             show_copilot: false,
             ai: AiSettings::default(),
@@ -352,6 +433,12 @@ pub static SETTINGS: &[SettingInfo] = &[
         title: "Snap to drawing geometry",
         description: "Measurements snap to line ends, corners, intersections and midpoints.",
         keywords: "snap magnet cad corner endpoint intersection midpoint measure",
+    },
+    SettingInfo {
+        key: "graphics",
+        title: "Graphics (drawing backend, frame pacing)",
+        description: "Shows which graphics adapter is used and lets you try another API or uncapped frames if resizing or zooming feels slow.",
+        keywords: "graphics gpu backend directx dx12 vulkan opengl vsync slow resize lag performance adapter",
     },
     SettingInfo {
         key: "ai",

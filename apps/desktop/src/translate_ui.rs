@@ -1,14 +1,14 @@
-//! Translate a document: detect its language on this computer, translate page by page through
-//! the configured AI provider, then save the result as a PDF or text file.
-//!
-//! The translation is a new document (text only, in the built-in font). The original is never
-//! changed and its layout is not reproduced.
+//! Translate a document: detect its language on this computer, translate paragraph by paragraph
+//! through the configured AI provider, and put the translation *in* the document: each paragraph
+//! is replaced where it stands (the original text is removed or covered, the translation is drawn
+//! in the same box, shrunk if it needs more room). The result opens as a copy in a new tab; the
+//! original document is never changed.
 
 use crate::copilot_ui::host_of;
 use crate::dialogs::modal;
 use crate::state::*;
 use ai_client::PageText;
-use ai_client::translate::{Detected, detect, translate_pages};
+use ai_client::translate::{Detected, detect, translate_blocks};
 use egui::RichText;
 use std::panic::catch_unwind;
 use std::sync::Arc;
@@ -46,9 +46,23 @@ const LANGUAGES: &[&str] = &[
 /// Page texts, the revision they belong to, and the detected language.
 type Prepared = (Arc<Vec<PageText>>, u64, Option<Detected>);
 
+/// A page index, its paragraphs and the background colour behind each.
+type PageBlocks = (
+    usize,
+    Vec<pdf_engine::inlinetr::Block>,
+    Vec<(f32, f32, f32)>,
+);
+
+/// The finished translation: the translated copy, a summary and the text per page.
+struct Outcome {
+    bytes: Arc<Vec<u8>>,
+    pages: Vec<PageText>,
+    notes: Vec<String>,
+}
+
 enum Msg {
     Prepared(Result<Prepared, String>),
-    Done(Result<Vec<PageText>, String>),
+    Done(Result<Outcome, String>),
 }
 
 #[derive(PartialEq, Eq)]
@@ -66,13 +80,17 @@ pub struct TranslateState {
     rx: Option<Receiver<Msg>>,
     cancel: Arc<AtomicBool>,
     progress: Arc<AtomicUsize>,
-    total: usize,
+    total: Arc<AtomicUsize>,
     pub target: String,
     current_only: bool,
     current_page: usize,
     detected: Option<Detected>,
     pages: Option<Arc<Vec<PageText>>>,
     result: Vec<PageText>,
+    copy: Option<Arc<Vec<u8>>>,
+    notes: Vec<String>,
+    geoms: Vec<(usize, pdf_engine::geom::PageGeometry)>,
+    snapshot: Option<Arc<Vec<u8>>>,
     error: Option<String>,
     title: String,
     source_name: Option<String>,
@@ -98,6 +116,8 @@ impl App {
             .map(|(i, p)| (i, p.geometry))
             .collect();
         let cached = self.ai_cached_pages(doc, rev);
+        let geoms2 = geoms.clone();
+        let snap_bytes = snap.bytes.clone();
         let (tx, rx) = channel();
         let cancel = Arc::new(AtomicBool::new(false));
         let c2 = cancel.clone();
@@ -125,13 +145,17 @@ impl App {
             rx: Some(rx),
             cancel,
             progress: Arc::new(AtomicUsize::new(0)),
-            total: 0,
+            total: Arc::new(AtomicUsize::new(0)),
             target,
             current_only: false,
             current_page: current,
             detected: None,
             pages: None,
             result: Vec::new(),
+            copy: None,
+            notes: Vec::new(),
+            geoms: geoms2,
+            snapshot: Some(snap_bytes),
             error: None,
             title,
             source_name: None,
@@ -165,8 +189,10 @@ impl App {
                 Ok(Msg::Done(r)) => {
                     st.rx = None;
                     match r {
-                        Ok(p) => {
-                            st.result = p;
+                        Ok(o) => {
+                            st.result = o.pages;
+                            st.copy = Some(o.bytes);
+                            st.notes = o.notes;
                             st.stage = Stage::Done;
                         }
                         Err(e) => {
@@ -192,6 +218,7 @@ impl App {
         let mut close = false;
         let mut start = false;
         let mut save_pdf = false;
+        let mut open_copy = false;
         let mut save_txt = false;
         let mut copy = false;
         let mut retry = false;
@@ -275,7 +302,7 @@ impl App {
                     ui.add_space(4.0);
                     ui.label(
                         RichText::new(format!(
-                            "About {chars} characters will be sent to {host} (model {model}) with your API key. The usage is billed by your provider. The translation is saved as a new file; your document is not changed."
+                            "About {chars} characters will be sent to {host} (model {model}) with your API key. The usage is billed by your provider. The translation replaces the text in a copy of the document that opens in a new tab; your document is not changed."
                         ))
                         .size(12.0)
                         .color(dim),
@@ -300,18 +327,23 @@ impl App {
                 }
                 Stage::Running => {
                     let done = st.progress.load(Ordering::Relaxed);
-                    ui.add(
-                        egui::ProgressBar::new(done as f32 / st.total.max(1) as f32).text(format!(
-                            "Page {} of {}",
-                            done.min(st.total),
-                            st.total
-                        )),
-                    );
-                    ui.label(
-                        RichText::new("Waiting for the AI service…")
-                            .size(12.0)
-                            .color(dim),
-                    );
+                    let total = st.total.load(Ordering::Relaxed);
+                    if total == 0 {
+                        ui.horizontal(|ui| {
+                            ui.spinner();
+                            ui.label("Finding the paragraphs on the pages…");
+                        });
+                    } else {
+                        ui.add(
+                            egui::ProgressBar::new(done as f32 / total.max(1) as f32)
+                                .text(format!("Paragraph {} of {}", done.min(total), total)),
+                        );
+                        ui.label(
+                            RichText::new("Waiting for the AI service…")
+                                .size(12.0)
+                                .color(dim),
+                        );
+                    }
                     if ui.button("Cancel").clicked() {
                         st.cancel.store(true, Ordering::Relaxed);
                         close = true;
@@ -319,10 +351,13 @@ impl App {
                 }
                 Stage::Done => {
                     ui.label(format!(
-                        "Translated {} page(s) into {}.",
+                        "Translated {} page(s) into {}, in place in the document.",
                         st.result.len(),
                         st.used_target
                     ));
+                    for n in &st.notes {
+                        ui.label(RichText::new(n.as_str()).size(12.0).color(dim));
+                    }
                     ui.label(
                         RichText::new(
                             "Machine translation: check important passages against the original.",
@@ -349,7 +384,10 @@ impl App {
                         });
                     ui.add_space(6.0);
                     ui.horizontal(|ui| {
-                        if ui.button("Save as PDF…").clicked() {
+                        if ui.button("Open translated copy").clicked() {
+                            open_copy = true;
+                        }
+                        if ui.button("Save translated PDF…").clicked() {
                             save_pdf = true;
                         }
                         if ui.button("Save as text…").clicked() {
@@ -365,7 +403,7 @@ impl App {
                         }
                     });
                     ui.label(
-                        RichText::new("The PDF is plain text in the built-in font (Latin, Greek and Cyrillic); the original layout is not reproduced.")
+                        RichText::new("The copy keeps the page layout; paragraphs are re-flowed in the same box. Tables, headers and text inside pictures are not handled specially. Your original is unchanged.")
                             .size(11.0)
                             .color(dim),
                     );
@@ -414,6 +452,10 @@ impl App {
         if save_pdf {
             self.save_translation_pdf(st);
         }
+        if open_copy {
+            self.open_translated_copy(st);
+            close = true;
+        }
         !close
     }
 
@@ -426,24 +468,33 @@ impl App {
                 return;
             }
         };
-        let pages: Vec<PageText> = st
-            .pages
-            .as_ref()
-            .map(|p| {
-                p.iter()
-                    .filter(|p| !p.text.trim().is_empty())
-                    .filter(|p| !st.current_only || p.number == st.current_page + 1)
-                    .cloned()
-                    .collect()
+        let Some(bytes) = st.snapshot.clone() else {
+            st.error = Some("The document is no longer available.".into());
+            st.stage = Stage::Failed;
+            return;
+        };
+        let page_texts = st.pages.clone().unwrap_or_default();
+        let wanted: Vec<usize> = st
+            .geoms
+            .iter()
+            .map(|(i, _)| *i)
+            .filter(|i| !st.current_only || *i == st.current_page)
+            .filter(|i| {
+                page_texts
+                    .iter()
+                    .find(|p| p.number == i + 1)
+                    .is_some_and(|p| !p.text.trim().is_empty())
             })
-            .unwrap_or_default();
-        st.total = pages.len();
+            .collect();
+        let geoms = st.geoms.clone();
         st.progress = Arc::new(AtomicUsize::new(0));
+        st.total = Arc::new(AtomicUsize::new(0));
         st.cancel = Arc::new(AtomicBool::new(false));
         st.used_target = st.target.trim().to_string();
         st.source_name = st.detected.as_ref().map(|d| d.name.clone());
-        let (progress, cancel, target, source) = (
+        let (progress, total, cancel, target, source) = (
             st.progress.clone(),
+            st.total.clone(),
             st.cancel.clone(),
             st.used_target.clone(),
             st.source_name.clone(),
@@ -451,17 +502,17 @@ impl App {
         let (tx, rx) = channel();
         std::thread::spawn(move || {
             let r = catch_unwind(std::panic::AssertUnwindSafe(|| {
-                translate_pages(
+                run_inline_translation(
                     &cfg,
-                    &pages,
+                    bytes,
+                    &geoms,
+                    &wanted,
                     source.as_deref(),
                     &target,
                     &cancel,
-                    &|d, _| {
-                        progress.store(d, Ordering::Relaxed);
-                    },
+                    &progress,
+                    &total,
                 )
-                .map_err(|e| e.to_string())
             }));
             let _ = tx.send(Msg::Done(r.unwrap_or_else(|_| {
                 Err("The translation stopped unexpectedly.".into())
@@ -471,7 +522,24 @@ impl App {
         st.stage = Stage::Running;
     }
 
+    fn open_translated_copy(&mut self, st: &TranslateState) {
+        let Some(bytes) = &st.copy else { return };
+        let title = format!(
+            "{} ({}).pdf",
+            st.title.trim_end_matches(".pdf"),
+            st.used_target
+        );
+        match editor_core::session::DocumentSession::open_bytes(bytes.as_ref().clone(), &title) {
+            Ok(mut session) => {
+                session.mark_unsaved();
+                self.add_tab(session);
+            }
+            Err(e) => self.notify_error(format!("Could not open the translated copy: {e}")),
+        }
+    }
+
     fn save_translation_pdf(&mut self, st: &TranslateState) {
+        let Some(bytes) = &st.copy else { return };
         let name = format!(
             "{}-{}.pdf",
             st.title.trim_end_matches(".pdf"),
@@ -480,44 +548,145 @@ impl App {
         let Some(dest) = platform::dialogs::pick_save_pdf(&name, None) else {
             return;
         };
-        let sections: Vec<(String, String)> = st
-            .result
-            .iter()
-            .map(|p| (format!("Page {}", p.number), p.text.clone()))
-            .collect();
-        let note = format!(
-            "{} · machine translation by {} through BergPDF Copilot. Check important passages against the original.",
-            match &st.source_name {
-                Some(s) => format!("{s} → {}", st.used_target),
-                None => format!("→ {}", st.used_target),
-            },
-            self.prefs.ai.model()
-        );
-        let title = format!("Translation of {}", st.title);
-        match pdf_engine::textdoc::build_text_pdf(&title, &note, &sections) {
-            Ok((bytes, rep)) => {
-                match pdf_engine::save::write_atomic(
-                    &dest,
-                    &bytes,
-                    &pdf_engine::save::SaveOptions::default(),
-                ) {
-                    Ok(_) => {
-                        let mut msg = format!("Saved {} ({} page(s))", dest.display(), rep.pages);
-                        if !rep.replaced.is_empty() {
-                            let s: String = rep.replaced.iter().take(8).collect();
-                            msg.push_str(&format!(
-                                ". {} character(s) such as {s} are not in the built-in font and were replaced by “?”; save as text to keep them",
-                                rep.replaced.len()
-                            ));
-                        }
-                        self.notify(msg);
-                    }
-                    Err(e) => self.notify_error(format!("Could not save: {e}")),
-                }
-            }
-            Err(e) => self.notify_error(format!("Could not create the PDF: {e}")),
+        match pdf_engine::save::write_atomic(
+            &dest,
+            bytes,
+            &pdf_engine::save::SaveOptions::default(),
+        ) {
+            Ok(_) => self.notify(format!("Saved {}", dest.display())),
+            Err(e) => self.notify_error(format!("Could not save: {e}")),
         }
     }
+}
+
+/// Everything the worker thread does: find paragraphs, translate them, write the copy.
+#[allow(clippy::too_many_arguments)]
+fn run_inline_translation(
+    cfg: &ai_client::Config,
+    bytes: Arc<Vec<u8>>,
+    geoms: &[(usize, pdf_engine::geom::PageGeometry)],
+    wanted: &[usize],
+    source: Option<&str>,
+    target: &str,
+    cancel: &AtomicBool,
+    progress: &AtomicUsize,
+    total: &AtomicUsize,
+) -> Result<Outcome, String> {
+    use pdf_engine::inlinetr::{self, Item};
+    // 1. Paragraphs and their background colours.
+    let mut per_page: Vec<PageBlocks> = Vec::new();
+    pdf_engine::render::with_session(bytes.clone(), |s| {
+        for (i, g) in geoms.iter().filter(|(i, _)| wanted.contains(i)) {
+            if cancel.load(Ordering::Relaxed) {
+                break;
+            }
+            let tp = s.extract_text(*i, g)?;
+            let blocks = inlinetr::blocks_of(&tp);
+            if blocks.is_empty() {
+                continue;
+            }
+            let bmp = s.render_page(*i, *g, pdf_engine::geom::Rotation::R0, 1.0)?;
+            let bg = blocks
+                .iter()
+                .map(|b| inlinetr::sample_background(&bmp, g, 1.0, b.rect))
+                .collect();
+            per_page.push((*i, blocks, bg));
+        }
+        Ok(())
+    })
+    .map_err(|e| e.to_string())?;
+    if cancel.load(Ordering::Relaxed) {
+        return Err("Cancelled.".into());
+    }
+    let texts: Vec<String> = per_page
+        .iter()
+        .flat_map(|(_, b, _)| b.iter().map(|b| b.text.clone()))
+        .collect();
+    if texts.is_empty() {
+        return Err("No translatable text was found on the selected pages.".into());
+    }
+    total.store(texts.len(), Ordering::Relaxed);
+    // 2. Translate.
+    let translated = translate_blocks(cfg, &texts, source, target, cancel, &|d, _| {
+        progress.store(d, Ordering::Relaxed);
+    })
+    .map_err(|e| e.to_string())?;
+    // 3. Put the translations into a copy of the document.
+    let mut doc = pdf_engine::doc::PdfDocument::open(
+        bytes.as_ref().clone(),
+        &pdf_engine::doc::OpenOptions::default(),
+    )
+    .map_err(|e| e.to_string())?;
+    let page_ids = doc.page_ids().map_err(|e| e.to_string())?;
+    let mut it = translated.into_iter();
+    let (mut blocks_n, mut removed, mut shrunk, mut overflow) = (0, 0, 0, 0);
+    let mut missing = std::collections::BTreeSet::new();
+    let mut fonts = std::collections::BTreeSet::new();
+    let mut pages_out = Vec::new();
+    for (i, blocks, bgs) in per_page {
+        let Some(page) = page_ids.get(i).copied() else {
+            continue;
+        };
+        let items: Vec<Item> = blocks
+            .into_iter()
+            .zip(bgs)
+            .filter_map(|(block, background)| {
+                Some(Item {
+                    translation: it.next()?,
+                    background,
+                    block,
+                })
+            })
+            .collect();
+        pages_out.push(PageText {
+            number: i + 1,
+            text: items
+                .iter()
+                .map(|x| x.translation.as_str())
+                .collect::<Vec<_>>()
+                .join("\n\n"),
+        });
+        let (rep, _) = doc
+            .transact(|tx| inlinetr::apply_translation(tx, page, &items))
+            .map_err(|e| e.to_string())?;
+        blocks_n += rep.blocks;
+        removed += rep.runs_removed;
+        shrunk += rep.shrunk;
+        overflow += rep.overflowing;
+        missing.extend(rep.missing_chars);
+        fonts.extend(rep.system_fonts);
+    }
+    let out = doc.snapshot_bytes().map_err(|e| e.to_string())?;
+    let mut notes = vec![format!(
+        "{blocks_n} paragraph(s) replaced; {removed} original text piece(s) removed from the page content, the rest covered."
+    )];
+    if shrunk > 0 {
+        notes.push(format!(
+            "{shrunk} paragraph(s) use a smaller font so the translation fits."
+        ));
+    }
+    if overflow > 0 {
+        notes.push(format!(
+            "{overflow} paragraph(s) are still longer than their original box; check them."
+        ));
+    }
+    if !fonts.is_empty() {
+        notes.push(format!(
+            "Installed font(s) used for characters the built-in fonts lack: {}.",
+            fonts.into_iter().collect::<Vec<_>>().join(", ")
+        ));
+    }
+    if !missing.is_empty() {
+        let s: String = missing.iter().take(10).collect();
+        notes.push(format!(
+            "No available font has {s}: shown as “?”. Save as text to keep them."
+        ));
+    }
+    Ok(Outcome {
+        bytes: Arc::new(out),
+        pages: pages_out,
+        notes,
+    })
 }
 
 fn joined(p: &[PageText]) -> String {

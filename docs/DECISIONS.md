@@ -180,3 +180,26 @@ renamed only on a match) and `cargo xtask dist --with-ocr-models`, which places 
 and the model card could not be read, so redistribution (bundling, or hosting the files yourself) is not
 cleared; the download route only fetches from the author's host. Unchanged: ASCII-only recognition alphabet;
 the download is the one more place (besides the opt-in AI client) that uses the network, and only on a click.
+
+## D-024 — Translation happens in the document: paragraphs replaced in place, in a copy
+The first Translate produced a separate text document. Now each page's paragraphs (heuristic grouping of
+text lines by direction, size, alignment and spacing) are translated in JSON batches and written back into a
+**copy** of the document that opens in a new tab: the original runs are removed from the page content where the
+editor can edit their font, every paragraph is covered with the colour sampled around it either way (text in
+form XObjects or uneditable fonts stays underneath otherwise), and the translation is drawn in the same box,
+shrunk if needed, bold/italic following the original run names. A copy, not the open document, because an AI
+edit across a whole file should be reviewable and the original must stay untouched. Characters the bundled
+fonts lack use an installed font that has them; otherwise they show as "?" and are reported.
+
+## D-025 — Installed fonts are offered, with embedding permission respected
+Font files in the OS font folders are indexed (only the name, style and `OS/2` tables are read), kept in a
+process-wide registry, and embedded as subsets like the bundled fonts. Only TrueType-outline fonts whose
+`fsType` allows embedding and subsetting are offered. Documents remember the choice as `sys:<family>` in
+`/BergFont`; on a computer without that font the text box falls back to DejaVu Sans when it is next edited.
+Whether a given font's licence allows embedding in *your* documents is the user's responsibility.
+
+## D-026 — Text orientation on rotated pages
+Annotation text is laid out in its own upright frame and placed into the box with a rotation matrix. The
+default makes text read upright for the page's `/Rotate` plus the temporary view rotation; the user can turn it
+further in 90° steps (stored as `/BergRot`). A callout's text box is stored separately (`/BergBox`) because
+`/Rect` also covers the leader line.

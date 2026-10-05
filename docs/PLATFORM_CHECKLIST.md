@@ -41,6 +41,9 @@ on that OS (with notes), nothing in `FEATURE_MATRIX.md` may be marked “Verifie
 - [ ] OCR on Windows and Apple Silicon: speed, memory (`rten` CPU kernels), models folder location
 - [ ] OCR models: the dialog's download button works through the OS certificate store (Windows/macOS); a bundled `ocr-models/` next to the exe (Windows) / inside the .app (macOS) is found
 - [ ] Windows: release exe opens **no console window**; the exe shows the BergPDF icon in Explorer, taskbar and shortcuts; `rc.exe` was found at build time (no `embedding the icon failed` warning)
+- [ ] Windows: Preferences ▸ Graphics shows a real GPU (not "Cpu"/WARP/Basic Render); try DirectX 12 vs Vulkan and "Uncapped" and note which resizes smoothly
+- [ ] Installed fonts appear in the font pickers on Windows and macOS (names, bold/italic), text in one embeds and extracts; Calibri/Arial/Segoe UI style fonts work, CFF-only fonts are simply absent
+- [ ] Translate inline against a real provider: layout of a real multi-page document (tables, columns), cost for a long document
 - [ ] Windows: resizing the window in Fit page / Fit width stays responsive (zoom changes during a resize are treated as settling, tiles re-render after ~150 ms)
 - [ ] Windows: `cargo xtask dist` (static CRT) builds and starts on a machine without Visual C++ redistributable; SmartScreen behaviour noted
 - [ ] Open JPEG photos straight from a phone (EXIF rotation) and PNG screenshots

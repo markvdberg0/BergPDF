@@ -14,6 +14,7 @@ mod docops_ui;
 mod exec;
 mod fontpick;
 mod forms_ui;
+mod gpu;
 mod icons;
 mod interaction;
 mod measure_ui;
@@ -44,7 +45,11 @@ fn main() -> eframe::Result {
                 || platform::dialogs::is_image_path(p)
         })
         .collect();
+    let prefs = platform::dirs::read_text(&platform::dirs::prefs_file())
+        .and_then(|s| editor_core::prefs::Preferences::from_toml(&s).ok())
+        .unwrap_or_default();
     let options = eframe::NativeOptions {
+        wgpu_options: gpu::configuration(&prefs.graphics),
         viewport: egui::ViewportBuilder::default()
             .with_title("BergPDF")
             .with_icon(egui::IconData {

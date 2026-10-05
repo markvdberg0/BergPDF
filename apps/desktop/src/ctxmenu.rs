@@ -182,6 +182,7 @@ impl App {
                             tool: Tool::Note,
                             rect: PRect::new(t.pt.x, t.pt.y, t.pt.x, t.pt.y),
                             text: String::new(),
+                            callout: None,
                         });
                     }
                 });

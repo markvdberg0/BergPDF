@@ -73,5 +73,7 @@ jars (see docs/EVIDENCE.md for how they were fetched) and `BERG_REQUIRE_VERAPDF=
 * **Windows packaging.** `cargo xtask dist` links the C runtime statically on Windows/MSVC (no Visual C++
   redistributable needed) and the exe carries the BergPDF icon and version info. It is **not** an installer and
   **not** code-signed, so Windows SmartScreen will warn on first start. None of this has been run on Windows yet.
+* **Installed fonts** can be chosen for text; only fonts whose embedding flags allow it are offered, and the user
+  remains responsible for the font's licence when a document is shared.
 * **Fonts**: 14 font files are embedded in the binary (Liberation — SIL OFL 1.1; DejaVu — Bitstream Vera licence);
   ship their licence texts (`crates/pdf-engine/assets/fonts/LICENSE-*.txt`) with the app.
