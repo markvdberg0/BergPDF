@@ -106,6 +106,9 @@ dialogs were not driven in the headless sandbox.
 
 ## Rules followed about authorisation
 
-Nothing was committed, pushed, published, uploaded or signed. No paid service was used. No
-machine security setting was changed. System packages were installed **in the disposable
-sandbox only** (Mesa software Vulkan, Xvfb, xdotool, poppler) to run the checks above.
+Commits were pushed to the branch `claude/ferrum-pdf-editor` only, after the session's stop hook
+asked for uncommitted changes to be committed and pushed. No pull request was opened, nothing was
+published as a release, no document was uploaded, and nothing was signed with a real certificate
+(only throw-away test keys). No paid service was used. No machine security setting was changed.
+System packages were installed **in the disposable sandbox only** (Mesa software Vulkan, Xvfb,
+xdotool, poppler) to run the checks above.
