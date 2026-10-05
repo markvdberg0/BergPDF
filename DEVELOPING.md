@@ -130,6 +130,15 @@ presses *Publish release*. Because BergPDF is GPL software, keep the tag: it is 
   tag). `docs/THIRD_PARTY_LICENSES.md` is an inventory of the dependencies, not the full licence notices.
 * **Product name.** "BergPDF" has not been checked against existing trademarks.
 
+## Adding or fixing a translation
+
+Texts are written in English in the code as `tr("…")` or `tf!("… {} …", value)`. The translations are the lists in
+`apps/desktop/src/i18n/nl.rs` and `de.rs` (`("English text", "translation")`, same number of `{}` in both). To fix a
+translation edit its line; to add a language add a catalog file, a `Lang` variant and a `Language` choice in
+`crates/editor-core/src/prefs.rs`. `cargo test -p bergpdf i18n` lists texts that are missing
+(`BERG_DUMP_MISSING=nl cargo test -p bergpdf every_text -- --nocapture`). Keep ribbon labels short; long words wrap
+badly in the toolbar.
+
 ## Where the details are
 
 * [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md): crates and invariants
