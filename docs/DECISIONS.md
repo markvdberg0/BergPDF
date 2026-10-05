@@ -232,3 +232,18 @@ the question). If yes it runs `bergpdf --download-ocr-models`, which uses the sa
 dialog (https only, pinned SHA-256, nothing kept on a mismatch) and exits with a status; a failure only produces a
 message, the installation stays valid. Silent/passive installs skip the question. macOS and Linux packages have no
 installation step to ask in; there the OCR dialog offers the same download.
+
+## D-030 — The Windows installer offers "just for me" or "all users"
+`installer-mode = "both"`: the installer asks (per-user in `%LOCALAPPDATA%\BergPDF` without administrator rights, or all
+users in `Program Files`, with the UAC prompt). For an all-users install the OCR models are downloaded next to the
+program (`…\BergPDF\ocr-models`, which the app searches) because an elevated installer could otherwise fill another
+user's profile; the uninstaller removes that folder. Per-user installs keep the models in the user's data folder.
+Not yet run on Windows.
+
+## D-031 — One BergPDF window: later starts hand their files to the running one
+A second start (for example double-clicking a PDF) connects to the first instance over a loopback port named in a
+private lock file (`instance.lock` in the data folder) together with a random token, sends the absolute paths, waits for
+an acknowledgement and exits; the first instance opens them as tabs and comes to the front. Stale or unusable lock files
+never block a start. `--new-instance` or `BERG_MULTI_INSTANCE=1` starts a separate instance. Limits: Windows may only
+flash the taskbar instead of raising the window (focus-stealing rules; no `AllowSetForegroundWindow` without unsafe
+code); macOS "open with" events are not handled yet (they arrive as Apple events, not as arguments).

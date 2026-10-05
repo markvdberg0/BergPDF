@@ -285,6 +285,8 @@ pub struct App {
     pub quit_confirmed: bool,
     pub dark_filter_applied: bool,
     pub pending_open: Vec<std::path::PathBuf>,
+    /// Files other starts of BergPDF hand to this instance.
+    pub instance_rx: Option<std::sync::mpsc::Receiver<Vec<std::path::PathBuf>>>,
     pub last_autosave: Instant,
     /// Dialog to show after the current one closes (e.g. Preferences -> Shortcuts).
     pub dialog_next: Option<Dialog>,

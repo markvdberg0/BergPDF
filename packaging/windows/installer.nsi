@@ -562,7 +562,20 @@ Section "-OcrModels"
   ${IfThen} $PassiveMode == 1 ${|} Goto ocr_done ${|}
   MessageBox MB_YESNO|MB_ICONQUESTION "BergPDF can recognise text in scanned pages (OCR).$\r$\nThis needs two model files (about 12 MB) that are downloaded once from the model author's server (ocrs-models.s3-accelerate.amazonaws.com) and checked before use.$\r$\n$\r$\nDownload them now?" IDNO ocr_done
   DetailPrint "Downloading the OCR models..."
-  ExecWait '"$INSTDIR\${MAINBINARYNAME}.exe" --download-ocr-models' $0
+  ; An all-users install keeps the models next to the program, where every user's BergPDF finds them
+  ; (an elevated installer would otherwise fill the wrong user's profile). A per-user install uses the
+  ; user's own data folder.
+  !if "${INSTALLMODE}" == "both"
+    ${If} $MultiUser.InstallMode == "AllUsers"
+      ExecWait '"$INSTDIR\${MAINBINARYNAME}.exe" --download-ocr-models "$INSTDIR\ocr-models"' $0
+    ${Else}
+      ExecWait '"$INSTDIR\${MAINBINARYNAME}.exe" --download-ocr-models' $0
+    ${EndIf}
+  !else if "${INSTALLMODE}" == "perMachine"
+    ExecWait '"$INSTDIR\${MAINBINARYNAME}.exe" --download-ocr-models "$INSTDIR\ocr-models"' $0
+  !else
+    ExecWait '"$INSTDIR\${MAINBINARYNAME}.exe" --download-ocr-models' $0
+  !endif
   ${If} $0 != 0
     MessageBox MB_OK|MB_ICONINFORMATION "The OCR models could not be downloaded now. You can download them later from the OCR dialog in BergPDF."
   ${EndIf}
@@ -624,6 +637,9 @@ Section Uninstall
       DeleteRegKey SHCTX "Software\Classes\\{{protocol}}"
     !endif
   {{/each}}
+
+  ; OCR models downloaded by the installer for an all-users install (BergPDF addition)
+  RMDir /r "$INSTDIR\ocr-models"
 
   ; Delete uninstaller
   Delete "$INSTDIR\uninstall.exe"

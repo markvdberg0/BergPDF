@@ -28,8 +28,8 @@ description = "PDF document"
 role = "editor"
 
 [nsis]
-# Per user, no administrator rights needed.
-installer-mode = "currentUser"
+# The installer lets the user choose: just for me (no administrator rights) or all users (Program Files).
+installer-mode = "both"
 compression = "lzma"
 # cargo-packager's own template plus one section that offers the OCR model download (see the file).
 # It is a copy of the template of cargo-packager 0.11.8: install exactly that version.

@@ -100,8 +100,12 @@ fn download_models(
 }
 
 /// `bergpdf --download-ocr-models`: used by the Windows installer; no window, exit code says how it went.
-pub fn download_models_blocking() -> Result<(), String> {
-    download_models(&install_dir(), &|_, _| {}, &AtomicBool::new(false))
+pub fn download_models_blocking(dir: Option<std::path::PathBuf>) -> Result<(), String> {
+    download_models(
+        &dir.unwrap_or_else(install_dir),
+        &|_, _| {},
+        &AtomicBool::new(false),
+    )
 }
 
 fn start_model_download() -> ModelDownload {

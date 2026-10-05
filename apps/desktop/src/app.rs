@@ -16,7 +16,11 @@ use std::time::{Duration, Instant};
 pub const OS: OsKind = OsKind::current();
 
 impl App {
-    pub fn new_app(cc: &eframe::CreationContext<'_>, files: Vec<PathBuf>) -> Self {
+    pub fn new_app(
+        cc: &eframe::CreationContext<'_>,
+        files: Vec<PathBuf>,
+        instance_rx: Option<std::sync::mpsc::Receiver<Vec<PathBuf>>>,
+    ) -> Self {
         theme::install_fonts(&cc.egui_ctx);
         crate::fontpick::init(&cc.egui_ctx);
         // Installed fonts are looked up in the background (only names and flags are read).
@@ -66,6 +70,7 @@ impl App {
             quit_confirmed: false,
             dark_filter_applied: false,
             pending_open: files,
+            instance_rx,
             last_autosave: Instant::now(),
             dialog_next: None,
             last_title: String::new(),
@@ -243,6 +248,20 @@ impl App {
         self.tiles.retain(|k| live.contains(&k.doc));
     }
 
+    /// Files that a second start of BergPDF handed to this instance: open them and come to the front.
+    fn take_forwarded_files(&mut self, ctx: &egui::Context) {
+        let Some(rx) = &self.instance_rx else { return };
+        let mut any = false;
+        while let Ok(files) = rx.try_recv() {
+            any = true;
+            self.pending_open.extend(files);
+        }
+        if any {
+            ctx.send_viewport_cmd(egui::ViewportCommand::Minimized(false));
+            ctx.send_viewport_cmd(egui::ViewportCommand::Focus);
+        }
+    }
+
     fn handle_drops_and_pending(&mut self, ctx: &egui::Context) {
         let dropped: Vec<PathBuf> = ctx.input(|i| {
             i.raw
@@ -350,6 +369,7 @@ impl eframe::App for App {
         // Follow OS theme changes when the preference is System.
         let sys_dark = ctx.global_style().visuals.dark_mode;
         let _ = sys_dark;
+        self.take_forwarded_files(ctx);
         self.handle_drops_and_pending(ctx);
         self.handle_worker_results(ctx);
         self.poll_exports(ctx);

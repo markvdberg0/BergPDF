@@ -9,6 +9,7 @@
 
 pub mod dialogs;
 pub mod dirs;
+pub mod instance;
 pub mod links;
 pub mod recovery;
 pub mod secrets;
