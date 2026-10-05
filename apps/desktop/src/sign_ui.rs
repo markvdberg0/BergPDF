@@ -7,7 +7,9 @@
 
 use crate::canvas::ViewCtx;
 use crate::dialogs::modal;
+use crate::i18n::tr;
 use crate::state::*;
+use crate::tf;
 use editor_core::handwriting::HandwrittenSignature;
 use editor_core::tools::Tool;
 use egui::{Color32, Pos2, RichText, Sense, Stroke, Vec2};
@@ -41,7 +43,9 @@ impl App {
         }
         let can_edit = self.tabs[self.active].session.doc().capabilities().can_edit;
         if !can_edit {
-            self.notify_error("This document cannot be modified, so it cannot be signed.");
+            self.notify_error(tr(
+                "This document cannot be modified, so it cannot be signed.",
+            ));
             return;
         }
         self.dialog = Some(Dialog::Sign(Box::default()));
@@ -58,37 +62,37 @@ impl App {
         }
         let mut act: Option<Act> = None;
         modal(ctx, "sign_dialog", |ui| {
-            ui.heading("Sign with a certificate");
+            ui.heading(tr("Sign with a certificate"));
             ui.label(
-                RichText::new("Creates a digital signature that shows whether the document changes after signing.")
+                RichText::new(tr("Creates a digital signature that shows whether the document changes after signing."))
                     .size(12.0)
                     .color(self.pal.text_dim),
             );
             ui.add_space(6.0);
             ui.horizontal(|ui| {
-                ui.label("Certificate");
+                ui.label(tr("Certificate"));
                 let name = st
                     .cert_path
                     .as_ref()
                     .and_then(|p| p.file_name())
-                    .map_or("none chosen".to_string(), |n| {
+                    .map_or(tr("none chosen").to_string(), |n| {
                         n.to_string_lossy().into_owned()
                     });
                 ui.label(RichText::new(name).strong());
-                if ui.button("Choose…").clicked() {
+                if ui.button(tr("Choose…")).clicked() {
                     act = Some(Act::PickCert);
                 }
             });
             ui.horizontal(|ui| {
-                ui.label("Password");
+                ui.label(tr("Password"));
                 ui.add(
                     egui::TextEdit::singleline(&mut st.password)
                         .password(true)
                         .desired_width(220.0),
                 );
                 if ui
-                    .add_enabled(st.cert_path.is_some(), egui::Button::new("Check"))
-                    .on_hover_text("Unlock the file and show who it identifies")
+                    .add_enabled(st.cert_path.is_some(), egui::Button::new(tr("Check")))
+                    .on_hover_text(tr("Unlock the file and show who it identifies"))
                     .clicked()
                 {
                     act = Some(Act::Check);
@@ -102,28 +106,28 @@ impl App {
                 .num_columns(2)
                 .spacing([8.0, 4.0])
                 .show(ui, |ui| {
-                    ui.label("Reason");
+                    ui.label(tr("Reason"));
                     ui.add(egui::TextEdit::singleline(&mut st.reason).desired_width(300.0));
                     ui.end_row();
-                    ui.label("Location");
+                    ui.label(tr("Location"));
                     ui.add(egui::TextEdit::singleline(&mut st.location).desired_width(300.0));
                     ui.end_row();
-                    ui.label("Contact");
+                    ui.label(tr("Contact"));
                     ui.add(egui::TextEdit::singleline(&mut st.contact).desired_width(300.0));
                     ui.end_row();
                 });
             ui.add_space(4.0);
             ui.horizontal(|ui| {
-                ui.checkbox(&mut st.visible, "Show the signature on a page");
-                if st.visible && ui.button("Choose area…").clicked() {
+                ui.checkbox(&mut st.visible, tr("Show the signature on a page"));
+                if st.visible && ui.button(tr("Choose area…")).clicked() {
                     act = Some(Act::PickArea);
                 }
             });
             if st.visible {
                 ui.label(
                     RichText::new(match &st.area {
-                        Some(_) => "Area chosen.",
-                        None => "No area chosen yet — drag a rectangle on the page.",
+                        Some(_) => tr("Area chosen."),
+                        None => tr("No area chosen yet — drag a rectangle on the page."),
                     })
                     .size(12.0)
                     .color(self.pal.text_dim),
@@ -132,9 +136,9 @@ impl App {
             ui.add_space(6.0);
             ui.label(
                 RichText::new(
-                    "The signed file is saved right away under a name you choose, and signing cannot be undone. \
+                    tr("The signed file is saved right away under a name you choose, and signing cannot be undone. \
                      Other programs will show your certificate as “not trusted” unless the reader trusts it; \
-                     BergPDF only creates the signature.",
+                     BergPDF only creates the signature."),
                 )
                 .size(11.5)
                 .color(self.pal.text_dim),
@@ -148,13 +152,15 @@ impl App {
                 if ui
                     .add_enabled(
                         st.cert_path.is_some(),
-                        egui::Button::new("Sign and save as…"),
+                        egui::Button::new(tr("Sign and save as…")),
                     )
                     .clicked()
                 {
                     act = Some(Act::Sign);
                 }
-                if ui.button("Cancel").clicked() || ui.input(|i| i.key_pressed(egui::Key::Escape)) {
+                if ui.button(tr("Cancel")).clicked()
+                    || ui.input(|i| i.key_pressed(egui::Key::Escape))
+                {
                     act = Some(Act::Cancel);
                 }
             });
@@ -176,7 +182,7 @@ impl App {
             Some(Act::Check) => {
                 match Self::load_identity(st) {
                     Ok(id) => {
-                        st.signer_hint = Some(format!(
+                        st.signer_hint = Some(tf!(
                             "Signs as {} ({} certificate(s) in the file)",
                             id.common_name(),
                             id.chain_len()
@@ -194,7 +200,9 @@ impl App {
                 self.sign_return = Some(Box::new(st.clone()));
                 st.password.clear();
                 self.set_tool(Tool::SignArea);
-                self.notify("Drag the rectangle where the signature should appear. Esc goes back.");
+                self.notify(tr(
+                    "Drag the rectangle where the signature should appear. Esc goes back.",
+                ));
                 false
             }
             Some(Act::Sign) => match self.do_sign(st) {
@@ -214,11 +222,11 @@ impl App {
         let path = st
             .cert_path
             .as_ref()
-            .ok_or("Choose a certificate file first.")?;
+            .ok_or(tr("Choose a certificate file first."))?;
         let bytes =
-            std::fs::read(path).map_err(|e| format!("Could not read the certificate file: {e}"))?;
+            std::fs::read(path).map_err(|e| tf!("Could not read the certificate file: {}", e))?;
         if bytes.len() > 2 * 1024 * 1024 {
-            return Err("That file is too large to be a certificate.".into());
+            return Err(tr("That file is too large to be a certificate.").into());
         }
         Identity::from_pkcs12(&bytes, &st.password).map_err(|e| e.to_string())
     }
@@ -226,13 +234,13 @@ impl App {
     fn do_sign(&mut self, st: &SignDialogState) -> Result<(), String> {
         let id = Self::load_identity(st)?;
         if st.visible && st.area.is_none() {
-            return Err(
-                "Choose where the signature is shown, or untick “Show the signature on a page”."
-                    .into(),
-            );
+            return Err(tr(
+                "Choose where the signature is shown, or untick “Show the signature on a page”.",
+            )
+            .into());
         }
         let ti = self.active;
-        let tab = self.tabs.get(ti).ok_or("No document is open.")?;
+        let tab = self.tabs.get(ti).ok_or(tr("No document is open."))?;
         let suggested = format!("{}-signed.pdf", tab.session.title.trim_end_matches(".pdf"));
         let start = tab
             .session
@@ -240,7 +248,7 @@ impl App {
             .as_ref()
             .and_then(|p| p.parent().map(std::path::Path::to_path_buf));
         let Some(dest) = platform::dialogs::pick_save_pdf(&suggested, start.as_deref()) else {
-            return Err("Signing was cancelled: no file name was chosen.".into());
+            return Err(tr("Signing was cancelled: no file name was chosen.").into());
         };
         let opts = SignOptions {
             reason: st.reason.trim().to_string(),
@@ -253,7 +261,7 @@ impl App {
             .session
             .sign_and_save(&dest, &id, &opts)
             .map_err(|e| e.to_string())?;
-        self.notify(format!(
+        self.notify(tf!(
             "Signed as {} and saved to {}.",
             id.common_name(),
             dest.display()
@@ -286,7 +294,7 @@ impl App {
         {
             let r = PRect::new(points[0].x, points[0].y, points[1].x, points[1].y).abs();
             if r.width() < 40.0 || r.height() < 20.0 {
-                self.notify("Drag a larger rectangle (at least 40 × 20 points).");
+                self.notify(tr("Drag a larger rectangle (at least 40 × 20 points)."));
                 return;
             }
             self.finish_sign_area(Some((page, r)));
@@ -319,46 +327,46 @@ impl App {
     pub fn dialog_signatures(&mut self, ctx: &egui::Context, list: &[SignatureInfo]) -> bool {
         let mut close = false;
         modal(ctx, "signatures", |ui| {
-            ui.heading("Digital signatures");
+            ui.heading(tr("Digital signatures"));
             if list.is_empty() {
-                ui.label("This document has no digital signatures.");
+                ui.label(tr("This document has no digital signatures."));
             }
             for s in list {
                 ui.group(|ui| {
                     let (mark, text, color) = match &s.status {
                         SignatureStatus::IntegrityOk if s.covers_whole_file => (
                             "✔",
-                            "The signed content is unchanged and nothing was added after signing.".to_string(),
+                            tr("The signed content is unchanged and nothing was added after signing.").to_string(),
                             OK_GREEN,
                         ),
                         SignatureStatus::IntegrityOk => (
                             "✔",
-                            "The signed content is unchanged. The file was changed after signing (new revisions were added)."
+                            tr("The signed content is unchanged. The file was changed after signing (new revisions were added).")
                                 .to_string(),
                             OK_GREEN,
                         ),
                         SignatureStatus::DigestMismatch => (
                             "✖",
-                            "The signed content was altered after signing.".to_string(),
+                            tr("The signed content was altered after signing.").to_string(),
                             self.pal.danger,
                         ),
                         SignatureStatus::BadSignature => (
                             "✖",
-                            "The signature itself is not valid.".to_string(),
+                            tr("The signature itself is not valid.").to_string(),
                             self.pal.danger,
                         ),
-                        SignatureStatus::Unsupported(why) => ("?", format!("Could not be checked: {why}"), self.pal.text_dim),
+                        SignatureStatus::Unsupported(why) => ("?", tf!("Could not be checked: {}", why), self.pal.text_dim),
                     };
                     ui.horizontal(|ui| {
                         ui.label(RichText::new(mark).color(color).strong());
-                        ui.label(RichText::new(if s.signer.is_empty() { "Unknown signer" } else { &s.signer }).strong());
+                        ui.label(RichText::new(if s.signer.is_empty() { tr("Unknown signer") } else { &s.signer }).strong());
                         ui.label(RichText::new(format!("({})", s.field)).size(11.0).color(self.pal.text_dim));
                     });
                     ui.label(RichText::new(text).color(color).size(12.5));
                     for (k, v) in [
-                        ("Time claimed by the signer", s.claimed_time.clone().unwrap_or_default()),
-                        ("Reason", s.reason.clone()),
-                        ("Location", s.location.clone()),
+                        (tr("Time claimed by the signer"), s.claimed_time.clone().unwrap_or_default()),
+                        (tr("Reason"), s.reason.clone()),
+                        (tr("Location"), s.location.clone()),
                     ] {
                         if !v.is_empty() {
                             ui.label(RichText::new(format!("{k}: {v}")).size(12.0).color(self.pal.text_dim));
@@ -369,15 +377,15 @@ impl App {
             ui.add_space(6.0);
             ui.label(
                 RichText::new(
-                    "BergPDF checks that the signed bytes still match the signature. It does not check whether the \
+                    tr("BergPDF checks that the signed bytes still match the signature. It does not check whether the \
                      signer's certificate is trusted, valid today, or revoked, and the signing time is only what the \
-                     signer claimed. Confirm who the signer is by other means.",
+                     signer claimed. Confirm who the signer is by other means."),
                 )
                 .size(11.5)
                 .color(self.pal.text_dim),
             );
             ui.add_space(6.0);
-            if ui.button("Close").clicked() || ui.input(|i| i.key_pressed(egui::Key::Escape)) {
+            if ui.button(tr("Close")).clicked() || ui.input(|i| i.key_pressed(egui::Key::Escape)) {
                 close = true;
             }
         });
@@ -395,9 +403,9 @@ impl App {
     pub fn dialog_draw_signature(&mut self, ctx: &egui::Context, st: &mut DrawSigState) -> bool {
         let mut choice: Option<bool> = None;
         modal(ctx, "draw_signature", |ui| {
-            ui.heading("Draw your signature");
+            ui.heading(tr("Draw your signature"));
             ui.label(
-                RichText::new("Sign inside the box with the mouse, pen or finger. This is a picture of your signature, not a digital signature.")
+                RichText::new(tr("Sign inside the box with the mouse, pen or finger. This is a picture of your signature, not a digital signature."))
                     .size(12.0)
                     .color(self.pal.text_dim),
             );
@@ -446,16 +454,21 @@ impl App {
             }
             ui.add_space(6.0);
             ui.horizontal(|ui| {
-                if ui.button("Clear").clicked() {
+                if ui.button(tr("Clear")).clicked() {
                     st.strokes.clear();
                 }
                 if ui
-                    .add_enabled(!st.strokes.is_empty(), egui::Button::new("Save signature"))
+                    .add_enabled(
+                        !st.strokes.is_empty(),
+                        egui::Button::new(tr("Save signature")),
+                    )
                     .clicked()
                 {
                     choice = Some(true);
                 }
-                if ui.button("Cancel").clicked() || ui.input(|i| i.key_pressed(egui::Key::Escape)) {
+                if ui.button(tr("Cancel")).clicked()
+                    || ui.input(|i| i.key_pressed(egui::Key::Escape))
+                {
                     choice = Some(false);
                 }
             });
@@ -472,19 +485,21 @@ impl App {
                         Ok(t) => {
                             if let Err(e) = platform::dirs::write_text_atomic(&signature_file(), &t)
                             {
-                                self.notify_error(format!("Could not save the signature: {e}"));
+                                self.notify_error(tf!("Could not save the signature: {}", e));
                             }
                         }
-                        Err(e) => self.notify_error(format!("Could not save the signature: {e}")),
+                        Err(e) => self.notify_error(tf!("Could not save the signature: {}", e)),
                     }
                     self.handwriting = sig;
-                    self.notify("Signature saved. Use Place Signature to put it on a page.");
+                    self.notify(tr(
+                        "Signature saved. Use Place Signature to put it on a page.",
+                    ));
                     self.set_tool(Tool::PlaceSignature);
                     false
                 }
                 None => {
                     st.error =
-                        Some("That looks like a dot, not a signature. Draw it again.".into());
+                        Some(tr("That looks like a dot, not a signature. Draw it again.").into());
                     true
                 }
             },
@@ -504,7 +519,7 @@ impl App {
         let Some(pos) = pos else { return };
         let Some(i) = vc.page_at(pos) else { return };
         if self.handwriting.is_empty() {
-            self.notify("Draw your signature first (Sign → Draw Signature).");
+            self.notify(tr("Draw your signature first (Sign → Draw Signature)."));
             self.open_draw_signature();
             return;
         }
@@ -520,9 +535,9 @@ impl App {
         spec.color = Rgb(0.08, 0.12, 0.45);
         spec.border_width = 1.4;
         spec.author = self.prefs.author.clone();
-        spec.subject = "Handwritten signature".into();
+        spec.subject = tr("Handwritten signature").into();
         let ti = self.active;
-        match self.tabs[ti].session.execute("Place signature", |tx| {
+        match self.tabs[ti].session.execute(tr("Place signature"), |tx| {
             annot::add_annotation(tx, page, &spec)
         }) {
             Ok(id) => {

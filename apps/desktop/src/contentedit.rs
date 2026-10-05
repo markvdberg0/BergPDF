@@ -6,7 +6,9 @@
 //! a deliberate button, and width/overlap effects are reported after each edit.
 
 use crate::canvas::ViewCtx;
+use crate::i18n::tr;
 use crate::state::*;
+use crate::tf;
 use editor_core::selection::ContentRef;
 use editor_core::tools::Tool;
 use egui::{Color32, Pos2, Rect, RichText, Stroke, Vec2};
@@ -266,7 +268,7 @@ impl App {
                     .editable
                     .clone()
                     .err()
-                    .map(|e| (true, format!("This text can't be edited: {e}."))),
+                    .map(|e| (true, tf!("This text can't be edited: {}.", e))),
                 missing: None,
                 report: None,
             });
@@ -292,7 +294,7 @@ impl App {
                 .map(|r| r.quad.bounds().center()),
         };
         let r = match c {
-            ContentRef::Text(id) => self.tabs[ti].session.execute("Move text", |tx| {
+            ContentRef::Text(id) => self.tabs[ti].session.execute(tr("Move text"), |tx| {
                 PageContent::load(tx.doc(), page.0)?
                     .edit_text(
                         tx,
@@ -315,7 +317,7 @@ impl App {
                     b.x1 + delta.0,
                     b.y1 + delta.1,
                 );
-                self.tabs[ti].session.execute("Move image", |tx| {
+                self.tabs[ti].session.execute(tr("Move image"), |tx| {
                     PageContent::load(tx.doc(), page.0)?.place_image(tx, id, nb)
                 })
             }
@@ -330,7 +332,7 @@ impl App {
                     );
                 }
             }
-            Err(e) => self.notify_error(format!("Could not move: {e}")),
+            Err(e) => self.notify_error(tf!("Could not move: {}", e)),
         }
     }
 
@@ -342,12 +344,12 @@ impl App {
         if p != page || rect.width() < 2.0 || rect.height() < 2.0 {
             return;
         }
-        let r = self.tabs[ti].session.execute("Resize image", |tx| {
+        let r = self.tabs[ti].session.execute(tr("Resize image"), |tx| {
             PageContent::load(tx.doc(), page.0)?.place_image(tx, id, rect)
         });
         match r {
             Ok(()) => self.reselect_near(page, rect.center(), false),
-            Err(e) => self.notify_error(format!("Could not resize: {e}")),
+            Err(e) => self.notify_error(tf!("Could not resize: {}", e)),
         }
     }
 
@@ -413,7 +415,7 @@ impl App {
         {
             let r = PRect::new(points[0].x, points[0].y, points[1].x, points[1].y).abs();
             if r.width() < 8.0 || r.height() < 8.0 {
-                self.notify("Drag a larger box to place the image.");
+                self.notify(tr("Drag a larger box to place the image."));
                 return;
             }
             let Some(path) = platform::dialogs::pick_image() else {
@@ -421,7 +423,7 @@ impl App {
             };
             match std::fs::read(&path) {
                 Ok(bytes) => {
-                    let res = self.tabs[ti].session.execute("Add image", |tx| {
+                    let res = self.tabs[ti].session.execute(tr("Add image"), |tx| {
                         pagecontent::add_image(tx, page, r, &bytes)
                     });
                     match res {
@@ -431,7 +433,7 @@ impl App {
                         }
                         Err(e) => {
                             self.dialog = Some(Dialog::Error {
-                                title: "Could not add image".into(),
+                                title: tr("Could not add image").into(),
                                 detail: e.to_string(),
                             })
                         }
@@ -439,7 +441,7 @@ impl App {
                 }
                 Err(e) => {
                     self.dialog = Some(Dialog::Error {
-                        title: "Could not read the image".into(),
+                        title: tr("Could not read the image").into(),
                         detail: e.to_string(),
                     })
                 }
@@ -460,7 +462,7 @@ impl App {
         let col = (0.0f32, 0.0f32, 0.0f32);
         // Upright on screen (also on rotated pages), plus the quarter turns the user asked for.
         let rotation = (self.upright_rotation(page) + 90 * turns).rem_euclid(360);
-        let r = self.tabs[ti].session.execute("Add text", |tx| {
+        let r = self.tabs[ti].session.execute(tr("Add text"), |tx| {
             pagecontent::add_text_rotated(tx, page, at, text, size, col, font, rotation)
         });
         match r {
@@ -478,15 +480,16 @@ impl App {
             }
             Err(EngineError::MissingGlyphs { chars, .. }) => {
                 self.dialog = Some(Dialog::Error {
-                    title: "Some characters are not available".into(),
-                    detail: format!(
-                        "The chosen font cannot show: {chars}\nThe text was not added. Remove those characters or pick a font that has them."
+                    title: tr("Some characters are not available").into(),
+                    detail: tf!(
+                        "The chosen font cannot show: {}\nThe text was not added. Remove those characters or pick a font that has them.",
+                        chars
                     ),
                 });
             }
             Err(e) => {
                 self.dialog = Some(Dialog::Error {
-                    title: "Could not add text".into(),
+                    title: tr("Could not add text").into(),
                     detail: e.to_string(),
                 })
             }
@@ -502,7 +505,7 @@ impl App {
         let text_changed = d.text != d.original;
         let size_changed = (d.size - d.original_size).abs() > 0.005;
         if !text_changed && !size_changed && font.is_none() {
-            d.message = Some((false, "No changes to apply.".into()));
+            d.message = Some((false, tr("No changes to apply.").into()));
             self.tabs[ti].ui.edit_draft = Some(d);
             return;
         }
@@ -521,12 +524,12 @@ impl App {
             .iter()
             .find(|r| r.id == run)
             .map(|r| r.quad.bounds().center());
-        let r = self.tabs[ti].session.execute("Edit text", |tx| {
+        let r = self.tabs[ti].session.execute(tr("Edit text"), |tx| {
             PageContent::load(tx.doc(), page.0)?.edit_text(tx, run, &edit)
         });
         match r {
             Ok(report) => {
-                let mut msg = String::from("Text updated.");
+                let mut msg = String::from(tr("Text updated."));
                 if !report.warnings.is_empty() {
                     msg = report.warnings.join(" ");
                 }
@@ -542,7 +545,7 @@ impl App {
                 d.missing = Some((font, chars));
                 d.message = Some((
                     true,
-                    "The font cannot show some of these characters.".into(),
+                    tr("The font cannot show some of these characters.").into(),
                 ));
                 self.tabs[ti].ui.edit_draft = Some(d);
             }
@@ -560,17 +563,17 @@ impl App {
             return;
         };
         let r = match c {
-            ContentRef::Text(id) => self.tabs[ti].session.execute("Delete text", |tx| {
+            ContentRef::Text(id) => self.tabs[ti].session.execute(tr("Delete text"), |tx| {
                 PageContent::load(tx.doc(), page.0)?.delete_text(tx, id)
             }),
-            ContentRef::Image(id) => self.tabs[ti].session.execute("Delete image", |tx| {
+            ContentRef::Image(id) => self.tabs[ti].session.execute(tr("Delete image"), |tx| {
                 PageContent::load(tx.doc(), page.0)?.delete_image(tx, id)
             }),
         };
         self.tabs[ti].session.selection.content = None;
         self.tabs[ti].ui.edit_draft = None;
         if let Err(e) = r {
-            self.notify_error(format!("Could not delete: {e}"));
+            self.notify_error(tf!("Could not delete: {}", e));
         }
     }
 
@@ -586,7 +589,7 @@ impl App {
             Ok(b) => b,
             Err(e) => {
                 self.dialog = Some(Dialog::Error {
-                    title: "Could not read the image".into(),
+                    title: tr("Could not read the image").into(),
                     detail: e.to_string(),
                 });
                 return;
@@ -598,7 +601,7 @@ impl App {
             .iter()
             .find(|i| i.id == id)
             .map(|i| i.quad.bounds().center());
-        let r = self.tabs[ti].session.execute("Replace image", |tx| {
+        let r = self.tabs[ti].session.execute(tr("Replace image"), |tx| {
             PageContent::load(tx.doc(), page.0)?.replace_image(tx, id, &bytes, false)
         });
         match r {
@@ -609,7 +612,7 @@ impl App {
             }
             Err(e) => {
                 self.dialog = Some(Dialog::Error {
-                    title: "Could not replace the image".into(),
+                    title: tr("Could not replace the image").into(),
                     detail: e.to_string(),
                 })
             }
@@ -640,7 +643,7 @@ impl App {
                 painter.text(
                     vc.slot(i).center_top() + Vec2::new(0.0, 10.0),
                     egui::Align2::CENTER_TOP,
-                    format!("Editing unavailable: {e}"),
+                    tf!("Editing unavailable: {}", e),
                     egui::FontId::proportional(12.0),
                     self.pal.danger,
                 );
@@ -688,7 +691,7 @@ impl App {
                     painter.text(
                         pts[0] + Vec2::new(0.0, -4.0),
                         egui::Align2::LEFT_BOTTOM,
-                        format!("Not editable: {reason}"),
+                        tf!("Not editable: {}", reason),
                         egui::FontId::proportional(11.0),
                         self.pal.danger,
                     );
@@ -760,7 +763,7 @@ impl App {
         let objs = self.objects_for(page);
         let can_edit = self.tabs[ti].session.doc().capabilities().can_edit;
         ui.label(
-            RichText::new("Page content")
+            RichText::new(tr("Page content"))
                 .size(11.0)
                 .color(self.pal.text_dim),
         );
@@ -769,9 +772,9 @@ impl App {
                 let Some(run) = objs.runs.iter().find(|r| r.id == id).cloned() else {
                     return false;
                 };
-                ui.label(RichText::new("Edit text").strong());
+                ui.label(RichText::new(tr("Edit text")).strong());
                 ui.label(
-                    RichText::new("Changes the document's own text — not a comment.")
+                    RichText::new(tr("Changes the document's own text — not a comment."))
                         .size(11.0)
                         .color(self.pal.text_dim),
                 );
@@ -781,23 +784,23 @@ impl App {
                     RichText::new(format!(
                         "Font: {}{}{}",
                         if run.base_font.is_empty() {
-                            "(unnamed)"
+                            tr("(unnamed)")
                         } else {
                             &run.base_font
                         },
                         if run.embedded {
-                            " · embedded"
+                            tr(" · embedded")
                         } else {
-                            " · not embedded"
+                            tr(" · not embedded")
                         },
-                        if run.subset { " subset" } else { "" }
+                        if run.subset { tr(" subset") } else { "" }
                     ))
                     .size(12.0),
                 );
                 if let Err(reason) = &run.editable {
                     ui.colored_label(
                         self.pal.danger,
-                        format!("This text can't be edited: {reason}."),
+                        tf!("This text can't be edited: {}.", reason),
                     );
                 }
                 let mut apply = false;
@@ -808,18 +811,18 @@ impl App {
                     ui.add_enabled_ui(editable, |ui| {
                         ui.add(egui::TextEdit::multiline(&mut d.text).desired_rows(3).desired_width(f32::INFINITY));
                         ui.horizontal(|ui| {
-                            ui.label("Size");
+                            ui.label(tr("Size"));
                             ui.add(egui::DragValue::new(&mut d.size).range(4.0..=300.0).speed(0.2).suffix(" pt"));
                         });
                         ui.horizontal(|ui| {
-                            ui.label("Font");
+                            ui.label(tr("Font"));
                             let orig = d.original_font.to_lowercase();
                             let label = match d.font {
-                                None => format!("Keep ({})", short_font_name(&d.original_font)),
+                                None => tf!("Keep ({})", short_font_name(&d.original_font)),
                                 Some(s) => s.family.title().to_string(),
                             };
                             egui::ComboBox::from_id_salt("edit_font").selected_text(label).width(190.0).height(470.0).show_ui(ui, |ui| {
-                                if ui.selectable_label(d.font.is_none(), "Keep the original font").clicked() {
+                                if ui.selectable_label(d.font.is_none(), tr("Keep the original font")).clicked() {
                                     d.font = None;
                                 }
                                 let mut fam = d.font.map_or(pdf_engine::fontembed::FontFamily::DejaVuSans, |s| s.family);
@@ -837,14 +840,14 @@ impl App {
                             ui.horizontal(|ui| {
                                 crate::fontpick::font_picker_toggles(ui, s);
                             });
-                            ui.label(RichText::new("This replaces the font of this text only; other text keeps its font.").size(11.0).color(self.pal.text_dim));
+                            ui.label(RichText::new(tr("This replaces the font of this text only; other text keeps its font.")).size(11.0).color(self.pal.text_dim));
                         }
-                        ui.checkbox(&mut d.fit_width, "Keep original width (adjust spacing)").on_hover_text("Tightens or loosens character spacing so surrounding text keeps its place and nothing overlaps.");
+                        ui.checkbox(&mut d.fit_width, tr("Keep original width (adjust spacing)")).on_hover_text(tr("Tightens or loosens character spacing so surrounding text keeps its place and nothing overlaps."));
                         ui.horizontal(|ui| {
-                            if ui.button("Apply").clicked() {
+                            if ui.button(tr("Apply")).clicked() {
                                 apply = true;
                             }
-                            if ui.button("Revert").clicked() {
+                            if ui.button(tr("Revert")).clicked() {
                                 revert = true;
                             }
                         });
@@ -852,11 +855,11 @@ impl App {
                     if let Some((font, chars)) = d.missing.clone() {
                         ui.add_space(4.0);
                         egui::Frame::new().fill(self.pal.accent_soft).corner_radius(6).inner_margin(8).show(ui, |ui| {
-                            ui.label(RichText::new("Characters not in this font").strong());
-                            ui.label(format!("“{font}” has no glyph for: {chars}"));
-                            ui.label(RichText::new("The font stays unchanged unless you choose to replace it for this text. Pick a font above, or use the default below.").size(11.0));
+                            ui.label(RichText::new(tr("Characters not in this font")).strong());
+                            ui.label(tf!("“{}” has no glyph for: {}", font, chars));
+                            ui.label(RichText::new(tr("The font stays unchanged unless you choose to replace it for this text. Pick a font above, or use the default below.")).size(11.0));
                             let which = d.font.map_or("DejaVu Sans".to_string(), |s| s.family.title().to_string());
-                            if ui.button(format!("Use {which} for this text")).clicked() {
+                            if ui.button(tf!("Use {} for this text", which)).clicked() {
                                 apply_sub = true;
                             }
                         });
@@ -875,14 +878,16 @@ impl App {
                     if let Some(r) = &d.report
                         && r.overlaps_following
                     {
-                        ui.colored_label(self.pal.danger, "The new text overlaps the text after it. Enable “Keep original width” or shorten the text.");
+                        ui.colored_label(self.pal.danger, tr("The new text overlaps the text after it. Enable “Keep original width” or shorten the text."));
                     }
                 }
                 ui.add_space(6.0);
                 if ui
                     .add_enabled(
                         editable,
-                        egui::Button::new(RichText::new("Delete this text").color(self.pal.danger)),
+                        egui::Button::new(
+                            RichText::new(tr("Delete this text")).color(self.pal.danger),
+                        ),
                     )
                     .clicked()
                 {
@@ -919,31 +924,33 @@ impl App {
                 }
                 ui.add_space(8.0);
                 ui.label(
-                    RichText::new("Only this text run is edited — there is no paragraph reflow.")
-                        .size(11.0)
-                        .color(self.pal.text_dim),
+                    RichText::new(tr(
+                        "Only this text run is edited — there is no paragraph reflow.",
+                    ))
+                    .size(11.0)
+                    .color(self.pal.text_dim),
                 );
             }
             ContentRef::Image(id) => {
                 let Some(im) = objs.images.iter().find(|r| r.id == id).cloned() else {
                     return false;
                 };
-                ui.label(RichText::new("Image").strong());
+                ui.label(RichText::new(tr("Image")).strong());
                 let b = im.quad.bounds();
                 ui.label(
-                    RichText::new(format!(
-                        "{}×{} px, placed at {:.0}×{:.0} pt",
+                    RichText::new(tf!(
+                        "{}×{} px, placed at {}×{} pt",
                         im.width_px,
                         im.height_px,
-                        b.width(),
-                        b.height()
+                        format!("{:.0}", b.width()),
+                        format!("{:.0}", b.height())
                     ))
                     .size(12.0),
                 );
                 ui.add_space(6.0);
                 ui.horizontal(|ui| {
                     if ui
-                        .add_enabled(can_edit, egui::Button::new("Replace image…"))
+                        .add_enabled(can_edit, egui::Button::new(tr("Replace image…")))
                         .clicked()
                     {
                         self.replace_selected_image();
@@ -951,7 +958,7 @@ impl App {
                     if ui
                         .add_enabled(
                             can_edit,
-                            egui::Button::new(RichText::new("Delete").color(self.pal.danger)),
+                            egui::Button::new(RichText::new(tr("Delete")).color(self.pal.danger)),
                         )
                         .clicked()
                     {
@@ -959,7 +966,7 @@ impl App {
                     }
                 });
                 ui.label(
-                    RichText::new("Drag to move; drag a handle to resize.")
+                    RichText::new(tr("Drag to move; drag a handle to resize."))
                         .size(11.0)
                         .color(self.pal.text_dim),
                 );

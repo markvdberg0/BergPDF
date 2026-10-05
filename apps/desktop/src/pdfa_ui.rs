@@ -2,8 +2,10 @@
 //! write a PDF/A-2b copy on a background thread. The original is never modified.
 
 use crate::dialogs::modal;
+use crate::i18n::tr;
 use crate::optimize_ui::human_size;
 use crate::state::*;
+use crate::tf;
 use egui::RichText;
 use pdf_engine::pdfa::{PdfaReport, analyze, convert_bytes};
 use pdf_engine::save::{SaveOptions, write_atomic};
@@ -25,18 +27,18 @@ impl App {
             return;
         };
         if tab.session.doc().capabilities().encrypted {
-            self.notify_error("Encrypted documents cannot be converted to PDF/A.");
+            self.notify_error(tr("Encrypted documents cannot be converted to PDF/A."));
             return;
         }
         let signed = tab.session.doc().capabilities().has_signatures;
         let Ok(snap) = tab.session.snapshot() else {
-            self.notify_error("Could not prepare the document for checking.");
+            self.notify_error(tr("Could not prepare the document for checking."));
             return;
         };
         let (tx, rx) = channel();
         std::thread::spawn(move || {
             let r = std::panic::catch_unwind(|| analyze(&snap.bytes).map_err(|e| e.to_string()))
-                .unwrap_or_else(|_| Err("The check stopped unexpectedly.".into()));
+                .unwrap_or_else(|_| Err(tr("The check stopped unexpectedly.").into()));
             let _ = tx.send(r);
         });
         self.dialog = Some(Dialog::PdfA(Box::new(PdfaDialogState {
@@ -58,7 +60,7 @@ impl App {
                     ctx.request_repaint_after(std::time::Duration::from_millis(80))
                 }
                 Err(TryRecvError::Disconnected) => {
-                    st.result = Some(Err("The check stopped unexpectedly.".into()));
+                    st.result = Some(Err(tr("The check stopped unexpectedly.").into()));
                     st.rx = None;
                 }
             }
@@ -69,16 +71,16 @@ impl App {
         let danger = self.pal.danger;
         modal(ctx, "pdfa", |ui| {
             ui.set_max_width(520.0);
-            ui.heading("Convert to PDF/A");
+            ui.heading(tr("Convert to PDF/A"));
             ui.label(
-                "Saves a PDF/A-2b copy for long-term archiving. The open document and its file are not changed.",
+                tr("Saves a PDF/A-2b copy for long-term archiving. The open document and its file are not changed."),
             );
             ui.add_space(6.0);
             match &st.result {
                 None => {
                     ui.horizontal(|ui| {
                         ui.spinner();
-                        ui.label("Checking the document…");
+                        ui.label(tr("Checking the document…"));
                     });
                 }
                 Some(Err(e)) => {
@@ -87,24 +89,25 @@ impl App {
                 Some(Ok(rep)) => {
                     if !rep.blockers.is_empty() {
                         ui.label(
-                            RichText::new("This document cannot be converted as it is:").strong(),
+                            RichText::new(tr("This document cannot be converted as it is:"))
+                                .strong(),
                         );
                         for b in &rep.blockers {
                             ui.colored_label(danger, format!("• {b}"));
                         }
                         ui.add_space(4.0);
                         ui.label(
-                            RichText::new("BergPDF will not change fonts or colours to force a result, because the copy would no longer be the same document.")
+                            RichText::new(tr("BergPDF will not change fonts or colours to force a result, because the copy would no longer be the same document."))
                                 .size(12.0)
                                 .color(dim),
                         );
                     } else {
-                        ui.label(RichText::new("BergPDF will:").strong());
+                        ui.label(RichText::new(tr("BergPDF will:")).strong());
                         for f in &rep.fixes {
                             ui.label(format!("• {f}"));
                         }
                         for r in &rep.removed {
-                            ui.label(format!("• remove {r}"));
+                            ui.label(tf!("• remove {}", r));
                         }
                         ui.add_space(4.0);
                         for n in &rep.notes {
@@ -115,7 +118,7 @@ impl App {
                         ui.add_space(4.0);
                         ui.colored_label(
                             danger,
-                            "This document has digital signatures. They will no longer be valid in the converted copy.",
+                            tr("This document has digital signatures. They will no longer be valid in the converted copy."),
                         );
                     }
                 }
@@ -127,12 +130,14 @@ impl App {
             let can = matches!(&st.result, Some(Ok(r)) if r.can_convert());
             ui.horizontal(|ui| {
                 if ui
-                    .add_enabled(can, egui::Button::new("Choose file and convert…"))
+                    .add_enabled(can, egui::Button::new(tr("Choose file and convert…")))
                     .clicked()
                 {
                     go = true;
                 }
-                if ui.button("Cancel").clicked() || ui.input(|i| i.key_pressed(egui::Key::Escape)) {
+                if ui.button(tr("Cancel")).clicked()
+                    || ui.input(|i| i.key_pressed(egui::Key::Escape))
+                {
                     cancel = true;
                 }
             });
@@ -160,14 +165,16 @@ impl App {
         let snap = tab
             .session
             .snapshot()
-            .map_err(|e| format!("Could not prepare the document: {e}"))?;
+            .map_err(|e| tf!("Could not prepare the document: {}", e))?;
         let pages = tab.session.doc().page_count();
         let start = current.as_deref().and_then(|p| p.parent());
         let Some(dest) = platform::dialogs::pick_save_pdf(&suggested, start) else {
             return Ok(false);
         };
         if current.as_deref() == Some(dest.as_path()) {
-            return Err("Choose a different file name: the original is never overwritten.".into());
+            return Err(
+                tr("Choose a different file name: the original is never overwritten.").into(),
+            );
         }
         let (tx, rx) = channel();
         std::thread::spawn(move || {
@@ -186,16 +193,17 @@ impl App {
                     .file_name()
                     .map(|n| n.to_string_lossy().into_owned())
                     .unwrap_or_default();
-                Ok::<String, String>(format!(
-                    "Saved {name} ({}) prepared as PDF/A-2b. Check it with a PDF/A validator if conformance matters.",
+                Ok::<String, String>(tf!(
+                    "Saved {} ({}) prepared as PDF/A-2b. Check it with a PDF/A validator if conformance matters.",
+                    name,
                     human_size(bytes.len())
                 ))
             });
-            let _ =
-                tx.send(r.unwrap_or_else(|_| Err("The conversion stopped unexpectedly.".into())));
+            let _ = tx
+                .send(r.unwrap_or_else(|_| Err(tr("The conversion stopped unexpectedly.").into())));
         });
         self.exports.push(crate::docops_ui::ExportJob { rx });
-        self.notify("Converting to PDF/A…");
+        self.notify(tr("Converting to PDF/A…"));
         Ok(true)
     }
 }

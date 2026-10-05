@@ -1,5 +1,6 @@
 //! Application shell: construction, per-frame logic and top-level layout.
 
+use crate::i18n::tr;
 use crate::state::*;
 use crate::theme;
 use editor_core::command::{CommandId, Key, Shortcut};
@@ -34,6 +35,7 @@ impl App {
             .and_then(|s| Preferences::from_toml(&s).ok())
             .unwrap_or_default();
         prefs.sanitize();
+        crate::i18n::apply(prefs.language);
         let ctx = cc.egui_ctx.clone();
         let hub = WorkerHub::new(Arc::new(move || ctx.request_repaint()));
         let system_dark = cc.egui_ctx.global_style().visuals.dark_mode;
@@ -105,6 +107,7 @@ impl App {
 
     /// Apply theme/scale after a preference change.
     pub fn restyle(&mut self, ctx: &egui::Context) {
+        crate::i18n::apply(self.prefs.language);
         self.pal = theme::palette(&self.prefs, self.system_dark);
         theme::apply(ctx, &self.prefs, &self.pal);
         self.tiles
@@ -431,7 +434,7 @@ impl eframe::App for App {
             let info = crate::gpu::describe(rs);
             if rs.adapter.get_info().device_type == eframe::wgpu::DeviceType::Cpu {
                 self.notify_error(
-                    "BergPDF is drawing with a software renderer (no graphics card driver found), so resizing and zooming will be slow. Install your computer's graphics driver; see Preferences ▸ Graphics.",
+                    tr("BergPDF is drawing with a software renderer (no graphics card driver found), so resizing and zooming will be slow. Install your computer's graphics driver; see Preferences ▸ Graphics."),
                 );
             }
             self.gpu_info = Some(info);

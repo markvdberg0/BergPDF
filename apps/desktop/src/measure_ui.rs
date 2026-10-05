@@ -7,7 +7,9 @@
 
 use crate::canvas::ViewCtx;
 use crate::dialogs::modal;
+use crate::i18n::tr;
 use crate::state::*;
+use crate::tf;
 use editor_core::tools::Tool;
 use egui::{Align2, Color32, FontId, Pos2, RichText, Stroke};
 use pdf_engine::annot::AnnotationKind;
@@ -122,10 +124,10 @@ impl App {
             ScaleSource::None => "",
         };
         Some(if s.calibrated {
-            (format!("Scale {} ({where_})", s.text), true)
+            (tf!("Scale {} ({})", s.text, where_), true)
         } else {
             (
-                "⚠ Scale not set — measuring in PDF points".to_string(),
+                tr("⚠ Scale not set — measuring in PDF points").to_string(),
                 false,
             )
         })
@@ -257,13 +259,13 @@ impl App {
         };
         if !scale.calibrated && kind != MeasureKind::Count && kind != MeasureKind::Angle {
             self.notify(
-                "No scale is set for this page, so the value is in PDF points. Use Calibrate Scale for real units.",
+                tr("No scale is set for this page, so the value is in PDF points. Use Calibrate Scale for real units."),
             );
         }
         let label = if kind == MeasureKind::Count {
-            "Add count marker"
+            tr("Add count marker")
         } else {
-            "Add measurement"
+            tr("Add measurement")
         };
         let r = self.tabs[self.active].session.execute(label, |tx| {
             pdf_engine::annot::add_annotation(tx, page, &spec)
@@ -309,7 +311,7 @@ impl App {
             self.tabs[ti].ui.interaction = Interaction::None;
             let len = (pts[0].x - pts[1].x).hypot(pts[0].y - pts[1].y);
             if len < 1.0 {
-                self.notify("Those two points are too close together to calibrate.");
+                self.notify(tr("Those two points are too close together to calibrate."));
                 return;
             }
             self.open_scale_dialog(page, Some(len));
@@ -353,7 +355,7 @@ impl App {
         {
             let r = PRect::new(points[0].x, points[0].y, points[1].x, points[1].y).abs();
             if r.width() < 8.0 || r.height() < 8.0 {
-                self.notify("Drag a larger rectangle for the region.");
+                self.notify(tr("Drag a larger rectangle for the region."));
                 return;
             }
             self.tabs[ti].ui.pending_region = None;
@@ -365,9 +367,9 @@ impl App {
             });
             match self.tabs[ti]
                 .session
-                .execute("Set region scale", |tx| measure::write_scales(tx, &set))
+                .execute(tr("Set region scale"), |tx| measure::write_scales(tx, &set))
             {
-                Ok(()) => self.notify("Region scale set."),
+                Ok(()) => self.notify(tr("Region scale set.")),
                 Err(e) => self.notify_error(e.to_string()),
             }
         }
@@ -411,32 +413,32 @@ impl App {
                 });
         };
         modal(ctx, "scale_dialog", |ui| {
-            ui.heading("Set drawing scale");
+            ui.heading(tr("Set drawing scale"));
             ui.label(
-                RichText::new("Measurements use this scale. Pick how you know it.")
+                RichText::new(tr("Measurements use this scale. Pick how you know it."))
                     .size(12.0)
                     .color(self.pal.text_dim),
             );
             ui.add_space(6.0);
             ui.horizontal(|ui| {
                 ui.add_enabled_ui(st.measured_pts.is_some(), |ui| {
-                    ui.radio_value(&mut st.mode, ScaleMode::Calibrate, "Known length");
+                    ui.radio_value(&mut st.mode, ScaleMode::Calibrate, tr("Known length"));
                 });
-                ui.radio_value(&mut st.mode, ScaleMode::Ratio, "Ratio 1 : n");
-                ui.radio_value(&mut st.mode, ScaleMode::Custom, "Custom");
+                ui.radio_value(&mut st.mode, ScaleMode::Ratio, tr("Ratio 1 : n"));
+                ui.radio_value(&mut st.mode, ScaleMode::Custom, tr("Custom"));
             });
             ui.add_space(4.0);
             match st.mode {
                 ScaleMode::Calibrate => {
                     if let Some(m) = st.measured_pts {
-                        ui.label(format!(
-                            "The two points you clicked are {:.1} pt ({:.1} mm on paper) apart.",
-                            m,
-                            m / Unit::Mm.points()
+                        ui.label(tf!(
+                            "The two points you clicked are {} pt ({} mm on paper) apart.",
+                            format!("{:.1}", m),
+                            format!("{:.1}", m / Unit::Mm.points())
                         ));
                     }
                     ui.horizontal(|ui| {
-                        ui.label("Their real length is");
+                        ui.label(tr("Their real length is"));
                         ui.add(egui::TextEdit::singleline(&mut st.known_len).desired_width(80.0));
                         unit_combo(ui, "cal_unit", &mut st.known_unit);
                     });
@@ -445,7 +447,7 @@ impl App {
                     ui.horizontal(|ui| {
                         ui.label("1 :");
                         ui.add(egui::TextEdit::singleline(&mut st.ratio_n).desired_width(80.0));
-                        ui.label("show results in");
+                        ui.label(tr("show results in"));
                         unit_combo(ui, "ratio_unit", &mut st.ratio_unit);
                     });
                     ui.horizontal(|ui| {
@@ -460,7 +462,7 @@ impl App {
                     ui.horizontal(|ui| {
                         ui.add(egui::TextEdit::singleline(&mut st.paper_len).desired_width(60.0));
                         unit_combo(ui, "paper_unit", &mut st.paper_unit);
-                        ui.label("on paper  =");
+                        ui.label(tr("on paper  ="));
                         ui.add(egui::TextEdit::singleline(&mut st.real_len).desired_width(60.0));
                         unit_combo(ui, "real_unit", &mut st.real_unit);
                         ui.label("real");
@@ -483,24 +485,28 @@ impl App {
                 }
             }
             ui.add_space(8.0);
-            ui.label("Apply to");
+            ui.label(tr("Apply to"));
             ui.horizontal(|ui| {
-                ui.radio_value(&mut st.scope, ScaleScope::Page, "This page");
-                ui.radio_value(&mut st.scope, ScaleScope::Document, "Whole document");
-                ui.radio_value(&mut st.scope, ScaleScope::Region, "A region of this page");
+                ui.radio_value(&mut st.scope, ScaleScope::Page, tr("This page"));
+                ui.radio_value(&mut st.scope, ScaleScope::Document, tr("Whole document"));
+                ui.radio_value(
+                    &mut st.scope,
+                    ScaleScope::Region,
+                    tr("A region of this page"),
+                );
             });
             if st.scope == ScaleScope::Region {
                 ui.label(
-                    RichText::new(
+                    RichText::new(tr(
                         "After OK, drag a rectangle on the page for a detail drawn at this scale.",
-                    )
+                    ))
                     .size(12.0)
                     .color(self.pal.text_dim),
                 );
             } else {
                 ui.checkbox(
                     &mut st.apply_existing,
-                    "Update existing measurements to this scale",
+                    tr("Update existing measurements to this scale"),
                 );
             }
             if let Some(e) = &st.error {
@@ -511,7 +517,9 @@ impl App {
                 if ui.button("OK").clicked() {
                     choice = Some(true);
                 }
-                if ui.button("Cancel").clicked() || ui.input(|i| i.key_pressed(egui::Key::Escape)) {
+                if ui.button(tr("Cancel")).clicked()
+                    || ui.input(|i| i.key_pressed(egui::Key::Escape))
+                {
                     choice = Some(false);
                 }
             });
@@ -534,11 +542,13 @@ impl App {
             s.trim()
                 .replace(',', ".")
                 .parse::<f64>()
-                .map_err(|_| format!("“{s}” is not a number"))
+                .map_err(|_| tf!("“{}” is not a number", s))
         };
         let scale = match st.mode {
             ScaleMode::Calibrate => {
-                let m = st.measured_pts.ok_or("Draw a calibration segment first")?;
+                let m = st
+                    .measured_pts
+                    .ok_or(tr("Draw a calibration segment first"))?;
                 Scale::from_calibration(m, num(&st.known_len)?, st.known_unit)
             }
             ScaleMode::Ratio => Scale::from_one_to(num(&st.ratio_n)?, st.ratio_unit),
@@ -554,7 +564,7 @@ impl App {
         if st.scope == ScaleScope::Region {
             self.tabs[ti].ui.pending_region = Some((st.page, scale));
             self.set_tool(Tool::Calibrate);
-            self.notify("Drag a rectangle on the page to define the region.");
+            self.notify(tr("Drag a rectangle on the page to define the region."));
             return Ok(());
         }
         let mut set = (*self.scales_for()).clone();
@@ -579,7 +589,7 @@ impl App {
             ScaleScope::Region => {}
         }
         let apply = st.apply_existing;
-        let r = self.tabs[ti].session.execute("Set scale", |tx| {
+        let r = self.tabs[ti].session.execute(tr("Set scale"), |tx| {
             measure::write_scales(tx, &set)?;
             let mut n = 0;
             if apply {
@@ -592,9 +602,9 @@ impl App {
         match r {
             Ok(n) => {
                 if n > 0 {
-                    self.notify(format!("Scale set; {n} measurement(s) updated."));
+                    self.notify(tf!("Scale set; {} measurement(s) updated.", n));
                 } else {
-                    self.notify("Scale set.");
+                    self.notify(tr("Scale set."));
                 }
                 Ok(())
             }
@@ -614,7 +624,7 @@ impl App {
         }
         if let Err(e) = self.tabs[self.active]
             .session
-            .execute("Clear scale", |tx| measure::write_scales(tx, &set))
+            .execute(tr("Clear scale"), |tx| measure::write_scales(tx, &set))
         {
             self.notify_error(e.to_string());
         }
@@ -624,7 +634,7 @@ impl App {
     pub fn export_measurements(&mut self) {
         let rows = self.measure_rows_for();
         if rows.is_empty() {
-            self.notify("There are no measurements to export.");
+            self.notify(tr("There are no measurements to export."));
             return;
         }
         let Some(tab) = self.active_tab() else { return };
@@ -637,12 +647,8 @@ impl App {
         };
         let csv = measure::to_csv(&rows);
         match std::fs::write(&dest, csv) {
-            Ok(()) => self.notify(format!(
-                "Exported {} row(s) to {}",
-                rows.len(),
-                dest.display()
-            )),
-            Err(e) => self.notify_error(format!("Could not write {}: {e}", dest.display())),
+            Ok(()) => self.notify(tf!("Exported {} row(s) to {}", rows.len(), dest.display())),
+            Err(e) => self.notify_error(tf!("Could not write {}: {}", dest.display(), e)),
         }
     }
 
@@ -657,7 +663,7 @@ impl App {
         let Some(&page) = pages.get(cur) else { return };
         let set = self.scales_for();
         let (scale, src) = set.resolve(page, None);
-        ui.label(RichText::new("Scale (this page)").strong());
+        ui.label(RichText::new(tr("Scale (this page)")).strong());
         if scale.calibrated {
             ui.label(format!(
                 "{}  ·  {}",
@@ -672,27 +678,27 @@ impl App {
         } else {
             ui.colored_label(
                 self.pal.danger,
-                "Not calibrated. Values are in PDF points until you set a scale.",
+                tr("Not calibrated. Values are in PDF points until you set a scale."),
             );
         }
         ui.horizontal_wrapped(|ui| {
-            if ui.button("Set scale…").clicked() {
+            if ui.button(tr("Set scale…")).clicked() {
                 self.open_scale_dialog(page, None);
             }
-            if ui.button("Calibrate…").clicked() {
+            if ui.button(tr("Calibrate…")).clicked() {
                 self.set_tool(Tool::Calibrate);
             }
             if (set.pages.contains_key(&page) || set.regions.iter().any(|r| r.page == page))
-                && ui.small_button("Clear page scale").clicked()
+                && ui.small_button(tr("Clear page scale")).clicked()
             {
                 self.clear_scale(Some(page));
             }
-            if set.document.is_some() && ui.small_button("Clear document scale").clicked() {
+            if set.document.is_some() && ui.small_button(tr("Clear document scale")).clicked() {
                 self.clear_scale(None);
             }
         });
         ui.separator();
-        ui.label(RichText::new("Count category").strong());
+        ui.label(RichText::new(tr("Count category")).strong());
         ui.add(
             egui::TextEdit::singleline(&mut self.tabs[ti].ui.count_category)
                 .hint_text("Count 1")
@@ -707,7 +713,7 @@ impl App {
                         self.tabs[ti].ui.count_category == c.category,
                         format!("{} — {}", c.category, c.total),
                     )
-                    .on_hover_text("Click to place more markers in this category")
+                    .on_hover_text(tr("Click to place more markers in this category"))
                     .clicked()
                 {
                     self.tabs[ti].ui.count_category = c.category.clone();
@@ -728,22 +734,30 @@ impl App {
         if stale > 0 {
             ui.colored_label(
                 self.pal.danger,
-                format!("{stale} measurement(s) on this page use a different scale."),
+                tf!(
+                    "{} measurement(s) on this page use a different scale.",
+                    stale
+                ),
             );
-            if ui.small_button("Update them to the page scale").clicked() {
+            if ui
+                .small_button(tr("Update them to the page scale"))
+                .clicked()
+            {
                 let sc = scale.clone();
-                match self.tabs[ti].session.execute("Update measurements", |tx| {
-                    measure::rescale_page(tx, page, &sc)
-                }) {
-                    Ok(n) => self.notify(format!("{n} measurement(s) updated.")),
+                match self.tabs[ti]
+                    .session
+                    .execute(tr("Update measurements"), |tx| {
+                        measure::rescale_page(tx, page, &sc)
+                    }) {
+                    Ok(n) => self.notify(tf!("{} measurement(s) updated.", n)),
                     Err(e) => self.notify_error(e.to_string()),
                 }
             }
         }
         ui.horizontal(|ui| {
-            ui.label(RichText::new(format!("Measurements ({})", rows.len())).strong());
+            ui.label(RichText::new(tf!("Measurements ({})", rows.len())).strong());
             if ui
-                .add_enabled(!rows.is_empty(), egui::Button::new("Export CSV…"))
+                .add_enabled(!rows.is_empty(), egui::Button::new(tr("Export CSV…")))
                 .clicked()
             {
                 self.export_measurements();
@@ -757,7 +771,7 @@ impl App {
         for ((k, u), v) in &totals {
             if !matches!(k, MeasureKind::Angle) {
                 ui.label(
-                    RichText::new(format!("Σ {}: {:.2} {u}", k.title(), v))
+                    RichText::new(format!("Σ {}: {:.2} {u}", tr(k.title()), v))
                         .size(12.0)
                         .color(self.pal.text_dim),
                 );
@@ -768,10 +782,14 @@ impl App {
             let text = format!(
                 "p{}  {}  {:.2} {}{}",
                 r.page_number,
-                r.kind.title(),
+                tr(r.kind.title()),
                 r.value,
                 r.unit,
-                if r.calibrated { "" } else { "  (uncalibrated)" }
+                if r.calibrated {
+                    ""
+                } else {
+                    tr("  (uncalibrated)")
+                }
             );
             if ui.selectable_label(false, text).clicked() {
                 jump = Some((r.page_number - 1, r.page, r.id));

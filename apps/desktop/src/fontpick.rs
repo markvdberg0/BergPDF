@@ -6,6 +6,8 @@
 use egui::{FontFamily, RichText, Ui};
 use pdf_engine::fontembed::{FontFamily as Family, FontStyle};
 
+use crate::i18n::tr;
+use crate::tf;
 use std::collections::HashSet;
 use std::sync::{Mutex, OnceLock};
 
@@ -134,21 +136,21 @@ pub fn family_menu(ui: &mut Ui, fam: &mut Family, search_id: egui::Id) -> bool {
     let installed = pdf_engine::sysfonts::list();
     if installed.is_empty() {
         ui.label(
-            RichText::new("Installed fonts: none found (or still scanning)")
+            RichText::new(tr("Installed fonts: none found (or still scanning)"))
                 .size(11.0)
                 .weak(),
         );
         return *fam != before;
     }
     ui.label(
-        RichText::new(format!("Installed fonts ({})", installed.len()))
+        RichText::new(tf!("Installed fonts ({})", installed.len()))
             .size(11.0)
             .weak(),
     );
     let mut filter: String = ui.data_mut(|d| d.get_temp(search_id).unwrap_or_default());
     ui.add(
         egui::TextEdit::singleline(&mut filter)
-            .hint_text("Search installed fonts")
+            .hint_text(tr("Search installed fonts"))
             .desired_width(200.0),
     );
     ui.data_mut(|d| d.insert_temp(search_id, filter.clone()));
@@ -185,14 +187,14 @@ pub fn font_picker(ui: &mut Ui, id: &str, style: &mut FontStyle) -> bool {
         });
     ui.add_enabled(
         fam.has_bold(),
-        egui::Checkbox::new(&mut bold, RichText::new("Bold").strong()),
+        egui::Checkbox::new(&mut bold, RichText::new(tr("Bold")).strong()),
     )
-    .on_disabled_hover_text("This font has no bold style");
+    .on_disabled_hover_text(tr("This font has no bold style"));
     ui.add_enabled(
         fam.has_italic(),
-        egui::Checkbox::new(&mut italic, RichText::new("Italic").italics()),
+        egui::Checkbox::new(&mut italic, RichText::new(tr("Italic")).italics()),
     )
-    .on_disabled_hover_text("This font has no italic style");
+    .on_disabled_hover_text(tr("This font has no italic style"));
     let new = FontStyle::new(fam, bold && fam.has_bold(), italic);
     let changed = new != *style;
     *style = new;
@@ -204,14 +206,14 @@ pub fn font_picker_toggles(ui: &mut Ui, style: &mut FontStyle) -> bool {
     let (mut bold, mut italic) = (style.bold, style.italic);
     ui.add_enabled(
         style.family.has_bold(),
-        egui::Checkbox::new(&mut bold, RichText::new("Bold").strong()),
+        egui::Checkbox::new(&mut bold, RichText::new(tr("Bold")).strong()),
     )
-    .on_disabled_hover_text("This font has no bold style");
+    .on_disabled_hover_text(tr("This font has no bold style"));
     ui.add_enabled(
         style.family.has_italic(),
-        egui::Checkbox::new(&mut italic, RichText::new("Italic").italics()),
+        egui::Checkbox::new(&mut italic, RichText::new(tr("Italic")).italics()),
     )
-    .on_disabled_hover_text("This font has no italic style");
+    .on_disabled_hover_text(tr("This font has no italic style"));
     let new = FontStyle::new(style.family, bold && style.family.has_bold(), italic);
     let changed = new != *style;
     *style = new;

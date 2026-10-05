@@ -6,7 +6,9 @@
 //! bounded by the "characters sent" setting, and the first use per provider needs consent.
 
 use crate::dialogs::modal;
+use crate::i18n::tr;
 use crate::state::*;
+use crate::tf;
 use ai_client::docqa::{Ask, Mode};
 use ai_client::{AiError, Answer, Config, PageText, Provider, build_document};
 use editor_core::prefs::AiProvider;
@@ -372,30 +374,29 @@ impl App {
         let host = host_of(&self.prefs.ai.base_url());
         let dim = self.pal.text_dim;
         modal(ctx, "ai_consent", |ui| {
-            ui.heading("Send text to an AI service?");
-            ui.label(format!(
-                "PDF Copilot and Translate send text from your document (for a question: the pages' text; for Explain: the selection and nearby pages) to {} ({host}) using your API key.",
-                provider.title()
-            ));
+            ui.heading(tr("Send text to an AI service?"));
+            ui.label(tf!("PDF Copilot and Translate send text from your document (for a question: the pages' text; for Explain: the selection and nearby pages) to {} ({}) using your API key.", provider.title(), host));
             ui.add_space(4.0);
-            ui.label(
+            ui.label(tr(
                 "• Nothing is sent until you press a button such as Send, Summarize or Translate.",
-            );
-            ui.label(
+            ));
+            ui.label(tr(
                 "• BergPDF itself has no other network traffic and does not collect anything.",
-            );
-            ui.label("• What the service does with the text is governed by your agreement with that provider.");
+            ));
+            ui.label(tr("• What the service does with the text is governed by your agreement with that provider."));
             ui.label(
-                RichText::new("Do not use this with documents you are not allowed to share with that provider.")
+                RichText::new(tr("Do not use this with documents you are not allowed to share with that provider."))
                     .size(12.0)
                     .color(dim),
             );
             ui.add_space(8.0);
             ui.horizontal(|ui| {
-                if ui.button("Allow for this provider").clicked() {
+                if ui.button(tr("Allow for this provider")).clicked() {
                     allow = true;
                 }
-                if ui.button("Cancel").clicked() || ui.input(|i| i.key_pressed(egui::Key::Escape)) {
+                if ui.button(tr("Cancel")).clicked()
+                    || ui.input(|i| i.key_pressed(egui::Key::Escape))
+                {
                     cancel = true;
                 }
             });
@@ -463,7 +464,7 @@ impl App {
         self.ai_ask(
             ctx,
             AiAction {
-                shown: "Summarize this document".into(),
+                shown: tr("Summarize this document").into(),
                 mode: Mode::Summarize,
                 question: String::new(),
                 around_page: None,
@@ -475,7 +476,7 @@ impl App {
         self.ai_ask(
             ctx,
             AiAction {
-                shown: "Summarize the annotations".into(),
+                shown: tr("Summarize the annotations").into(),
                 mode: Mode::Annotations,
                 question: String::new(),
                 around_page: None,
@@ -485,7 +486,7 @@ impl App {
 
     pub fn copilot_explain(&mut self, ctx: &egui::Context, text: &str, page: usize) {
         let t = text.split_whitespace().collect::<Vec<_>>().join(" ");
-        let shown = format!("Explain: “{}”", ai_client::text::clip_chars(&t, 160));
+        let shown = tf!("Explain: “{}”", ai_client::text::clip_chars(&t, 160));
         self.ai_ask(
             ctx,
             AiAction {
@@ -589,7 +590,7 @@ impl App {
                 self.chat_push(ChatKind::User, a.shown.clone());
                 self.chat_push(
                     ChatKind::Info,
-                    "This document has no comments or markup to summarize.".into(),
+                    tr("This document has no comments or markup to summarize.").into(),
                 );
                 return;
             }
@@ -647,7 +648,7 @@ impl App {
                     let doc_text = build_document(&subset, max_chars);
                     if doc_text.pages_with_text == 0 {
                         return Err(
-                        "This document has no text to work with. If it is a scan, run OCR first (Edit ▸ Recognize Text).".into(),
+                        tr("This document has no text to work with. If it is a scan, run OCR first (Edit ▸ Recognize Text).").into(),
                     );
                     }
                     let extra =
@@ -677,7 +678,7 @@ impl App {
                 Ok(Err(e)) => Outcome::Failed { doc, error: e },
                 Err(_) => Outcome::Failed {
                     doc,
-                    error: "The AI request stopped unexpectedly.".into(),
+                    error: tr("The AI request stopped unexpectedly.").into(),
                 },
             };
             let _ = tx.send(msg);
@@ -707,8 +708,9 @@ impl App {
             return;
         };
         let target = self.prefs.ai.translate_to.clone();
-        let shown = format!(
-            "Translate to {target}: “{}”",
+        let shown = tf!(
+            "Translate to {}: “{}”",
+            target,
             ai_client::text::clip_chars(
                 &text.split_whitespace().collect::<Vec<_>>().join(" "),
                 120
@@ -735,7 +737,7 @@ impl App {
                 Ok(Err(e)) => Outcome::Failed { doc, error: e },
                 Err(_) => Outcome::Failed {
                     doc,
-                    error: "The AI request stopped unexpectedly.".into(),
+                    error: tr("The AI request stopped unexpectedly.").into(),
                 },
             };
             let _ = tx.send(msg);
@@ -773,7 +775,7 @@ impl App {
                 },
             );
             let _ = tx.send(Outcome::Tested(match r {
-                Ok(_) => Ok(format!(
+                Ok(_) => Ok(tf!(
                     "Connected to {} (model {}).",
                     host_of(&cfg.base_url),
                     cfg.model
@@ -786,7 +788,7 @@ impl App {
             rx,
             doc: DocId(u64::MAX),
             cancel: Arc::new(AtomicBool::new(false)),
-            label: "Testing the connection".into(),
+            label: tr("Testing the connection").into(),
             started: Instant::now(),
         });
         ctx.request_repaint();
@@ -818,7 +820,7 @@ impl App {
             }
             Err(TryRecvError::Disconnected) => Some(Outcome::Failed {
                 doc: job.doc,
-                error: "The AI request stopped unexpectedly.".into(),
+                error: tr("The AI request stopped unexpectedly.").into(),
             }),
         };
         let Some(o) = outcome else { return };
@@ -932,11 +934,11 @@ impl App {
         .ok()
         .flatten();
         let Some(quads) = range.filter(|q| !q.is_empty()) else {
-            self.notify_error("Could not find that passage on the page any more.");
+            self.notify_error(tr("Could not find that passage on the page any more."));
             return false;
         };
         let spec = self.new_spec(pdf_engine::annot::AnnotationKind::Highlight { quads });
-        self.add_annotation(page_id, spec, "Highlight (Copilot)");
+        self.add_annotation(page_id, spec, tr("Highlight (Copilot)"));
         if let Some(pt) = self.tabs[ti]
             .ui
             .copilot
@@ -957,16 +959,16 @@ impl App {
         let host = host_of(&self.prefs.ai.base_url());
         let busy = self.ai_busy();
         ui.horizontal(|ui| {
-            ui.label(RichText::new("PDF Copilot").strong());
+            ui.label(RichText::new(tr("PDF Copilot")).strong());
             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                if ui.small_button("Settings").clicked() {
+                if ui.small_button(tr("Settings")).clicked() {
                     self.dialog = Some(Dialog::Preferences {
                         filter: "ai".into(),
                     });
                 }
                 if ui
-                    .small_button("Clear")
-                    .on_hover_text("Clear this conversation")
+                    .small_button(tr("Clear"))
+                    .on_hover_text(tr("Clear this conversation"))
                     .clicked()
                     && let Some(t) = self.tabs.get_mut(self.active)
                 {
@@ -976,16 +978,16 @@ impl App {
         });
         ui.add_space(2.0);
         if !has_key {
-            ui.label("Add your own API key to turn on Copilot. It can summarize this document, answer questions with page references and highlights, explain selected text, summarize comments and translate.");
+            ui.label(tr("Add your own API key to turn on Copilot. It can summarize this document, answer questions with page references and highlights, explain selected text, summarize comments and translate."));
             ui.add_space(6.0);
-            if ui.button("Set up an AI provider…").clicked() {
+            if ui.button(tr("Set up an AI provider…")).clicked() {
                 self.dialog = Some(Dialog::Preferences {
                     filter: "ai".into(),
                 });
             }
             ui.add_space(6.0);
             ui.label(
-                RichText::new("BergPDF has no AI of its own and sends nothing anywhere until you set this up and press a button.")
+                RichText::new(tr("BergPDF has no AI of its own and sends nothing anywhere until you set this up and press a button."))
                     .size(11.0)
                     .color(pal.text_dim),
             );
@@ -996,21 +998,25 @@ impl App {
         let mut translate = false;
         ui.horizontal_wrapped(|ui| {
             for (label, mode, shown) in [
-                ("Summarize", Mode::Summarize, "Summarize this document"),
                 (
-                    "Main points",
-                    Mode::Ask,
-                    "List the main points of this document",
+                    tr("Summarize"),
+                    Mode::Summarize,
+                    tr("Summarize this document"),
                 ),
                 (
-                    "Annotation summary",
+                    tr("Main points"),
+                    Mode::Ask,
+                    tr("List the main points of this document"),
+                ),
+                (
+                    tr("Annotation summary"),
                     Mode::Annotations,
-                    "Summarize the annotations",
+                    tr("Summarize the annotations"),
                 ),
                 (
-                    "Key obligations",
+                    tr("Key obligations"),
                     Mode::Ask,
-                    "What are the key obligations, deadlines and amounts in this document?",
+                    tr("What are the key obligations, deadlines and amounts in this document?"),
                 ),
             ] {
                 if ui.add_enabled(!busy, egui::Button::new(label)).clicked() {
@@ -1023,7 +1029,7 @@ impl App {
                 }
             }
             if ui
-                .add_enabled(!busy, egui::Button::new("Translate…"))
+                .add_enabled(!busy, egui::Button::new(tr("Translate…")))
                 .clicked()
             {
                 translate = true;
@@ -1046,7 +1052,7 @@ impl App {
                 let msgs = self.tabs[ti].ui.copilot.msgs.clone();
                 if msgs.is_empty() {
                     ui.label(
-                        RichText::new("Ask a question about this document, or use a suggestion above. Select text and right-click ▸ Explain for a quick explanation.")
+                        RichText::new(tr("Ask a question about this document, or use a suggestion above. Select text and right-click ▸ Explain for a quick explanation."))
                             .color(pal.text_dim),
                     );
                 }
@@ -1066,7 +1072,7 @@ impl App {
                             ui.add(egui::Label::new(&m.text).selectable(true));
                             if !m.points.is_empty() {
                                 ui.add_space(4.0);
-                                ui.label(RichText::new("Passages").size(11.0).color(pal.text_dim));
+                                ui.label(RichText::new(tr("Passages")).size(11.0).color(pal.text_dim));
                                 for (pi, p) in m.points.iter().enumerate() {
                                     egui::Frame::new()
                                         .stroke(egui::Stroke::new(1.0, pal.border))
@@ -1076,18 +1082,18 @@ impl App {
                                             ui.set_width(ui.available_width());
                                             ui.horizontal(|ui| {
                                                 if p.page > 0
-                                                    && ui.small_button(format!("p. {}", p.page)).on_hover_text("Go to this page").clicked()
+                                                    && ui.small_button(format!("p. {}", p.page)).on_hover_text(tr("Go to this page")).clicked()
                                                 {
                                                     jump = Some(p.page - 1);
                                                 }
                                                 if p.verified {
-                                                    let label = if p.applied { "Highlighted" } else { "Highlight" };
+                                                    let label = if p.applied { tr("Highlighted") } else { tr("Highlight") };
                                                     if ui.add_enabled(!p.applied, egui::Button::new(label).small()).clicked() {
                                                         hl = Some((mi, pi));
                                                     }
                                                 } else {
-                                                    ui.label(RichText::new("not found in the document").size(11.0).color(pal.danger))
-                                                        .on_hover_text("The assistant quoted text that is not on the page, so it cannot be highlighted. Treat this point with care.");
+                                                    ui.label(RichText::new(tr("not found in the document")).size(11.0).color(pal.danger))
+                                                        .on_hover_text(tr("The assistant quoted text that is not on the page, so it cannot be highlighted. Treat this point with care."));
                                                 }
                                             });
                                             ui.label(RichText::new(format!("“{}”", p.quote)).italics().size(12.0));
@@ -1097,7 +1103,7 @@ impl App {
                                         });
                                 }
                                 if m.points.iter().filter(|p| p.verified && !p.applied).count() > 1
-                                    && ui.small_button("Highlight all passages").clicked()
+                                    && ui.small_button(tr("Highlight all passages")).clicked()
                                 {
                                     hl_all = Some(mi);
                                 }
@@ -1117,7 +1123,7 @@ impl App {
                         ui.spinner();
                         let label = self.ai.job.as_ref().map(|j| format!("{} ({}s)", j.label, j.started.elapsed().as_secs())).unwrap_or_default();
                         ui.label(RichText::new(ai_client::text::clip_chars(&label, 60)).color(pal.text_dim));
-                        if ui.small_button("Cancel").clicked() {
+                        if ui.small_button(tr("Cancel")).clicked() {
                             self.cancel_ai();
                         }
                     });
@@ -1136,7 +1142,7 @@ impl App {
                 egui::TextEdit::multiline(input)
                     .desired_rows(2)
                     .desired_width(f32::INFINITY)
-                    .hint_text("Ask PDF Copilot…"),
+                    .hint_text(tr("Ask PDF Copilot…")),
             );
             if resp.has_focus()
                 && ui.input(|i| i.key_pressed(egui::Key::Enter) && !i.modifiers.shift)
@@ -1152,14 +1158,14 @@ impl App {
             if ui
                 .add_enabled(
                     !busy && !self.tabs[ti].ui.copilot.input.trim().is_empty(),
-                    egui::Button::new("Send"),
+                    egui::Button::new(tr("Send")),
                 )
                 .clicked()
             {
                 send = true;
             }
             ui.label(
-                RichText::new(format!("Sent to {host} only when you press Send"))
+                RichText::new(tf!("Sent to {} only when you press Send", host))
                     .size(10.0)
                     .color(pal.text_dim),
             );
@@ -1201,7 +1207,7 @@ impl App {
                 }
             }
             if done > 0 {
-                self.notify(format!("Highlighted {done} passage(s)."));
+                self.notify(tf!("Highlighted {} passage(s).", done));
             }
         }
         if let Some(a) = action {
@@ -1222,14 +1228,14 @@ impl App {
         let mut changed = false;
         let previous_provider = self.prefs.ai.provider;
         ui.horizontal(|ui| {
-            ui.label("Provider");
+            ui.label(tr("Provider"));
             for p in [
                 AiProvider::OpenAi,
                 AiProvider::Anthropic,
                 AiProvider::Custom,
             ] {
                 changed |= ui
-                    .selectable_value(&mut self.prefs.ai.provider, p, p.title())
+                    .selectable_value(&mut self.prefs.ai.provider, p, tr(p.title()))
                     .changed();
             }
         });
@@ -1243,21 +1249,21 @@ impl App {
             .num_columns(2)
             .spacing([8.0, 6.0])
             .show(ui, |ui| {
-                ui.label("Model");
+                ui.label(tr("Model"));
                 ui.vertical(|ui| {
                     let models = provider.models();
                     if !models.is_empty() {
                         let current = self.prefs.ai.model().to_string();
                         let known = models.iter().any(|(id, _)| *id == current);
                         let shown = if self.ai_custom_model || !known {
-                            "Other…".to_string()
+                            tr("Other…").to_string()
                         } else {
                             let d = models
                                 .iter()
                                 .find(|(id, _)| *id == current)
                                 .map_or("", |m| m.1);
                             let tag = if self.prefs.ai.model.trim().is_empty() {
-                                " (default)"
+                                tr(" (default)")
                             } else {
                                 ""
                             };
@@ -1269,7 +1275,7 @@ impl App {
                             .show_ui(ui, |ui| {
                                 for (id, desc) in models {
                                     let label = if *id == provider.default_model() {
-                                        format!("{id} — {desc} (default)")
+                                        tf!("{} — {} (default)", id, desc)
                                     } else {
                                         format!("{id} — {desc}")
                                     };
@@ -1291,7 +1297,7 @@ impl App {
                                     }
                                 }
                                 if ui
-                                    .selectable_label(self.ai_custom_model || !known, "Other…")
+                                    .selectable_label(self.ai_custom_model || !known, tr("Other…"))
                                     .clicked()
                                 {
                                     self.ai_custom_model = true;
@@ -1312,7 +1318,7 @@ impl App {
                     }
                 });
                 ui.end_row();
-                ui.label("Server address");
+                ui.label(tr("Server address"));
                 changed |= ui
                     .add(
                         egui::TextEdit::singleline(&mut self.prefs.ai.base_url)
@@ -1321,16 +1327,16 @@ impl App {
                     )
                     .changed();
                 ui.end_row();
-                ui.label("Answer language");
+                ui.label(tr("Answer language"));
                 changed |= ui
                     .add(
                         egui::TextEdit::singleline(&mut self.prefs.ai.answer_language)
-                            .hint_text("same as the question")
+                            .hint_text(tr("same as the question"))
                             .desired_width(260.0),
                     )
                     .changed();
                 ui.end_row();
-                ui.label("Translate into");
+                ui.label(tr("Translate into"));
                 changed |= ui
                     .add(
                         egui::TextEdit::singleline(&mut self.prefs.ai.translate_to)
@@ -1339,70 +1345,75 @@ impl App {
                     )
                     .changed();
                 ui.end_row();
-                ui.label("Text sent per question");
+                ui.label(tr("Text sent per question"));
                 changed |= ui
                     .add(
                         egui::DragValue::new(&mut self.prefs.ai.max_chars)
                             .range(5_000..=400_000)
                             .speed(1000.0)
-                            .suffix(" characters"),
+                            .suffix(tr(" characters")),
                     )
                     .changed();
                 ui.end_row();
             });
         ui.add_space(6.0);
-        ui.label(RichText::new("API key").strong());
+        ui.label(RichText::new(tr("API key")).strong());
         match platform::secrets::key_source() {
             platform::secrets::KeySource::Environment => {
-                ui.label("Using the key from the BERGPDF_AI_KEY environment variable.");
+                ui.label(tr(
+                    "Using the key from the BERGPDF_AI_KEY environment variable.",
+                ));
             }
             platform::secrets::KeySource::File => {
-                ui.label(format!(
+                ui.label(tf!(
                     "A key is saved on this computer: {}",
                     platform::secrets::key_path().display()
                 ));
-                if ui.button("Remove saved key").clicked() {
+                if ui.button(tr("Remove saved key")).clicked() {
                     match platform::secrets::delete_ai_key() {
                         Ok(()) => {
                             self.ai_key_changed();
                             self.ai.test_result = None;
-                            self.notify("Saved key removed.");
+                            self.notify(tr("Saved key removed."));
                         }
-                        Err(e) => self.notify_error(format!("Could not remove the key: {e}")),
+                        Err(e) => self.notify_error(tf!("Could not remove the key: {}", e)),
                     }
                 }
             }
             platform::secrets::KeySource::None => {
-                ui.label(RichText::new("No key saved yet.").color(pal.text_dim));
+                ui.label(RichText::new(tr("No key saved yet.")).color(pal.text_dim));
             }
         }
         ui.horizontal(|ui| {
             ui.add(
                 egui::TextEdit::singleline(&mut self.ai.key_input)
                     .password(!self.ai.key_show)
-                    .hint_text("Paste your API key")
+                    .hint_text(tr("Paste your API key"))
                     .desired_width(260.0),
             );
-            ui.checkbox(&mut self.ai.key_show, "Show");
+            ui.checkbox(&mut self.ai.key_show, tr("Show"));
             let can = !self.ai.key_input.trim().is_empty();
-            if ui.add_enabled(can, egui::Button::new("Save key")).clicked() {
+            if ui
+                .add_enabled(can, egui::Button::new(tr("Save key")))
+                .clicked()
+            {
                 match platform::secrets::save_ai_key(&self.ai.key_input) {
                     Ok(()) => {
                         self.ai.key_input.clear();
                         self.ai_key_changed();
                         self.ai.test_result = None;
-                        self.notify("API key saved on this computer.");
+                        self.notify(tr("API key saved on this computer."));
                     }
-                    Err(e) => self.notify_error(format!("Could not save the key: {e}")),
+                    Err(e) => self.notify_error(tf!("Could not save the key: {}", e)),
                 }
             }
         });
         ui.horizontal(|ui| {
             if ui
-                .add_enabled(!self.ai_busy(), egui::Button::new("Test connection"))
-                .on_hover_text(
+                .add_enabled(!self.ai_busy(), egui::Button::new(tr("Test connection")))
+                .on_hover_text(tr(
                     "Sends one tiny message (no document text) to check the key and address",
-                )
+                ))
                 .clicked()
             {
                 self.ai_test_connection(ctx);
@@ -1423,14 +1434,16 @@ impl App {
         ui.add_space(4.0);
         ui.label(
             RichText::new(
-                "The key is stored unencrypted in your user profile (readable only by your account on macOS/Linux). Anyone who can read your files can use it, so give it a spending limit at your provider. \
-Text from your documents is sent to the provider only when you press a Copilot or Translate button, and you are asked to agree the first time. With the Custom provider you can point BergPDF at a server on your own computer so nothing leaves it.",
+                tr("The key is stored unencrypted in your user profile (readable only by your account on macOS/Linux). Anyone who can read your files can use it, so give it a spending limit at your provider. \
+Text from your documents is sent to the provider only when you press a Copilot or Translate button, and you are asked to agree the first time. With the Custom provider you can point BergPDF at a server on your own computer so nothing leaves it."),
             )
             .size(11.0)
             .color(pal.text_dim),
         );
         if self.prefs.ai_consent_provider.is_some()
-            && ui.small_button("Forget my consent (ask again)").clicked()
+            && ui
+                .small_button(tr("Forget my consent (ask again)"))
+                .clicked()
         {
             self.prefs.ai_consent_provider = None;
             changed = true;

@@ -2,7 +2,9 @@
 //! form fields, and exporting a page as a PNG image (rendered on a background thread).
 
 use crate::dialogs::modal;
+use crate::i18n::tr;
 use crate::state::*;
+use crate::tf;
 use egui::RichText;
 use pdf_engine::meta::{self, InfoEdit};
 use pdf_engine::render::{export_scale, with_session};
@@ -43,17 +45,17 @@ impl App {
     pub fn dialog_properties(&mut self, ctx: &egui::Context, st: &mut PropsState) -> bool {
         let mut choice: Option<bool> = None;
         modal(ctx, "doc_props", |ui| {
-            ui.heading("Document properties");
+            ui.heading(tr("Document properties"));
             ui.add_space(4.0);
             egui::Grid::new("props_grid")
                 .num_columns(2)
                 .spacing([10.0, 6.0])
                 .show(ui, |ui| {
                     for (label, value) in [
-                        ("Title", &mut st.title),
-                        ("Author", &mut st.author),
-                        ("Subject", &mut st.subject),
-                        ("Keywords", &mut st.keywords),
+                        (tr("Title"), &mut st.title),
+                        (tr("Author"), &mut st.author),
+                        (tr("Subject"), &mut st.subject),
+                        (tr("Keywords"), &mut st.keywords),
                     ] {
                         ui.label(label);
                         ui.add_enabled(
@@ -70,29 +72,29 @@ impl App {
                     ui.label(RichText::new(format!("{k}: {v}")).size(12.0).color(dim));
                 }
             };
-            line(ui, "Pages", st.pages.to_string());
+            line(ui, tr("Pages"), st.pages.to_string());
             line(
                 ui,
-                "File size",
+                tr("File size"),
                 format!("{:.1} KB", st.file_size as f64 / 1024.0),
             );
-            line(ui, "Created by", st.creator.clone());
-            line(ui, "PDF producer", st.producer.clone());
-            line(ui, "Created", st.created.clone());
-            line(ui, "Modified", st.modified.clone());
+            line(ui, tr("Created by"), st.creator.clone());
+            line(ui, tr("PDF producer"), st.producer.clone());
+            line(ui, tr("Created"), st.created.clone());
+            line(ui, tr("Modified"), st.modified.clone());
             if st.xmp {
                 ui.add_space(4.0);
                 ui.label(
-                    RichText::new("This document also has XMP metadata, which is not updated by these edits; other programs may show the old values.")
+                    RichText::new(tr("This document also has XMP metadata, which is not updated by these edits; other programs may show the old values."))
                         .size(12.0)
                         .color(self.pal.danger),
                 );
             }
             if !st.can_edit {
                 ui.label(
-                    RichText::new(
+                    RichText::new(tr(
                         "This document cannot be edited, so its properties are read-only.",
-                    )
+                    ))
                     .size(12.0)
                     .color(dim),
                 );
@@ -109,7 +111,11 @@ impl App {
                     choice = Some(true);
                 }
                 if ui
-                    .button(if st.can_edit { "Cancel" } else { "Close" })
+                    .button(if st.can_edit {
+                        tr("Cancel")
+                    } else {
+                        tr("Close")
+                    })
                     .clicked()
                     || ui.input(|i| i.key_pressed(egui::Key::Escape))
                 {
@@ -137,8 +143,9 @@ impl App {
                 }
                 match self.tabs[self.active]
                     .session
-                    .execute("Edit document properties", |tx| meta::set_info(tx, &edit))
-                {
+                    .execute(tr("Edit document properties"), |tx| {
+                        meta::set_info(tx, &edit)
+                    }) {
                     Ok(()) => false,
                     Err(e) => {
                         st.error = Some(e.to_string());
@@ -153,7 +160,7 @@ impl App {
     pub fn request_flatten(&mut self) {
         let n = self.form_for().fields.len();
         if n == 0 {
-            self.notify("This document has no form fields.");
+            self.notify(tr("This document has no form fields."));
             return;
         }
         self.dialog = Some(Dialog::ConfirmFlatten { fields: n });
@@ -163,21 +170,21 @@ impl App {
     pub fn dialog_confirm_flatten(&mut self, ctx: &egui::Context, fields: usize) -> bool {
         let mut choice: Option<bool> = None;
         modal(ctx, "confirm_flatten", |ui| {
-            ui.heading("Flatten form fields?");
-            ui.label(format!(
-                "All {fields} form field(s) become plain page content: their current values stay visible but can no longer be edited, and the form is removed from the document."
-            ));
+            ui.heading(tr("Flatten form fields?"));
+            ui.label(tf!("All {} form field(s) become plain page content: their current values stay visible but can no longer be edited, and the form is removed from the document.", fields));
             ui.label(
-                RichText::new("You can undo this until you close the document.")
+                RichText::new(tr("You can undo this until you close the document."))
                     .size(12.0)
                     .color(self.pal.text_dim),
             );
             ui.add_space(8.0);
             ui.horizontal(|ui| {
-                if ui.button("Flatten").clicked() {
+                if ui.button(tr("Flatten")).clicked() {
                     choice = Some(true);
                 }
-                if ui.button("Cancel").clicked() || ui.input(|i| i.key_pressed(egui::Key::Escape)) {
+                if ui.button(tr("Cancel")).clicked()
+                    || ui.input(|i| i.key_pressed(egui::Key::Escape))
+                {
                     choice = Some(false);
                 }
             });
@@ -186,17 +193,17 @@ impl App {
             None => true,
             Some(false) => false,
             Some(true) => {
-                match self.tabs[self.active]
-                    .session
-                    .execute("Flatten form fields", pdf_engine::forms::flatten_document)
-                {
+                match self.tabs[self.active].session.execute(
+                    tr("Flatten form fields"),
+                    pdf_engine::forms::flatten_document,
+                ) {
                     Ok((baked, dropped)) => {
                         let extra = if dropped > 0 {
-                            format!(" ({dropped} empty or hidden field(s) removed)")
+                            tf!(" ({} empty or hidden field(s) removed)", dropped)
                         } else {
                             String::new()
                         };
-                        self.notify(format!("Flattened {baked} field(s){extra}."));
+                        self.notify(tf!("Flattened {} field(s){}.", baked, extra));
                     }
                     Err(e) => self.notify_error(e.to_string()),
                 }
@@ -225,7 +232,7 @@ impl App {
             cur + 1
         );
         let Ok(snap) = tab.session.snapshot() else {
-            self.notify_error("Could not prepare the document for export.");
+            self.notify_error(tr("Could not prepare the document for export."));
             return;
         };
         let Some(dest) = platform::dialogs::pick_save_png(&suggested) else {
@@ -242,13 +249,13 @@ impl App {
                 let tmp = dest.with_extension("png.partial");
                 std::fs::write(&tmp, &png)
                     .and_then(|()| std::fs::rename(&tmp, &dest))
-                    .map_err(|e| format!("Could not write {}: {e}", dest.display()))?;
-                Ok(format!("Saved {}", dest.display()))
+                    .map_err(|e| tf!("Could not write {}: {}", dest.display(), e))?;
+                Ok(tf!("Saved {}", dest.display()))
             });
             let _ = tx.send(result);
         });
         self.exports.push(ExportJob { rx });
-        self.notify("Exporting page…");
+        self.notify(tr("Exporting page…"));
     }
 
     /// Collect finished exports (called every frame).
@@ -264,7 +271,7 @@ impl App {
             }
             Err(mpsc::TryRecvError::Empty) => true,
             Err(mpsc::TryRecvError::Disconnected) => {
-                done.push(Err("The export stopped unexpectedly.".into()));
+                done.push(Err(tr("The export stopped unexpectedly.").into()));
                 false
             }
         });

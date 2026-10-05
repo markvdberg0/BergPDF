@@ -1,8 +1,10 @@
 //! Window chrome: quick-access bar, ribbon, document tabs, status bar, welcome screen.
 
 use crate::app::OS;
+use crate::i18n::tr;
 use crate::icons::{self, Icon};
 use crate::state::*;
+use crate::tf;
 use crate::theme;
 use editor_core::command::CommandId as C;
 use editor_core::prefs::{Density, Workspace};
@@ -190,7 +192,7 @@ impl App {
             }
         }
         resp.widget_info(|| {
-            egui::WidgetInfo::labeled(egui::WidgetType::Button, enabled, info.title)
+            egui::WidgetInfo::labeled(egui::WidgetType::Button, enabled, tr(info.title))
         });
         let tip = self.tooltip_for(id);
         let resp = resp.on_hover_text(tip);
@@ -266,14 +268,14 @@ impl App {
             }
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 let label = match self.prefs.keybindings.primary_label(C::CommandPalette, OS) {
-                    Some(s) => format!("Search commands…   {s}"),
-                    None => "Search commands…".into(),
+                    Some(s) => tf!("Search commands…   {}", s),
+                    None => tr("Search commands…").into(),
                 };
                 let b = egui::Button::new(RichText::new(label).color(self.pal.text_dim))
                     .min_size(Vec2::new(230.0, 24.0));
                 if ui
                     .add(b)
-                    .on_hover_text("Find and run any command, tool or setting")
+                    .on_hover_text(tr("Find and run any command, tool or setting"))
                     .clicked()
                 {
                     self.run_command(ctx, C::CommandPalette);
@@ -286,19 +288,19 @@ impl App {
         let essential = self.prefs.workspace == Workspace::Essential;
         let has_form = self.has_form();
         let tabs: Vec<(RibbonTab, &str)> = {
-            let mut v = vec![(RibbonTab::File, "File"), (RibbonTab::Home, "Home")];
-            v.push((RibbonTab::Edit, "Edit"));
-            v.push((RibbonTab::Comment, "Comment"));
+            let mut v = vec![(RibbonTab::File, tr("File")), (RibbonTab::Home, tr("Home"))];
+            v.push((RibbonTab::Edit, tr("Edit")));
+            v.push((RibbonTab::Comment, tr("Comment")));
             if has_form {
-                v.push((RibbonTab::Forms, "Forms"));
+                v.push((RibbonTab::Forms, tr("Forms")));
             }
-            v.push((RibbonTab::Sign, "Sign"));
-            v.push((RibbonTab::Copilot, "Copilot"));
+            v.push((RibbonTab::Sign, tr("Sign")));
+            v.push((RibbonTab::Copilot, tr("Copilot")));
             if !essential || self.tool_is_measure() {
-                v.push((RibbonTab::Measure, "Measure"));
+                v.push((RibbonTab::Measure, tr("Measure")));
             }
-            v.push((RibbonTab::Organize, "Organize"));
-            v.push((RibbonTab::View, "View"));
+            v.push((RibbonTab::Organize, tr("Organize")));
+            v.push((RibbonTab::View, tr("View")));
             v
         };
         if !tabs.iter().any(|(t, _)| *t == self.ribbon_tab) {
@@ -343,11 +345,11 @@ impl App {
             ui.set_min_height(height);
             ui.horizontal(|ui| match self.ribbon_tab {
                 RibbonTab::File => {
-                    self.group(ui, "Document", |s, ui| s.cmds(ui, ctx, &[C::FileOpen, C::FileSave, C::FileSaveAs, C::FileSaveOptimized, C::FileConvertPdfA, C::FileClose]));
-                    self.group(ui, "Recent", |s, ui| {
+                    self.group(ui, tr("Document"), |s, ui| s.cmds(ui, ctx, &[C::FileOpen, C::FileSave, C::FileSaveAs, C::FileSaveOptimized, C::FileConvertPdfA, C::FileClose]));
+                    self.group(ui, tr("Recent"), |s, ui| {
                         let recents = s.prefs.recent_files.clone();
                         if recents.is_empty() {
-                            ui.label(RichText::new("No recent files").color(s.pal.text_dim));
+                            ui.label(RichText::new(tr("No recent files")).color(s.pal.text_dim));
                         } else {
                             ui.vertical(|ui| {
                                 for p in recents.iter().take(3) {
@@ -359,22 +361,22 @@ impl App {
                             });
                         }
                     });
-                    self.group(ui, "Application", |s, ui| s.cmds(ui, ctx, &[C::Preferences, C::ShortcutReference, C::About]));
+                    self.group(ui, tr("Application"), |s, ui| s.cmds(ui, ctx, &[C::Preferences, C::ShortcutReference, C::About]));
                 }
                 RibbonTab::Home => {
-                    self.group(ui, "History", |s, ui| s.cmds(ui, ctx, &[C::EditUndo, C::EditRedo]));
-                    self.group(ui, "Tools", |s, ui| s.cmds(ui, ctx, &[C::ToolSelect, C::ToolHand, C::ToolTextSelect]));
-                    self.group(ui, "Quick markup", |s, ui| {
+                    self.group(ui, tr("History"), |s, ui| s.cmds(ui, ctx, &[C::EditUndo, C::EditRedo]));
+                    self.group(ui, tr("Tools"), |s, ui| s.cmds(ui, ctx, &[C::ToolSelect, C::ToolHand, C::ToolTextSelect]));
+                    self.group(ui, tr("Quick markup"), |s, ui| {
                         let favs = s.prefs.favorites.clone();
                         s.cmds(ui, ctx, &favs);
                     });
-                    self.group(ui, "View", |s, ui| s.cmds(ui, ctx, &[C::ViewZoomIn, C::ViewZoomOut, C::ViewFitWidth, C::ViewFitPage]));
-                    self.group(ui, "Search", |s, ui| s.cmds(ui, ctx, &[C::Find]));
+                    self.group(ui, tr("View"), |s, ui| s.cmds(ui, ctx, &[C::ViewZoomIn, C::ViewZoomOut, C::ViewFitWidth, C::ViewFitPage]));
+                    self.group(ui, tr("Search"), |s, ui| s.cmds(ui, ctx, &[C::Find]));
                 }
                 RibbonTab::Comment => {
-                    self.group(ui, "Text markup", |s, ui| s.cmds(ui, ctx, &[C::ToolHighlight, C::ToolUnderline, C::ToolStrikeOut]));
-                    self.group(ui, "Notes", |s, ui| s.cmds(ui, ctx, &[C::ToolNote, C::ToolFreeText, C::ToolCallout]));
-                    self.group(ui, "Drawing", |s, ui| {
+                    self.group(ui, tr("Text markup"), |s, ui| s.cmds(ui, ctx, &[C::ToolHighlight, C::ToolUnderline, C::ToolStrikeOut]));
+                    self.group(ui, tr("Notes"), |s, ui| s.cmds(ui, ctx, &[C::ToolNote, C::ToolFreeText, C::ToolCallout]));
+                    self.group(ui, tr("Drawing"), |s, ui| {
                         let ids: &[C] = if essential {
                             &[C::ToolRectangle, C::ToolEllipse, C::ToolLine, C::ToolArrow, C::ToolInk]
                         } else {
@@ -382,60 +384,60 @@ impl App {
                         };
                         s.cmds(ui, ctx, ids);
                     });
-                    self.group(ui, "Stamps", |s, ui| s.cmds(ui, ctx, &[C::ToolStamp]));
-                    self.group(ui, "Selection", |s, ui| s.cmds(ui, ctx, &[C::ToolSelect, C::EditDuplicate, C::EditDelete]));
+                    self.group(ui, tr("Stamps"), |s, ui| s.cmds(ui, ctx, &[C::ToolStamp]));
+                    self.group(ui, tr("Selection"), |s, ui| s.cmds(ui, ctx, &[C::ToolSelect, C::EditDuplicate, C::EditDelete]));
                 }
                 RibbonTab::Forms => {
-                    self.group(ui, "Fill", |s, ui| s.cmds(ui, ctx, &[C::ToolFillForm]));
-                    self.group(ui, "Finish", |s, ui| s.cmds(ui, ctx, &[C::FormFlatten]));
+                    self.group(ui, tr("Fill"), |s, ui| s.cmds(ui, ctx, &[C::ToolFillForm]));
+                    self.group(ui, tr("Finish"), |s, ui| s.cmds(ui, ctx, &[C::FormFlatten]));
                     let n = self.form_for().fields.len();
                     ui.vertical(|ui| {
                         ui.add_space(6.0);
-                        ui.label(RichText::new(format!("{n} form field(s). Click a field to fill it.\nScripts and calculations are never run.")).size(11.0).color(s_dim(&self.pal)));
+                        ui.label(RichText::new(tf!("{} form field(s). Click a field to fill it.\nScripts and calculations are never run.", n)).size(11.0).color(s_dim(&self.pal)));
                     });
                 }
                 RibbonTab::Sign => {
-                    self.group(ui, "Digital signature", |s, ui| s.cmds(ui, ctx, &[C::SignDocument, C::ShowSignatures]));
-                    self.group(ui, "Handwritten signature", |s, ui| s.cmds(ui, ctx, &[C::DrawSignature, C::ToolPlaceSignature]));
+                    self.group(ui, tr("Digital signature"), |s, ui| s.cmds(ui, ctx, &[C::SignDocument, C::ShowSignatures]));
+                    self.group(ui, tr("Handwritten signature"), |s, ui| s.cmds(ui, ctx, &[C::DrawSignature, C::ToolPlaceSignature]));
                     ui.vertical(|ui| {
                         ui.add_space(6.0);
-                        ui.label(RichText::new("A digital signature proves the file is unchanged since signing.\nA handwritten signature is only a picture of your signature.").size(11.0).color(s_dim(&self.pal)));
+                        ui.label(RichText::new(tr("A digital signature proves the file is unchanged since signing.\nA handwritten signature is only a picture of your signature.")).size(11.0).color(s_dim(&self.pal)));
                     });
                 }
                 RibbonTab::Copilot => {
-                    self.group(ui, "Ask", |s, ui| s.cmds(ui, ctx, &[C::ToggleCopilot, C::CopilotSummarize, C::CopilotSummarizeAnnotations]));
-                    self.group(ui, "Translate", |s, ui| s.cmds(ui, ctx, &[C::TranslateDocument]));
+                    self.group(ui, tr("Ask"), |s, ui| s.cmds(ui, ctx, &[C::ToggleCopilot, C::CopilotSummarize, C::CopilotSummarizeAnnotations]));
+                    self.group(ui, tr("Translate"), |s, ui| s.cmds(ui, ctx, &[C::TranslateDocument]));
                     ui.vertical(|ui| {
                         ui.add_space(6.0);
-                        ui.label(RichText::new("Uses your own OpenAI or Anthropic key (Preferences).\nText is sent only when you press a button.").size(11.0).color(s_dim(&self.pal)));
+                        ui.label(RichText::new(tr("Uses your own OpenAI or Anthropic key (Preferences).\nText is sent only when you press a button.")).size(11.0).color(s_dim(&self.pal)));
                     });
                 }
                 RibbonTab::Measure => {
-                    self.group(ui, "Scale", |s, ui| s.cmds(ui, ctx, &[C::ToolCalibrate]));
-                    self.group(ui, "Measure", |s, ui| s.cmds(ui, ctx, &[C::ToolMeasureDistance, C::ToolMeasurePerimeter, C::ToolMeasureArea, C::ToolMeasureRect, C::ToolMeasureRadius, C::ToolMeasureAngle]));
-                    self.group(ui, "Count", |s, ui| s.cmds(ui, ctx, &[C::ToolCount]));
-                    self.group(ui, "Snap", |s, ui| s.cmds(ui, ctx, &[C::ToggleSnap]));
-                    self.group(ui, "Report", |s, ui| s.cmds(ui, ctx, &[C::ExportMeasurements]));
+                    self.group(ui, tr("Scale"), |s, ui| s.cmds(ui, ctx, &[C::ToolCalibrate]));
+                    self.group(ui, tr("Measure"), |s, ui| s.cmds(ui, ctx, &[C::ToolMeasureDistance, C::ToolMeasurePerimeter, C::ToolMeasureArea, C::ToolMeasureRect, C::ToolMeasureRadius, C::ToolMeasureAngle]));
+                    self.group(ui, tr("Count"), |s, ui| s.cmds(ui, ctx, &[C::ToolCount]));
+                    self.group(ui, tr("Snap"), |s, ui| s.cmds(ui, ctx, &[C::ToggleSnap]));
+                    self.group(ui, tr("Report"), |s, ui| s.cmds(ui, ctx, &[C::ExportMeasurements]));
                 }
                 RibbonTab::Organize => {
-                    self.group(ui, "Pages", |s, ui| s.cmds(ui, ctx, &[C::PageRotateCounterClockwise, C::PageRotateClockwise, C::PageInsertBlank, C::PageInsertImage, C::PageDuplicate, C::PageDelete]));
-                    self.group(ui, "Order", |s, ui| s.cmds(ui, ctx, &[C::PageMoveUp, C::PageMoveDown]));
-                    self.group(ui, "Documents", |s, ui| s.cmds(ui, ctx, &[C::PageExtract, C::DocumentMerge]));
+                    self.group(ui, tr("Pages"), |s, ui| s.cmds(ui, ctx, &[C::PageRotateCounterClockwise, C::PageRotateClockwise, C::PageInsertBlank, C::PageInsertImage, C::PageDuplicate, C::PageDelete]));
+                    self.group(ui, tr("Order"), |s, ui| s.cmds(ui, ctx, &[C::PageMoveUp, C::PageMoveDown]));
+                    self.group(ui, tr("Documents"), |s, ui| s.cmds(ui, ctx, &[C::PageExtract, C::DocumentMerge]));
                 }
                 RibbonTab::View => {
-                    self.group(ui, "Zoom", |s, ui| s.cmds(ui, ctx, &[C::ViewZoomIn, C::ViewZoomOut, C::ViewZoomActual, C::ViewFitPage, C::ViewFitWidth]));
-                    self.group(ui, "Layout", |s, ui| s.cmds(ui, ctx, &[C::ViewModeContinuous, C::ViewModeSingle, C::ViewModeFacing]));
-                    self.group(ui, "Rotate view", |s, ui| s.cmds(ui, ctx, &[C::ViewRotateCounterClockwise, C::ViewRotateClockwise]));
-                    self.group(ui, "Reading", |s, ui| s.cmds(ui, ctx, &[C::ViewDarkPages]));
-                    self.group(ui, "Panels", |s, ui| s.cmds(ui, ctx, &[C::ViewToggleLeftSidebar, C::ViewToggleRightSidebar]));
+                    self.group(ui, tr("Zoom"), |s, ui| s.cmds(ui, ctx, &[C::ViewZoomIn, C::ViewZoomOut, C::ViewZoomActual, C::ViewFitPage, C::ViewFitWidth]));
+                    self.group(ui, tr("Layout"), |s, ui| s.cmds(ui, ctx, &[C::ViewModeContinuous, C::ViewModeSingle, C::ViewModeFacing]));
+                    self.group(ui, tr("Rotate view"), |s, ui| s.cmds(ui, ctx, &[C::ViewRotateCounterClockwise, C::ViewRotateClockwise]));
+                    self.group(ui, tr("Reading"), |s, ui| s.cmds(ui, ctx, &[C::ViewDarkPages]));
+                    self.group(ui, tr("Panels"), |s, ui| s.cmds(ui, ctx, &[C::ViewToggleLeftSidebar, C::ViewToggleRightSidebar]));
                 }
                 RibbonTab::Edit => {
-                    self.group(ui, "Page content", |s, ui| s.cmds(ui, ctx, &[C::ToolEditText, C::ToolAddText, C::ToolAddImage]));
-                    self.group(ui, "Scanned pages", |s, ui| s.cmds(ui, ctx, &[C::OcrDocument]));
-                    self.group(ui, "Selection", |s, ui| s.cmds(ui, ctx, &[C::EditDelete]));
+                    self.group(ui, tr("Page content"), |s, ui| s.cmds(ui, ctx, &[C::ToolEditText, C::ToolAddText, C::ToolAddImage]));
+                    self.group(ui, tr("Scanned pages"), |s, ui| s.cmds(ui, ctx, &[C::OcrDocument]));
+                    self.group(ui, tr("Selection"), |s, ui| s.cmds(ui, ctx, &[C::EditDelete]));
                     ui.vertical(|ui| {
                         ui.add_space(6.0);
-                        ui.label(RichText::new("These tools change the page's real content —\nnot comments. Annotations live on the Comment tab.").size(11.0).color(s_dim(&self.pal)));
+                        ui.label(RichText::new(tr("These tools change the page's real content —\nnot comments. Annotations live on the Comment tab.")).size(11.0).color(s_dim(&self.pal)));
                     });
                 }
             });
@@ -507,7 +509,7 @@ impl App {
                     Icon::Close,
                     self.pal.text_dim,
                 );
-                x_resp.clone().on_hover_text("Close tab");
+                x_resp.clone().on_hover_text(tr("Close tab"));
                 if x_resp.clicked() || resp.middle_clicked() {
                     close = Some(i);
                 } else if resp.clicked() {
@@ -529,7 +531,7 @@ impl App {
             if let Some(i) = close {
                 self.request_close(i);
             }
-            if self.cmd_button(ui, C::FileOpen, false, Some("Open"), true) {
+            if self.cmd_button(ui, C::FileOpen, false, Some(tr("Open")), true) {
                 self.run_command(ctx, C::FileOpen);
             }
         });
@@ -538,9 +540,9 @@ impl App {
     pub fn status_bar(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
         ui.horizontal(|ui| {
             let hint = if self.tabs.is_empty() {
-                "Open a PDF or image to begin".to_string()
+                tr("Open a PDF or image to begin").to_string()
             } else {
-                self.tool.hint().to_string()
+                tr(self.tool.hint()).to_string()
             };
             ui.label(RichText::new(hint).color(self.pal.text_dim).size(12.0));
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
@@ -553,12 +555,12 @@ impl App {
                     ui.add(
                         egui::ProgressBar::new(s.progress.0 as f32 / s.progress.1.max(1) as f32)
                             .desired_width(90.0)
-                            .text("Searching"),
+                            .text(tr("Searching")),
                     );
                 } else if queued > 0 {
                     ui.add(egui::Spinner::new().size(12.0));
                     ui.label(
-                        RichText::new(format!("{queued} rendering"))
+                        RichText::new(tf!("{} rendering", queued))
                             .color(self.pal.text_dim)
                             .size(12.0),
                     );
@@ -567,12 +569,12 @@ impl App {
                     return;
                 };
                 let (z, mode, zmode) = (info.zoom, info.mode, info.zoom_mode);
-                if ui.small_button("+").on_hover_text("Zoom in").clicked() {
+                if ui.small_button("+").on_hover_text(tr("Zoom in")).clicked() {
                     self.run_command(ctx, C::ViewZoomIn);
                 }
                 let label = match zmode {
-                    ZoomMode::FitWidth => format!("{:.0}% (fit width)", z * 100.0),
-                    ZoomMode::FitPage => format!("{:.0}% (fit page)", z * 100.0),
+                    ZoomMode::FitWidth => tf!("{}% (fit width)", format!("{:.0}", z * 100.0)),
+                    ZoomMode::FitPage => tf!("{}% (fit page)", format!("{:.0}", z * 100.0)),
                     ZoomMode::Custom => format!("{:.0}%", z * 100.0),
                 };
                 ui.menu_button(label, |ui| {
@@ -583,24 +585,24 @@ impl App {
                         }
                     }
                     ui.separator();
-                    if ui.button("Fit width").clicked() {
+                    if ui.button(tr("Fit width")).clicked() {
                         self.run_command(ctx, C::ViewFitWidth);
                         ui.close();
                     }
-                    if ui.button("Fit page").clicked() {
+                    if ui.button(tr("Fit page")).clicked() {
                         self.run_command(ctx, C::ViewFitPage);
                         ui.close();
                     }
                 });
-                if ui.small_button("−").on_hover_text("Zoom out").clicked() {
+                if ui.small_button("−").on_hover_text(tr("Zoom out")).clicked() {
                     self.run_command(ctx, C::ViewZoomOut);
                 }
                 ui.separator();
                 ui.label(
                     RichText::new(match mode {
-                        ViewMode::Continuous => "Continuous",
-                        ViewMode::SinglePage => "Single page",
-                        ViewMode::Facing => "Facing",
+                        ViewMode::Continuous => tr("Continuous"),
+                        ViewMode::SinglePage => tr("Single page"),
+                        ViewMode::Facing => tr("Facing"),
                     })
                     .color(self.pal.text_dim)
                     .size(12.0),
@@ -617,7 +619,7 @@ impl App {
                         );
                         if rotated != 0 {
                             ui.label(
-                                RichText::new(format!("view rotated {rotated}°"))
+                                RichText::new(tf!("view rotated {}°", rotated))
                                     .color(self.pal.accent)
                                     .size(12.0),
                             );
@@ -629,13 +631,15 @@ impl App {
                         && ui
                             .add(
                                 egui::Label::new(
-                                    RichText::new("Signed").color(self.pal.accent).size(12.0),
+                                    RichText::new(tr("Signed"))
+                                        .color(self.pal.accent)
+                                        .size(12.0),
                                 )
                                 .sense(Sense::click()),
                             )
-                            .on_hover_text(
+                            .on_hover_text(tr(
                                 "This document contains digital signatures. Click to check them.",
-                            )
+                            ))
                             .clicked()
                     {
                         self.open_signatures();
@@ -653,10 +657,10 @@ impl App {
                         );
                     }
                     ui.separator();
-                    let txt = format!("Page {} of {}", cur + 1, info.page_count);
+                    let txt = tf!("Page {} of {}", cur + 1, info.page_count);
                     if ui
                         .add(egui::Label::new(RichText::new(txt).size(12.0)).sense(Sense::click()))
-                        .on_hover_text("Go to page…")
+                        .on_hover_text(tr("Go to page…"))
                         .clicked()
                     {
                         self.run_command(ctx, C::GoToPage);
@@ -679,7 +683,7 @@ impl App {
                     .color(self.pal.text),
             );
             ui.label(
-                RichText::new("Fast, offline PDF editing")
+                RichText::new(tr("Fast, offline PDF editing"))
                     .size(15.0)
                     .color(self.pal.text_dim),
             );
@@ -687,7 +691,7 @@ impl App {
             if ui
                 .add(
                     egui::Button::new(
-                        RichText::new("Open a PDF or image…")
+                        RichText::new(tr("Open a PDF or image…"))
                             .size(15.0)
                             .color(Color32::WHITE),
                     )
@@ -700,13 +704,13 @@ impl App {
             }
             ui.add_space(6.0);
             ui.label(
-                RichText::new("or drop a PDF or picture anywhere in this window")
+                RichText::new(tr("or drop a PDF or picture anywhere in this window"))
                     .color(self.pal.text_dim)
                     .size(12.0),
             );
             if !self.prefs.recent_files.is_empty() {
                 ui.add_space(22.0);
-                ui.label(RichText::new("Recent").strong());
+                ui.label(RichText::new(tr("Recent")).strong());
                 for p in self.prefs.recent_files.clone().into_iter().take(6) {
                     let name = std::path::Path::new(&p)
                         .file_name()
@@ -740,9 +744,9 @@ pub fn format_size(w_pt: f64, h_pt: f64) -> String {
 #[allow(dead_code)]
 fn density_name(d: Density) -> &'static str {
     match d {
-        Density::Compact => "Compact",
-        Density::Comfortable => "Comfortable",
-        Density::Touch => "Touch / Pen",
+        Density::Compact => tr("Compact"),
+        Density::Comfortable => tr("Comfortable"),
+        Density::Touch => tr("Touch / Pen"),
     }
 }
 
@@ -790,47 +794,47 @@ fn s_dim(p: &crate::theme::Palette) -> egui::Color32 {
 /// (The palette, tooltips and menus keep the full title.)
 fn ribbon_label(id: C, title: &'static str) -> &'static str {
     match id {
-        C::PageRotateCounterClockwise => "Rotate Left",
-        C::PageRotateClockwise => "Rotate Right",
-        C::ViewRotateCounterClockwise => "Rotate View Left",
-        C::ViewRotateClockwise => "Rotate View Right",
-        C::PageInsertBlank => "Blank Page",
-        C::PageInsertImage => "Image Page",
-        C::PageDuplicate => "Duplicate",
-        C::PageDelete => "Delete",
-        C::PageMoveUp => "Move Up",
-        C::PageMoveDown => "Move Down",
-        C::PageExtract => "Extract",
-        C::DocumentMerge => "Merge",
-        C::ToolMeasurePerimeter => "Path Length",
-        C::ToolMeasureDistance => "Distance",
-        C::ToolMeasureRect => "Rectangle",
-        C::ExportMeasurements => "Export CSV",
+        C::PageRotateCounterClockwise => tr("Rotate Left"),
+        C::PageRotateClockwise => tr("Rotate Right"),
+        C::ViewRotateCounterClockwise => tr("Rotate View Left"),
+        C::ViewRotateClockwise => tr("Rotate View Right"),
+        C::PageInsertBlank => tr("Blank Page"),
+        C::PageInsertImage => tr("Image Page"),
+        C::PageDuplicate => tr("Duplicate"),
+        C::PageDelete => tr("Delete"),
+        C::PageMoveUp => tr("Move Up"),
+        C::PageMoveDown => tr("Move Down"),
+        C::PageExtract => tr("Extract"),
+        C::DocumentMerge => tr("Merge"),
+        C::ToolMeasurePerimeter => tr("Path Length"),
+        C::ToolMeasureDistance => tr("Distance"),
+        C::ToolMeasureRect => tr("Rectangle"),
+        C::ExportMeasurements => tr("Export CSV"),
         C::OcrDocument => "OCR",
-        C::ToggleSnap => "Snap",
-        C::FileSaveOptimized => "Optimize",
+        C::ToggleSnap => tr("Snap"),
+        C::FileSaveOptimized => tr("Optimize"),
         C::FileConvertPdfA => "PDF/A",
-        C::ToggleCopilot => "Copilot",
-        C::CopilotSummarize => "Summarize",
-        C::CopilotSummarizeAnnotations => "Summarize notes",
-        C::TranslateDocument => "Translate",
-        C::SignDocument => "Sign",
-        C::ShowSignatures => "Signatures",
-        C::DrawSignature => "Draw Signature",
-        C::ToolPlaceSignature => "Place Signature",
-        C::ToolFillForm => "Fill Form",
-        C::FormFlatten => "Flatten",
-        C::FileExportImage => "Export Image",
-        C::FileProperties => "Properties",
-        C::ToolHighlight => "Highlight",
-        C::ToolUnderline => "Underline",
-        C::ToolStrikeOut => "Strikeout",
-        C::ToolCalibrate => "Calibrate",
+        C::ToggleCopilot => tr("Copilot"),
+        C::CopilotSummarize => tr("Summarize"),
+        C::CopilotSummarizeAnnotations => tr("Summarize notes"),
+        C::TranslateDocument => tr("Translate"),
+        C::SignDocument => tr("Sign"),
+        C::ShowSignatures => tr("Signatures"),
+        C::DrawSignature => tr("Draw Signature"),
+        C::ToolPlaceSignature => tr("Place Signature"),
+        C::ToolFillForm => tr("Fill Form"),
+        C::FormFlatten => tr("Flatten"),
+        C::FileExportImage => tr("Export Image"),
+        C::FileProperties => tr("Properties"),
+        C::ToolHighlight => tr("Highlight"),
+        C::ToolUnderline => tr("Underline"),
+        C::ToolStrikeOut => tr("Strikeout"),
+        C::ToolCalibrate => tr("Calibrate"),
         C::ViewZoomActual => "100 %",
-        C::ViewDarkPages => "Dark Pages",
-        C::ViewToggleLeftSidebar => "Navigation",
-        C::ViewToggleRightSidebar => "Properties",
-        C::ShortcutReference => "Shortcuts",
-        _ => title,
+        C::ViewDarkPages => tr("Dark Pages"),
+        C::ViewToggleLeftSidebar => tr("Navigation"),
+        C::ViewToggleRightSidebar => tr("Properties"),
+        C::ShortcutReference => tr("Shortcuts"),
+        _ => tr(title),
     }
 }

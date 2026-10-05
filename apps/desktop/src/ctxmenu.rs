@@ -4,7 +4,9 @@
 //! an annotation (delete, duplicate, properties) or empty page area (note, zoom, tools).
 
 use crate::canvas::ViewCtx;
+use crate::i18n::tr;
 use crate::state::*;
+use crate::tf;
 use editor_core::command::CommandId as C;
 use editor_core::selection::TextSelection;
 use editor_core::tools::Tool;
@@ -128,16 +130,16 @@ impl App {
                 .get(&(doc, sel.page))
                 .map(|(_, tp)| tp.text_of(sel.glyphs.clone()))
                 .unwrap_or_default();
-            if Self::menu_item(ui, "Copy", "Ctrl+C") {
+            if Self::menu_item(ui, tr("Copy"), "Ctrl+C") {
                 self.run_command(ctx, C::EditCopy);
             }
             ui.separator();
             ui.add_enabled_ui(can_edit, |ui| {
                 for (label, m) in [
-                    ("Highlight", Markup::Highlight),
-                    ("Underline", Markup::Underline),
-                    ("Strikeout", Markup::StrikeOut),
-                    ("Squiggly", Markup::Squiggly),
+                    (tr("Highlight"), Markup::Highlight),
+                    (tr("Underline"), Markup::Underline),
+                    (tr("Strikeout"), Markup::StrikeOut),
+                    (tr("Squiggly"), Markup::Squiggly),
                 ] {
                     if Self::menu_item(ui, label, "") {
                         self.markup_selection(m);
@@ -146,7 +148,7 @@ impl App {
             });
             ui.separator();
             let short: String = snippet.chars().take(24).collect();
-            let label = format!(
+            let label = tf!(
                 "Find “{}{}” in document",
                 short.trim(),
                 if snippet.chars().count() > 24 {
@@ -161,22 +163,22 @@ impl App {
             self.context_menu_ai_items(ui, ctx, &snippet);
         } else if annot_sel {
             ui.add_enabled_ui(can_edit, |ui| {
-                if Self::menu_item(ui, "Delete", "Del") {
+                if Self::menu_item(ui, tr("Delete"), "Del") {
                     self.run_command(ctx, C::EditDelete);
                 }
-                if Self::menu_item(ui, "Duplicate", "") {
+                if Self::menu_item(ui, tr("Duplicate"), "") {
                     self.run_command(ctx, C::EditDuplicate);
                 }
             });
             ui.separator();
-            if Self::menu_item(ui, "Properties", "") {
+            if Self::menu_item(ui, tr("Properties"), "") {
                 self.prefs.show_right_sidebar = true;
                 self.right_tab = RightTab::Properties;
             }
         } else {
             if let Some(t) = target {
                 ui.add_enabled_ui(can_edit, |ui| {
-                    if Self::menu_item(ui, "Add note here…", "") {
+                    if Self::menu_item(ui, tr("Add note here…"), "") {
                         self.dialog = Some(Dialog::TextEntry {
                             page: t.page,
                             tool: Tool::Note,
@@ -186,30 +188,30 @@ impl App {
                         });
                     }
                 });
-                if Self::menu_item(ui, "Select all text on this page", "Ctrl+A") {
+                if Self::menu_item(ui, tr("Select all text on this page"), "Ctrl+A") {
                     self.run_command(ctx, C::EditSelectAll);
                 }
                 ui.separator();
             }
-            ui.menu_button("Tool", |ui| {
+            ui.menu_button(tr("Tool"), |ui| {
                 for (label, id) in [
-                    ("Select", C::ToolSelect),
-                    ("Hand", C::ToolHand),
-                    ("Select text", C::ToolTextSelect),
-                    ("Highlight", C::ToolHighlight),
+                    (tr("Select"), C::ToolSelect),
+                    (tr("Hand"), C::ToolHand),
+                    (tr("Select text"), C::ToolTextSelect),
+                    (tr("Highlight"), C::ToolHighlight),
                 ] {
                     if Self::menu_item(ui, label, "") {
                         self.run_command(ctx, id);
                     }
                 }
             });
-            ui.menu_button("View", |ui| {
+            ui.menu_button(tr("View"), |ui| {
                 for (label, id) in [
-                    ("Zoom in", C::ViewZoomIn),
-                    ("Zoom out", C::ViewZoomOut),
-                    ("Fit page", C::ViewFitPage),
-                    ("Fit width", C::ViewFitWidth),
-                    ("Rotate view clockwise", C::ViewRotateClockwise),
+                    (tr("Zoom in"), C::ViewZoomIn),
+                    (tr("Zoom out"), C::ViewZoomOut),
+                    (tr("Fit page"), C::ViewFitPage),
+                    (tr("Fit width"), C::ViewFitWidth),
+                    (tr("Rotate view clockwise"), C::ViewRotateClockwise),
                 ] {
                     if Self::menu_item(ui, label, "") {
                         self.run_command(ctx, id);
@@ -234,10 +236,10 @@ impl App {
             return;
         }
         let (kind, label) = match m {
-            Markup::Highlight => (AnnotationKind::Highlight { quads }, "Highlight text"),
-            Markup::Underline => (AnnotationKind::Underline { quads }, "Underline text"),
-            Markup::StrikeOut => (AnnotationKind::StrikeOut { quads }, "Strike out text"),
-            Markup::Squiggly => (AnnotationKind::Squiggly { quads }, "Squiggly underline"),
+            Markup::Highlight => (AnnotationKind::Highlight { quads }, tr("Highlight text")),
+            Markup::Underline => (AnnotationKind::Underline { quads }, tr("Underline text")),
+            Markup::StrikeOut => (AnnotationKind::StrikeOut { quads }, tr("Strike out text")),
+            Markup::Squiggly => (AnnotationKind::Squiggly { quads }, tr("Squiggly underline")),
         };
         let mut spec = self.new_spec(kind);
         if matches!(m, Markup::Squiggly) {
@@ -276,10 +278,10 @@ impl App {
         ui.separator();
         let busy = self.ai_busy();
         ui.add_enabled_ui(!busy, |ui| {
-            if Self::menu_item(ui, "Explain", "") {
+            if Self::menu_item(ui, tr("Explain"), "") {
                 self.copilot_explain(ctx, text, page);
             }
-            if Self::menu_item(ui, "Translate", "") {
+            if Self::menu_item(ui, tr("Translate"), "") {
                 self.copilot_translate_selection(ctx, text);
             }
         });

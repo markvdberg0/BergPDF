@@ -6,7 +6,9 @@
 
 use crate::copilot_ui::host_of;
 use crate::dialogs::modal;
+use crate::i18n::tr;
 use crate::state::*;
+use crate::tf;
 use ai_client::PageText;
 use ai_client::translate::{Detected, detect, translate_blocks};
 use egui::RichText;
@@ -105,7 +107,7 @@ impl App {
         let current = tab.session.view.current_page;
         let title = tab.session.title.clone();
         let (Ok(pages), Ok(snap)) = (tab.session.pages(), tab.session.snapshot()) else {
-            self.notify_error("Could not prepare the document for translation.");
+            self.notify_error(tr("Could not prepare the document for translation."));
             return;
         };
         let doc = tab.session.id;
@@ -136,7 +138,7 @@ impl App {
                 Ok((pages, rev, d))
             }));
             let _ = tx.send(Msg::Prepared(r.unwrap_or_else(|_| {
-                Err("Reading the document text failed unexpectedly.".into())
+                Err(tr("Reading the document text failed unexpectedly.").into())
             })));
         });
         let target = self.prefs.ai.translate_to.clone();
@@ -206,7 +208,7 @@ impl App {
                 }
                 Err(TryRecvError::Disconnected) => {
                     st.rx = None;
-                    st.error = Some("The translation stopped unexpectedly.".into());
+                    st.error = Some(tr("The translation stopped unexpectedly.").into());
                     st.stage = Stage::Failed;
                 }
             }
@@ -224,12 +226,12 @@ impl App {
         let mut retry = false;
         modal(ctx, "translate", |ui| {
             ui.set_max_width(560.0);
-            ui.heading("Translate document");
+            ui.heading(tr("Translate document"));
             match st.stage {
                 Stage::Preparing => {
                     ui.horizontal(|ui| {
                         ui.spinner();
-                        ui.label("Reading the text and detecting the language…");
+                        ui.label(tr("Reading the text and detecting the language…"));
                     });
                 }
                 Stage::Setup => {
@@ -237,29 +239,33 @@ impl App {
                     let with_text = pages.iter().filter(|p| !p.text.trim().is_empty()).count();
                     match &st.detected {
                         Some(d) => {
-                            ui.label(format!(
-                                "Detected language: {} ({:.0} % sure{})",
+                            ui.label(tf!(
+                                "Detected language: {} ({} % sure{})",
                                 d.name,
-                                d.confidence * 100.0,
-                                if d.reliable { "" } else { ", low confidence" }
+                                format!("{:.0}", d.confidence * 100.0),
+                                if d.reliable {
+                                    ""
+                                } else {
+                                    tr(", low confidence")
+                                }
                             ));
                             ui.label(
-                                RichText::new("Detected on this computer; nothing was sent.")
+                                RichText::new(tr("Detected on this computer; nothing was sent."))
                                     .size(11.0)
                                     .color(dim),
                             );
                         }
                         None => {
-                            ui.label("The language could not be detected (too little text). The translator will work it out.");
+                            ui.label(tr("The language could not be detected (too little text). The translator will work it out."));
                         }
                     }
                     if with_text == 0 {
                         ui.add_space(4.0);
-                        ui.colored_label(danger, "This document has no text to translate. If it is a scan, run OCR first (Edit ▸ Recognize Text).");
+                        ui.colored_label(danger, tr("This document has no text to translate. If it is a scan, run OCR first (Edit ▸ Recognize Text)."));
                     }
                     ui.add_space(6.0);
                     ui.horizontal(|ui| {
-                        ui.label("Translate into");
+                        ui.label(tr("Translate into"));
                         egui::ComboBox::from_id_salt("tr_lang")
                             .selected_text(st.target.clone())
                             .width(150.0)
@@ -271,7 +277,7 @@ impl App {
                         ui.add(
                             egui::TextEdit::singleline(&mut st.target)
                                 .desired_width(120.0)
-                                .hint_text("or type one"),
+                                .hint_text(tr("or type one")),
                         );
                     });
                     if let Some(d) = &st.detected
@@ -279,19 +285,19 @@ impl App {
                     {
                         ui.colored_label(
                             danger,
-                            format!("The document already seems to be in {}.", d.name),
+                            tf!("The document already seems to be in {}.", d.name),
                         );
                     }
                     ui.horizontal(|ui| {
                         ui.radio_value(
                             &mut st.current_only,
                             false,
-                            format!("All pages ({with_text} with text)"),
+                            tf!("All pages ({} with text)", with_text),
                         );
                         ui.radio_value(
                             &mut st.current_only,
                             true,
-                            format!("Current page ({})", st.current_page + 1),
+                            tf!("Current page ({})", st.current_page + 1),
                         );
                     });
                     let chars: usize = pages
@@ -301,9 +307,7 @@ impl App {
                         .sum();
                     ui.add_space(4.0);
                     ui.label(
-                        RichText::new(format!(
-                            "About {chars} characters will be sent to {host} (model {model}) with your API key. The usage is billed by your provider. The translation replaces the text in a copy of the document that opens in a new tab; your document is not changed."
-                        ))
+                        RichText::new(tf!("About {} characters will be sent to {} (model {}) with your API key. The usage is billed by your provider. The translation replaces the text in a copy of the document that opens in a new tab; your document is not changed.", chars, host, model))
                         .size(12.0)
                         .color(dim),
                     );
@@ -312,13 +316,13 @@ impl App {
                         if ui
                             .add_enabled(
                                 with_text > 0 && !st.target.trim().is_empty(),
-                                egui::Button::new("Translate"),
+                                egui::Button::new(tr("Translate")),
                             )
                             .clicked()
                         {
                             start = true;
                         }
-                        if ui.button("Cancel").clicked()
+                        if ui.button(tr("Cancel")).clicked()
                             || ui.input(|i| i.key_pressed(egui::Key::Escape))
                         {
                             close = true;
@@ -331,26 +335,29 @@ impl App {
                     if total == 0 {
                         ui.horizontal(|ui| {
                             ui.spinner();
-                            ui.label("Finding the paragraphs on the pages…");
+                            ui.label(tr("Finding the paragraphs on the pages…"));
                         });
                     } else {
                         ui.add(
-                            egui::ProgressBar::new(done as f32 / total.max(1) as f32)
-                                .text(format!("Paragraph {} of {}", done.min(total), total)),
+                            egui::ProgressBar::new(done as f32 / total.max(1) as f32).text(tf!(
+                                "Paragraph {} of {}",
+                                done.min(total),
+                                total
+                            )),
                         );
                         ui.label(
-                            RichText::new("Waiting for the AI service…")
+                            RichText::new(tr("Waiting for the AI service…"))
                                 .size(12.0)
                                 .color(dim),
                         );
                     }
-                    if ui.button("Cancel").clicked() {
+                    if ui.button(tr("Cancel")).clicked() {
                         st.cancel.store(true, Ordering::Relaxed);
                         close = true;
                     }
                 }
                 Stage::Done => {
-                    ui.label(format!(
+                    ui.label(tf!(
                         "Translated {} page(s) into {}, in place in the document.",
                         st.result.len(),
                         st.used_target
@@ -359,9 +366,9 @@ impl App {
                         ui.label(RichText::new(n.as_str()).size(12.0).color(dim));
                     }
                     ui.label(
-                        RichText::new(
+                        RichText::new(tr(
                             "Machine translation: check important passages against the original.",
-                        )
+                        ))
                         .size(12.0)
                         .color(dim),
                     );
@@ -369,7 +376,7 @@ impl App {
                     let mut preview: String = st
                         .result
                         .iter()
-                        .map(|p| format!("— page {} —\n{}", p.number, p.text.trim()))
+                        .map(|p| tf!("— page {} —\n{}", p.number, p.text.trim()))
                         .collect::<Vec<_>>()
                         .join("\n\n");
                     preview = ai_client::text::clip_chars(&preview, 6000).to_string();
@@ -384,26 +391,26 @@ impl App {
                         });
                     ui.add_space(6.0);
                     ui.horizontal(|ui| {
-                        if ui.button("Open translated copy").clicked() {
+                        if ui.button(tr("Open translated copy")).clicked() {
                             open_copy = true;
                         }
-                        if ui.button("Save translated PDF…").clicked() {
+                        if ui.button(tr("Save translated PDF…")).clicked() {
                             save_pdf = true;
                         }
-                        if ui.button("Save as text…").clicked() {
+                        if ui.button(tr("Save as text…")).clicked() {
                             save_txt = true;
                         }
-                        if ui.button("Copy").clicked() {
+                        if ui.button(tr("Copy")).clicked() {
                             copy = true;
                         }
-                        if ui.button("Close").clicked()
+                        if ui.button(tr("Close")).clicked()
                             || ui.input(|i| i.key_pressed(egui::Key::Escape))
                         {
                             close = true;
                         }
                     });
                     ui.label(
-                        RichText::new("The copy keeps the page layout; paragraphs are re-flowed in the same box. Tables, headers and text inside pictures are not handled specially. Your original is unchanged.")
+                        RichText::new(tr("The copy keeps the page layout; paragraphs are re-flowed in the same box. Tables, headers and text inside pictures are not handled specially. Your original is unchanged."))
                             .size(11.0)
                             .color(dim),
                     );
@@ -412,10 +419,10 @@ impl App {
                     ui.colored_label(danger, st.error.clone().unwrap_or_default());
                     ui.add_space(8.0);
                     ui.horizontal(|ui| {
-                        if st.pages.is_some() && ui.button("Back").clicked() {
+                        if st.pages.is_some() && ui.button(tr("Back")).clicked() {
                             retry = true;
                         }
-                        if ui.button("Close").clicked()
+                        if ui.button(tr("Close")).clicked()
                             || ui.input(|i| i.key_pressed(egui::Key::Escape))
                         {
                             close = true;
@@ -434,7 +441,7 @@ impl App {
         if copy {
             let text = joined(&st.result);
             ctx.copy_text(text);
-            self.notify("Translation copied.");
+            self.notify(tr("Translation copied."));
         }
         if save_txt {
             let name = format!(
@@ -444,8 +451,8 @@ impl App {
             );
             if let Some(dest) = platform::dialogs::pick_save_text(&name) {
                 match std::fs::write(&dest, joined(&st.result)) {
-                    Ok(()) => self.notify(format!("Saved {}", dest.display())),
-                    Err(e) => self.notify_error(format!("Could not save: {e}")),
+                    Ok(()) => self.notify(tf!("Saved {}", dest.display())),
+                    Err(e) => self.notify_error(tf!("Could not save: {}", e)),
                 }
             }
         }
@@ -469,7 +476,7 @@ impl App {
             }
         };
         let Some(bytes) = st.snapshot.clone() else {
-            st.error = Some("The document is no longer available.".into());
+            st.error = Some(tr("The document is no longer available.").into());
             st.stage = Stage::Failed;
             return;
         };
@@ -515,7 +522,7 @@ impl App {
                 )
             }));
             let _ = tx.send(Msg::Done(r.unwrap_or_else(|_| {
-                Err("The translation stopped unexpectedly.".into())
+                Err(tr("The translation stopped unexpectedly.").into())
             })));
         });
         st.rx = Some(rx);
@@ -534,7 +541,7 @@ impl App {
                 session.mark_unsaved();
                 self.add_tab(session);
             }
-            Err(e) => self.notify_error(format!("Could not open the translated copy: {e}")),
+            Err(e) => self.notify_error(tf!("Could not open the translated copy: {}", e)),
         }
     }
 
@@ -553,8 +560,8 @@ impl App {
             bytes,
             &pdf_engine::save::SaveOptions::default(),
         ) {
-            Ok(_) => self.notify(format!("Saved {}", dest.display())),
-            Err(e) => self.notify_error(format!("Could not save: {e}")),
+            Ok(_) => self.notify(tf!("Saved {}", dest.display())),
+            Err(e) => self.notify_error(tf!("Could not save: {}", e)),
         }
     }
 }
@@ -603,7 +610,7 @@ fn run_inline_translation(
         .flat_map(|(_, b, _)| b.iter().map(|b| b.text.clone()))
         .collect();
     if texts.is_empty() {
-        return Err("No translatable text was found on the selected pages.".into());
+        return Err(tr("No translatable text was found on the selected pages.").into());
     }
     total.store(texts.len(), Ordering::Relaxed);
     // 2. Translate.
@@ -657,29 +664,34 @@ fn run_inline_translation(
         fonts.extend(rep.system_fonts);
     }
     let out = doc.snapshot_bytes().map_err(|e| e.to_string())?;
-    let mut notes = vec![format!(
-        "{blocks_n} paragraph(s) replaced; {removed} original text piece(s) removed from the page content, the rest covered."
+    let mut notes = vec![tf!(
+        "{} paragraph(s) replaced; {} original text piece(s) removed from the page content, the rest covered.",
+        blocks_n,
+        removed
     )];
     if shrunk > 0 {
-        notes.push(format!(
-            "{shrunk} paragraph(s) use a smaller font so the translation fits."
+        notes.push(tf!(
+            "{} paragraph(s) use a smaller font so the translation fits.",
+            shrunk
         ));
     }
     if overflow > 0 {
-        notes.push(format!(
-            "{overflow} paragraph(s) are still longer than their original box; check them."
+        notes.push(tf!(
+            "{} paragraph(s) are still longer than their original box; check them.",
+            overflow
         ));
     }
     if !fonts.is_empty() {
-        notes.push(format!(
+        notes.push(tf!(
             "Installed font(s) used for characters the built-in fonts lack: {}.",
             fonts.into_iter().collect::<Vec<_>>().join(", ")
         ));
     }
     if !missing.is_empty() {
         let s: String = missing.iter().take(10).collect();
-        notes.push(format!(
-            "No available font has {s}: shown as “?”. Save as text to keep them."
+        notes.push(tf!(
+            "No available font has {}: shown as “?”. Save as text to keep them.",
+            s
         ));
     }
     Ok(Outcome {

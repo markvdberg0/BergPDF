@@ -1,7 +1,9 @@
 //! Left (thumbnails / bookmarks / search) and right (properties / comments) sidebars.
 
 use crate::chrome::command_icon;
+use crate::i18n::tr;
 use crate::state::*;
+use crate::tf;
 use editor_core::command::CommandId as C;
 use editor_core::tiles::{TileKey, TilePlan, quantize_scale};
 use editor_core::tools::Tool;
@@ -48,8 +50,8 @@ impl App {
             .show(ui, |ui| {
                 ui.add_space(6.0);
                 let (glyph, tip) = match left {
-                    true => ("»", "Show the page panel"),
-                    false => ("«", "Show the properties panel"),
+                    true => ("»", tr("Show the page panel")),
+                    false => ("«", tr("Show the properties panel")),
                 };
                 if ui
                     .add(egui::Button::new(RichText::new(glyph).size(15.0)).frame(false))
@@ -73,9 +75,9 @@ impl App {
             ui,
             |ui| {
                 for (t, label) in [
-                    (LeftTab::Thumbnails, "Pages"),
-                    (LeftTab::Bookmarks, "Bookmarks"),
-                    (LeftTab::Search, "Search"),
+                    (LeftTab::Thumbnails, tr("Pages")),
+                    (LeftTab::Bookmarks, tr("Bookmarks")),
+                    (LeftTab::Search, tr("Search")),
                 ] {
                     if ui.selectable_label(self.left_tab == t, label).clicked() {
                         self.left_tab = t;
@@ -83,7 +85,8 @@ impl App {
                 }
             },
             |ui| {
-                hide = Self::collapse_button(ui, "«", "Hide the page panel (View ▸ Left panel)");
+                hide =
+                    Self::collapse_button(ui, "«", tr("Hide the page panel (View ▸ Left panel)"));
             },
         );
         if hide {
@@ -248,11 +251,7 @@ impl App {
                     self.pal.text,
                 );
                 resp.widget_info(|| {
-                    egui::WidgetInfo::labeled(
-                        egui::WidgetType::Button,
-                        true,
-                        format!("Page {}", i + 1),
-                    )
+                    egui::WidgetInfo::labeled(egui::WidgetType::Button, true, tf!("Page {}", i + 1))
                 });
                 if resp.clicked() {
                     clicked = Some((i, ctx.input(|inp| inp.modifiers)));
@@ -289,7 +288,7 @@ impl App {
                         if ui
                             .add_enabled(
                                 en,
-                                egui::Button::new(editor_core::command::info(id).title),
+                                egui::Button::new(tr(editor_core::command::info(id).title)),
                             )
                             .clicked()
                         {
@@ -320,7 +319,7 @@ impl App {
                         .filter(|p| moving.contains(&p.id))
                         .count();
                     let to = target - removed_before;
-                    let r = self.tabs[ti].session.execute("Reorder pages", |tx| {
+                    let r = self.tabs[ti].session.execute(tr("Reorder pages"), |tx| {
                         pdf_engine::pageops::move_pages(tx, &moving, to)
                     });
                     if let Err(e) = r {
@@ -366,7 +365,7 @@ impl App {
         };
         if marks.is_empty() {
             ui.add_space(12.0);
-            ui.label(RichText::new("This document has no bookmarks.").color(self.pal.text_dim));
+            ui.label(RichText::new(tr("This document has no bookmarks.")).color(self.pal.text_dim));
             return;
         }
         let mut goto: Option<usize> = None;
@@ -380,7 +379,7 @@ impl App {
                     id: egui::Id,
                 ) {
                     let title = if b.title.is_empty() {
-                        "(untitled)"
+                        tr("(untitled)")
                     } else {
                         b.title.as_str()
                     };
@@ -416,7 +415,7 @@ impl App {
         let mut run = false;
         ui.horizontal(|ui| {
             let te = egui::TextEdit::singleline(&mut self.tabs[ti].session.search.query)
-                .hint_text("Find in document")
+                .hint_text(tr("Find in document"))
                 .desired_width(ui.available_width() - 34.0);
             let resp = ui.add(te);
             if self.search_focus {
@@ -427,14 +426,14 @@ impl App {
                 run = true;
                 resp.request_focus();
             }
-            if ui.button("Go").clicked() {
+            if ui.button(tr("Go")).clicked() {
                 run = true;
             }
         });
         if ui
             .checkbox(
                 &mut self.tabs[ti].session.search.case_sensitive,
-                "Match case",
+                tr("Match case"),
             )
             .changed()
         {
@@ -447,31 +446,28 @@ impl App {
         ui.add_space(4.0);
         if s.running {
             ui.label(
-                RichText::new(format!(
-                    "Searching… {}/{} pages",
-                    s.progress.0, s.progress.1
-                ))
-                .color(self.pal.text_dim),
+                RichText::new(tf!("Searching… {}/{} pages", s.progress.0, s.progress.1))
+                    .color(self.pal.text_dim),
             );
         } else if !s.query.trim().is_empty() && s.progress.1 > 0 {
             ui.label(
-                RichText::new(format!(
-                    "{} result{}",
-                    s.matches.len(),
-                    if s.matches.len() == 1 { "" } else { "s" }
-                ))
+                RichText::new(if s.matches.len() == 1 {
+                    tr("1 result").to_string()
+                } else {
+                    tf!("{} results", s.matches.len())
+                })
                 .color(self.pal.text_dim),
             );
         }
         ui.horizontal(|ui| {
             if ui
-                .add_enabled(!s.matches.is_empty(), egui::Button::new("◀ Prev"))
+                .add_enabled(!s.matches.is_empty(), egui::Button::new(tr("◀ Prev")))
                 .clicked()
             {
                 self.run_command(ctx, C::FindPrevious);
             }
             if ui
-                .add_enabled(!s.matches.is_empty(), egui::Button::new("Next ▶"))
+                .add_enabled(!s.matches.is_empty(), egui::Button::new(tr("Next ▶")))
                 .clicked()
             {
                 self.run_command(ctx, C::FindNext);
@@ -512,10 +508,10 @@ impl App {
             |ui| {
                 ui.horizontal_wrapped(|ui| {
                     for (t, label) in [
-                        (RightTab::Properties, "Properties"),
-                        (RightTab::Comments, "Comments"),
-                        (RightTab::Measure, "Measure"),
-                        (RightTab::Copilot, "Copilot"),
+                        (RightTab::Properties, tr("Properties")),
+                        (RightTab::Comments, tr("Comments")),
+                        (RightTab::Measure, tr("Measure")),
+                        (RightTab::Copilot, tr("Copilot")),
                     ] {
                         if ui.selectable_label(self.right_tab == t, label).clicked() {
                             self.right_tab = t;
@@ -527,7 +523,7 @@ impl App {
                 hide = Self::collapse_button(
                     ui,
                     "»",
-                    "Hide the properties panel (View ▸ Right panel)",
+                    tr("Hide the properties panel (View ▸ Right panel)"),
                 );
             },
         );
@@ -558,15 +554,15 @@ impl App {
             return;
         }
         if let Some(ts) = &sel.text {
-            ui.label(RichText::new("Selected text").strong());
+            ui.label(RichText::new(tr("Selected text")).strong());
             let n = ts.glyphs.len();
-            ui.label(RichText::new(format!("{n} characters")).color(self.pal.text_dim));
+            ui.label(RichText::new(tf!("{} characters", n)).color(self.pal.text_dim));
             ui.add_space(4.0);
             ui.horizontal_wrapped(|ui| {
                 for (t, label) in [
-                    (Tool::Highlight, "Highlight"),
-                    (Tool::Underline, "Underline"),
-                    (Tool::StrikeOut, "Strikeout"),
+                    (Tool::Highlight, tr("Highlight")),
+                    (Tool::Underline, tr("Underline")),
+                    (Tool::StrikeOut, tr("Strikeout")),
                 ] {
                     if ui
                         .add_enabled(self.command_enabled(t.command()), egui::Button::new(label))
@@ -575,7 +571,7 @@ impl App {
                         self.markup_current_selection(t);
                     }
                 }
-                if ui.button("Copy").clicked() {
+                if ui.button(tr("Copy")).clicked() {
                     self.run_command(ctx, C::EditCopy);
                 }
             });
@@ -596,7 +592,7 @@ impl App {
         };
         let can_edit = self.tabs[ti].session.doc().capabilities().can_edit;
         if infos.len() > 1 {
-            ui.label(RichText::new(format!("{} annotations selected", infos.len())).strong());
+            ui.label(RichText::new(tf!("{} annotations selected", infos.len())).strong());
         } else {
             ui.label(RichText::new(pretty_subtype(&first.subtype)).strong());
             if !first.author.is_empty() {
@@ -609,7 +605,7 @@ impl App {
         }
         ui.add_space(6.0);
         let Some(base_spec) = first.spec.clone() else {
-            ui.label(RichText::new("This annotation type was created by another program. It is displayed and can be moved or deleted, but its appearance cannot be edited here.").color(self.pal.text_dim).size(12.0));
+            ui.label(RichText::new(tr("This annotation type was created by another program. It is displayed and can be moved or deleted, but its appearance cannot be edited here.")).color(self.pal.text_dim).size(12.0));
             return;
         };
         // While a slider or colour is being dragged the edit lives in a draft; the document (and so
@@ -633,9 +629,9 @@ impl App {
                 .spacing([8.0, 6.0])
                 .show(ui, |ui| {
                     let color_label = match spec.kind {
-                        AnnotationKind::Highlight { .. } => "Color",
-                        AnnotationKind::FreeText { .. } => "Border",
-                        _ => "Line color",
+                        AnnotationKind::Highlight { .. } => tr("Color"),
+                        AnnotationKind::FreeText { .. } => tr("Border"),
+                        _ => tr("Line color"),
                     };
                     ui.label(color_label);
                     let mut c = [spec.color.0, spec.color.1, spec.color.2];
@@ -650,7 +646,7 @@ impl App {
                             | AnnotationKind::Polygon { .. }
                             | AnnotationKind::FreeText { .. }
                     ) {
-                        ui.label("Fill");
+                        ui.label(tr("Fill"));
                         ui.horizontal(|ui| {
                             let mut has = spec.fill.is_some();
                             if ui.checkbox(&mut has, "").changed() {
@@ -669,25 +665,28 @@ impl App {
                         spec.kind,
                         AnnotationKind::FreeText { .. } | AnnotationKind::StampText { .. }
                     ) {
-                        ui.label("Rotation");
+                        ui.label(tr("Rotation"));
                         ui.horizontal(|ui| {
                             if ui
                                 .button("⟲")
-                                .on_hover_text("Rotate 90° counter-clockwise")
+                                .on_hover_text(tr("Rotate 90° counter-clockwise"))
                                 .clicked()
                             {
                                 turn_text(&mut spec, 90);
                             }
                             if ui
                                 .button("⟳")
-                                .on_hover_text("Rotate 90° clockwise")
+                                .on_hover_text(tr("Rotate 90° clockwise"))
                                 .clicked()
                             {
                                 turn_text(&mut spec, -90);
                             }
                             if ui
-                                .add_enabled(spec.rotation != upright, egui::Button::new("Upright"))
-                                .on_hover_text("Make the text read horizontally on screen")
+                                .add_enabled(
+                                    spec.rotation != upright,
+                                    egui::Button::new(tr("Upright")),
+                                )
+                                .on_hover_text(tr("Make the text read horizontally on screen"))
                                 .clicked()
                             {
                                 let delta = upright - spec.rotation;
@@ -697,12 +696,12 @@ impl App {
                             ui.label(if off == 0 {
                                 "upright".to_string()
                             } else {
-                                format!("{off}° turned")
+                                tf!("{}° turned", off)
                             });
                         });
                         ui.end_row();
                     }
-                    ui.label("Opacity");
+                    ui.label(tr("Opacity"));
                     let mut op = (spec.opacity * 100.0) as f32;
                     if ui
                         .add(egui::Slider::new(&mut op, 5.0..=100.0).suffix("%"))
@@ -721,7 +720,7 @@ impl App {
                             | AnnotationKind::StampText { .. }
                     ) || matches!(spec.kind, AnnotationKind::StampText { .. })
                     {
-                        ui.label("Line width");
+                        ui.label(tr("Line width"));
                         let mut w = spec.border_width as f32;
                         if ui
                             .add(egui::Slider::new(&mut w, 0.0..=20.0).suffix(" pt"))
@@ -730,17 +729,17 @@ impl App {
                             spec.border_width = f64::from(w);
                         }
                         ui.end_row();
-                        ui.label("Style");
+                        ui.label(tr("Style"));
                         ui.horizontal(|ui| {
                             ui.selectable_value(
                                 &mut spec.border_style,
                                 BorderStyle::Solid,
-                                "Solid",
+                                tr("Solid"),
                             );
                             ui.selectable_value(
                                 &mut spec.border_style,
                                 BorderStyle::Dashed,
-                                "Dashed",
+                                tr("Dashed"),
                             );
                         });
                         ui.end_row();
@@ -752,16 +751,16 @@ impl App {
                         ..
                     } = &mut spec.kind
                     {
-                        ui.label("Font size");
+                        ui.label(tr("Font size"));
                         ui.add(egui::Slider::new(font_size, 6.0..=72.0).suffix(" pt"));
                         ui.end_row();
-                        ui.label("Text color");
+                        ui.label(tr("Text color"));
                         let mut tc = [text_color.0, text_color.1, text_color.2];
                         if ui.color_edit_button_rgb(&mut tc).changed() {
                             *text_color = Rgb(tc[0], tc[1], tc[2]);
                         }
                         ui.end_row();
-                        ui.label("Font");
+                        ui.label(tr("Font"));
                         ui.horizontal(|ui| {
                             crate::fontpick::font_picker(ui, "freetext_font", font);
                         });
@@ -774,16 +773,16 @@ impl App {
                     spec.kind,
                     AnnotationKind::FreeText { .. } | AnnotationKind::StampText { .. }
                 ) {
-                    "Text"
+                    tr("Text")
                 } else {
-                    "Comment"
+                    tr("Comment")
                 },
             );
             ui.add(
                 egui::TextEdit::multiline(&mut spec.contents)
                     .desired_rows(4)
                     .desired_width(f32::INFINITY)
-                    .hint_text("Add a comment…"),
+                    .hint_text(tr("Add a comment…")),
             );
         });
         if spec != before && can_edit {
@@ -820,7 +819,7 @@ impl App {
             let key = format!("props:{:?}", ids);
             let r = self.tabs[ti].session.execute_coalesced(
                 &key,
-                "Change annotation properties",
+                tr("Change annotation properties"),
                 |tx| {
                     for (id, s) in &targets {
                         annot::update_annotation(tx, *id, s)?;
@@ -835,7 +834,7 @@ impl App {
         ui.add_space(8.0);
         ui.horizontal(|ui| {
             if ui
-                .add_enabled(can_edit, egui::Button::new("Duplicate"))
+                .add_enabled(can_edit, egui::Button::new(tr("Duplicate")))
                 .clicked()
             {
                 self.run_command(ctx, C::EditDuplicate);
@@ -843,7 +842,7 @@ impl App {
             if ui
                 .add_enabled(
                     can_edit,
-                    egui::Button::new(RichText::new("Delete").color(self.pal.danger)),
+                    egui::Button::new(RichText::new(tr("Delete")).color(self.pal.danger)),
                 )
                 .clicked()
             {
@@ -855,13 +854,17 @@ impl App {
 
     fn tool_options(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
         let t = self.tool;
-        ui.label(RichText::new(editor_core::command::info(t.command()).title).strong());
-        ui.label(RichText::new(t.hint()).color(self.pal.text_dim).size(12.0));
+        ui.label(RichText::new(tr(editor_core::command::info(t.command()).title)).strong());
+        ui.label(
+            RichText::new(tr(t.hint()))
+                .color(self.pal.text_dim)
+                .size(12.0),
+        );
         ui.add_space(8.0);
         use editor_core::tools::ToolFamily;
         if t.family() == ToolFamily::Annotation {
             ui.label(
-                RichText::new("Defaults for new markup")
+                RichText::new(tr("Defaults for new markup"))
                     .size(12.0)
                     .color(self.pal.text_dim),
             );
@@ -871,18 +874,18 @@ impl App {
                 .num_columns(2)
                 .spacing([8.0, 6.0])
                 .show(ui, |ui| {
-                    ui.label("Highlight");
+                    ui.label(tr("Highlight"));
                     changed |= ui.color_edit_button_rgb(&mut d.highlight).changed();
                     ui.end_row();
-                    ui.label("Line color");
+                    ui.label(tr("Line color"));
                     changed |= ui.color_edit_button_rgb(&mut d.stroke).changed();
                     ui.end_row();
-                    ui.label("Line width");
+                    ui.label(tr("Line width"));
                     changed |= ui
                         .add(egui::Slider::new(&mut d.stroke_width, 0.5..=12.0).suffix(" pt"))
                         .changed();
                     ui.end_row();
-                    ui.label("Opacity");
+                    ui.label(tr("Opacity"));
                     let mut op = (d.opacity * 100.0) as f32;
                     if ui
                         .add(egui::Slider::new(&mut op, 5.0..=100.0).suffix("%"))
@@ -892,12 +895,12 @@ impl App {
                         changed = true;
                     }
                     ui.end_row();
-                    ui.label("Font size");
+                    ui.label(tr("Font size"));
                     changed |= ui
                         .add(egui::Slider::new(&mut d.font_size, 6.0..=48.0).suffix(" pt"))
                         .changed();
                     ui.end_row();
-                    ui.label("Font");
+                    ui.label(tr("Font"));
                     ui.vertical(|ui| {
                         let mut st = d.font_style();
                         ui.horizontal_wrapped(|ui| {
@@ -913,11 +916,11 @@ impl App {
                 self.prefs_dirty = true;
             }
             ui.add_space(6.0);
-            ui.label("Author");
+            ui.label(tr("Author"));
             if ui
                 .add(
                     egui::TextEdit::singleline(&mut self.prefs.author)
-                        .hint_text("Your name")
+                        .hint_text(tr("Your name"))
                         .desired_width(f32::INFINITY),
                 )
                 .changed()
@@ -926,8 +929,10 @@ impl App {
             }
         } else {
             ui.label(
-                RichText::new("Select an annotation or some text to see its properties.")
-                    .color(self.pal.text_dim),
+                RichText::new(tr(
+                    "Select an annotation or some text to see its properties.",
+                ))
+                .color(self.pal.text_dim),
             );
         }
         // Document / page info.
@@ -936,20 +941,18 @@ impl App {
             && let Some(p) = pages.get(tab.session.view.current_page)
         {
             ui.add_space(14.0);
-            ui.label(RichText::new("Page").strong());
+            ui.label(RichText::new(tr("Page")).strong());
             let s = p.geometry.view_size(Rotation::R0);
             ui.label(
-                RichText::new(format!(
+                RichText::new(tf!(
                     "Size: {}",
                     crate::chrome::format_size(s.width, s.height)
                 ))
                 .size(12.0),
             );
-            ui.label(
-                RichText::new(format!("Rotation: {}°", p.geometry.rotate.degrees())).size(12.0),
-            );
+            ui.label(RichText::new(tf!("Rotation: {}°", p.geometry.rotate.degrees())).size(12.0));
             if (p.geometry.user_unit - 1.0).abs() > 1e-9 {
-                ui.label(RichText::new(format!("UserUnit: {}", p.geometry.user_unit)).size(12.0));
+                ui.label(RichText::new(tf!("UserUnit: {}", p.geometry.user_unit)).size(12.0));
             }
         }
         self.related_tools(
@@ -963,7 +966,7 @@ impl App {
     fn related_tools(&mut self, ui: &mut egui::Ui, ctx: &egui::Context, ids: &[C]) {
         ui.add_space(14.0);
         ui.label(
-            RichText::new("Related tools")
+            RichText::new(tr("Related tools"))
                 .size(11.0)
                 .color(self.pal.text_dim),
         );
@@ -1015,12 +1018,12 @@ impl App {
         };
         ui.add(
             egui::TextEdit::singleline(&mut self.tabs[ti].ui.comments_filter)
-                .hint_text("Filter comments")
+                .hint_text(tr("Filter comments"))
                 .desired_width(f32::INFINITY),
         );
         ui.add_space(4.0);
         if list.is_empty() {
-            ui.label(RichText::new("No comments or markup yet.").color(self.pal.text_dim));
+            ui.label(RichText::new(tr("No comments or markup yet.")).color(self.pal.text_dim));
             return;
         }
         let filter = self.tabs[ti].ui.comments_filter.to_lowercase();
@@ -1085,13 +1088,13 @@ impl App {
 
 pub fn pretty_subtype(s: &str) -> String {
     match s {
-        "Square" => "Rectangle".into(),
-        "Circle" => "Ellipse".into(),
-        "Text" => "Note".into(),
-        "FreeText" => "Text box".into(),
-        "StrikeOut" => "Strikethrough".into(),
-        "PolyLine" => "Polyline".into(),
-        "Ink" => "Drawing".into(),
+        "Square" => tr("Rectangle").into(),
+        "Circle" => tr("Ellipse").into(),
+        "Text" => tr("Note").into(),
+        "FreeText" => tr("Text box").into(),
+        "StrikeOut" => tr("Strikethrough").into(),
+        "PolyLine" => tr("Polyline").into(),
+        "Ink" => tr("Drawing").into(),
         other => other.to_string(),
     }
 }

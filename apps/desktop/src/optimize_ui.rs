@@ -2,7 +2,9 @@
 //! smaller copy on a background thread. The open document and its file are never changed.
 
 use crate::dialogs::modal;
+use crate::i18n::tr;
 use crate::state::*;
+use crate::tf;
 use egui::RichText;
 use pdf_engine::optimize::{OptimizeOptions, optimize_bytes};
 use pdf_engine::save::{SaveOptions, write_atomic};
@@ -49,7 +51,9 @@ impl App {
         };
         let doc = tab.session.doc();
         if doc.capabilities().encrypted {
-            self.notify_error("Encrypted documents cannot be optimized in this version.");
+            self.notify_error(tr(
+                "Encrypted documents cannot be optimized in this version.",
+            ));
             return;
         }
         self.dialog = Some(Dialog::Optimize(Box::new(OptimizeDialogState {
@@ -64,27 +68,30 @@ impl App {
         let mut go = false;
         let mut cancel = false;
         modal(ctx, "optimize", |ui| {
-            ui.heading("Save As Optimized");
-            ui.label(format!(
-                "Writes a smaller copy of this document (now about {}). The open document and its file are not changed.",
-                human_size(st.size)
-            ));
+            ui.heading(tr("Save As Optimized"));
+            ui.label(tf!("Writes a smaller copy of this document (now about {}). The open document and its file are not changed.", human_size(st.size)));
             ui.add_space(6.0);
             for (p, title, text) in [
                 (
                     Preset::Lossless,
-                    "Lossless",
-                    "Removes unused data, merges duplicates and compresses better. Pictures stay exactly as they are.",
+                    tr("Lossless"),
+                    tr(
+                        "Removes unused data, merges duplicates and compresses better. Pictures stay exactly as they are.",
+                    ),
                 ),
                 (
                     Preset::Balanced,
-                    "Balanced (recommended)",
-                    "Also reduces pictures above 150 dpi (photographs become JPEG, quality 75). Fine for screen and office printing.",
+                    tr("Balanced (recommended)"),
+                    tr(
+                        "Also reduces pictures above 150 dpi (photographs become JPEG, quality 75). Fine for screen and office printing.",
+                    ),
                 ),
                 (
                     Preset::Smallest,
-                    "Smallest",
-                    "Reduces pictures above 96 dpi (JPEG quality 60). For email and screen only; text and drawings stay sharp.",
+                    tr("Smallest"),
+                    tr(
+                        "Reduces pictures above 96 dpi (JPEG quality 60). For email and screen only; text and drawings stay sharp.",
+                    ),
                 ),
             ] {
                 ui.radio_value(&mut st.preset, p, RichText::new(title).strong());
@@ -93,7 +100,7 @@ impl App {
             }
             if st.preset != Preset::Lossless {
                 ui.label(
-                    RichText::new("Reducing pictures is permanent in the new copy; keep the original if you need full quality.")
+                    RichText::new(tr("Reducing pictures is permanent in the new copy; keep the original if you need full quality."))
                         .size(12.0)
                         .color(self.pal.text_dim),
                 );
@@ -102,7 +109,7 @@ impl App {
                 ui.add_space(4.0);
                 ui.colored_label(
                     self.pal.danger,
-                    "This document has digital signatures. The optimized copy is rewritten, so those signatures will no longer be valid.",
+                    tr("This document has digital signatures. The optimized copy is rewritten, so those signatures will no longer be valid."),
                 );
             }
             if let Some(e) = &st.error {
@@ -110,10 +117,12 @@ impl App {
             }
             ui.add_space(8.0);
             ui.horizontal(|ui| {
-                if ui.button("Choose file and save…").clicked() {
+                if ui.button(tr("Choose file and save…")).clicked() {
                     go = true;
                 }
-                if ui.button("Cancel").clicked() || ui.input(|i| i.key_pressed(egui::Key::Escape)) {
+                if ui.button(tr("Cancel")).clicked()
+                    || ui.input(|i| i.key_pressed(egui::Key::Escape))
+                {
                     cancel = true;
                 }
             });
@@ -145,14 +154,16 @@ impl App {
         let snap = tab
             .session
             .snapshot()
-            .map_err(|e| format!("Could not prepare the document: {e}"))?;
+            .map_err(|e| tf!("Could not prepare the document: {}", e))?;
         let pages = tab.session.doc().page_count();
         let start = current.as_deref().and_then(|p| p.parent());
         let Some(dest) = platform::dialogs::pick_save_pdf(&suggested, start) else {
             return Ok(false);
         };
         if current.as_deref() == Some(dest.as_path()) {
-            return Err("Choose a different file name: the original is never overwritten.".into());
+            return Err(
+                tr("Choose a different file name: the original is never overwritten.").into(),
+            );
         }
         let opts = preset.options();
         let (tx, rx) = std::sync::mpsc::channel();
@@ -173,23 +184,26 @@ impl App {
                     .map(|n| n.to_string_lossy().into_owned())
                     .unwrap_or_default();
                 Ok::<String, String>(if rep.kept_original {
-                    format!(
-                        "Saved {name}: no further reduction was possible, so it is a plain copy ({}).",
+                    tf!(
+                        "Saved {}: no further reduction was possible, so it is a plain copy ({}).",
+                        name,
                         human_size(rep.after)
                     )
                 } else {
                     let pct = 100.0 - rep.after as f64 * 100.0 / rep.before.max(1) as f64;
                     let mut extra = Vec::new();
                     if rep.images_downsampled > 0 {
-                        extra.push(format!("{} picture(s) reduced", rep.images_downsampled));
+                        extra.push(tf!("{} picture(s) reduced", rep.images_downsampled));
                     }
                     if rep.duplicates_merged > 0 {
-                        extra.push(format!("{} duplicate(s) merged", rep.duplicates_merged));
+                        extra.push(tf!("{} duplicate(s) merged", rep.duplicates_merged));
                     }
-                    format!(
-                        "Saved {name}: {} → {} (−{pct:.0} %){}",
+                    tf!(
+                        "Saved {}: {} → {} (−{} %){}",
+                        name,
                         human_size(rep.before),
                         human_size(rep.after),
+                        format!("{:.0}", pct),
                         if extra.is_empty() {
                             String::new()
                         } else {
@@ -198,11 +212,11 @@ impl App {
                     )
                 })
             });
-            let _ =
-                tx.send(r.unwrap_or_else(|_| Err("The optimizer stopped unexpectedly.".into())));
+            let _ = tx
+                .send(r.unwrap_or_else(|_| Err(tr("The optimizer stopped unexpectedly.").into())));
         });
         self.exports.push(crate::docops_ui::ExportJob { rx });
-        self.notify("Optimizing…");
+        self.notify(tr("Optimizing…"));
         Ok(true)
     }
 }

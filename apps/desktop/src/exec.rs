@@ -1,7 +1,9 @@
 //! Command execution: every user-visible action funnels through [`App::run_command`].
 
 use crate::app::OS;
+use crate::i18n::tr;
 use crate::state::*;
+use crate::tf;
 use editor_core::command::{self, CommandId};
 use editor_core::session::DocumentSession;
 use editor_core::tools::{Tool, ToolFamily};
@@ -99,8 +101,8 @@ impl App {
     pub fn tooltip_for(&self, id: CommandId) -> String {
         let info = command::info(id);
         match self.prefs.keybindings.primary_label(id, OS) {
-            Some(s) => format!("{} ({})\n{}", info.title, s, info.description),
-            None => format!("{}\n{}", info.title, info.description),
+            Some(s) => format!("{} ({})\n{}", tr(info.title), s, tr(info.description)),
+            None => format!("{}\n{}", tr(info.title), tr(info.description)),
         }
     }
 
@@ -227,7 +229,7 @@ impl App {
                     self.dialog = Some(Dialog::Preferences {
                         filter: "ai".into(),
                     });
-                    self.notify("Add an AI provider key first.");
+                    self.notify(tr("Add an AI provider key first."));
                 } else if self.ai_consent_or_ask(crate::copilot_ui::AiPending::OpenTranslate) {
                     self.open_translate_dialog(ctx);
                 }
@@ -237,9 +239,9 @@ impl App {
                 self.prefs_dirty = true;
                 let on = self.prefs.snap_to_geometry;
                 self.notify(if on {
-                    "Snap to drawing geometry on"
+                    tr("Snap to drawing geometry on")
                 } else {
-                    "Snap to drawing geometry off"
+                    tr("Snap to drawing geometry off")
                 });
             }
             C::GoNextPage => self.go_relative(1),
@@ -351,7 +353,7 @@ impl App {
                 }
                 if caps.has_javascript {
                     lines.push(
-                        "This document contains JavaScript. BergPDF never runs document scripts."
+                        tr("This document contains JavaScript. BergPDF never runs document scripts.")
                             .into(),
                     );
                 }
@@ -366,7 +368,7 @@ impl App {
             }
             Err(e) => {
                 self.dialog = Some(Dialog::Error {
-                    title: "Cannot open document".into(),
+                    title: tr("Cannot open document").into(),
                     detail: format!("{}\n\n{e}", path.display()),
                 });
             }
@@ -416,14 +418,15 @@ impl App {
         match tab.session.save() {
             Ok(()) => {
                 let name = tab.session.title.clone();
-                self.notify(format!("Saved {name}"));
+                self.notify(tf!("Saved {}", name));
                 true
             }
             Err(e) => {
                 self.dialog = Some(Dialog::Error {
-                    title: "Could not save".into(),
-                    detail: format!(
-                        "{e}\n\nYour original file was not modified. Your changes are still open; use Save As to write a copy elsewhere."
+                    title: tr("Could not save").into(),
+                    detail: tf!(
+                        "{}\n\nYour original file was not modified. Your changes are still open; use Save As to write a copy elsewhere.",
+                        e
                     ),
                 });
                 false
@@ -448,12 +451,12 @@ impl App {
                 Ok(()) => {
                     self.prefs.push_recent(&dest.to_string_lossy());
                     self.prefs_dirty = true;
-                    self.notify(format!("Saved {}", dest.display()));
+                    self.notify(tf!("Saved {}", dest.display()));
                 }
                 Err(e) => {
                     self.dialog = Some(Dialog::Error {
-                        title: "Could not save".into(),
-                        detail: format!("{e}\n\nThe destination was not modified."),
+                        title: tr("Could not save").into(),
+                        detail: tf!("{}\n\nThe destination was not modified.", e),
                     });
                 }
             }
@@ -522,7 +525,7 @@ impl App {
         if let Some(l) = label {
             self.notify(format!(
                 "{} {}",
-                if undo { "Undid" } else { "Redid" },
+                if undo { tr("Undid") } else { tr("Redid") },
                 l.to_lowercase()
             ));
         }
@@ -570,9 +573,9 @@ impl App {
         }
         let r = tab.session.execute(
             if sel.len() == 1 {
-                "Delete annotation"
+                tr("Delete annotation")
             } else {
-                "Delete annotations"
+                tr("Delete annotations")
             },
             |tx| {
                 for (page, id) in &sel {
@@ -604,7 +607,7 @@ impl App {
         if specs.is_empty() {
             return;
         }
-        let r = tab.session.execute("Duplicate annotations", |tx| {
+        let r = tab.session.execute(tr("Duplicate annotations"), |tx| {
             let mut out = Vec::new();
             for (page, spec) in &specs {
                 out.push((
@@ -750,9 +753,9 @@ impl App {
             return;
         }
         let label = if turns > 0 {
-            "Rotate pages clockwise"
+            tr("Rotate pages clockwise")
         } else {
-            "Rotate pages counter-clockwise"
+            tr("Rotate pages counter-clockwise")
         };
         let Some(tab) = self.active_tab_mut() else {
             return;
@@ -772,7 +775,7 @@ impl App {
         };
         let r = tab
             .session
-            .execute("Delete pages", |tx| pageops::delete_pages(tx, &pages));
+            .execute(tr("Delete pages"), |tx| pageops::delete_pages(tx, &pages));
         tab.session.selection.pages.clear();
         let n = tab.session.doc().page_count();
         tab.session.view.current_page = tab.session.view.current_page.min(n.saturating_sub(1));
@@ -797,7 +800,7 @@ impl App {
             .get(cur)
             .map(|p| p.geometry.view_size(Rotation::R0))
             .unwrap_or(pdf_engine::geom::Size::new(595.0, 842.0));
-        let r = tab.session.execute("Insert blank page", |tx| {
+        let r = tab.session.execute(tr("Insert blank page"), |tx| {
             pageops::insert_blank_page(tx, cur + 1, size.width, size.height)
         });
         match r {
@@ -835,7 +838,7 @@ impl App {
         let Some(tab) = self.active_tab_mut() else {
             return;
         };
-        let r = tab.session.execute("Duplicate pages", |tx| {
+        let r = tab.session.execute(tr("Duplicate pages"), |tx| {
             pageops::duplicate_pages(tx, &pages, policy)
         });
         match r {
@@ -856,10 +859,9 @@ impl App {
             return;
         };
         let target = (first as i64 + d).max(0) as usize;
-        if let Err(e) = tab
-            .session
-            .execute("Move pages", |tx| pageops::move_pages(tx, &pages, target))
-        {
+        if let Err(e) = tab.session.execute(tr("Move pages"), |tx| {
+            pageops::move_pages(tx, &pages, target)
+        }) {
             self.notify_error(e.to_string());
         }
     }
@@ -896,7 +898,7 @@ impl App {
                 self.tabs
                     .get(self.active)
                     .ok_or(pdf_engine::EngineError::InvalidArgument(
-                        "no document".into(),
+                        tr("no document").into(),
                     ))?;
             let mut new_doc = pdf_engine::doc::PdfDocument::new_empty()?;
             new_doc.transact(|tx| {
@@ -907,7 +909,7 @@ impl App {
         })();
         match result {
             Ok(()) => {
-                self.notify(format!(
+                self.notify(tf!(
                     "Extracted {} page(s) to {}",
                     pages.len(),
                     dest.display()
@@ -916,7 +918,7 @@ impl App {
             }
             Err(e) => {
                 self.dialog = Some(Dialog::Error {
-                    title: "Could not extract pages".into(),
+                    title: tr("Could not extract pages").into(),
                     detail: e.to_string(),
                 })
             }
@@ -942,7 +944,7 @@ impl App {
                 Ok(d) => sources.push((f.clone(), d)),
                 Err(e) => {
                     self.dialog = Some(Dialog::Error {
-                        title: "Cannot merge".into(),
+                        title: tr("Cannot merge").into(),
                         detail: format!("{}\n\n{e}", f.display()),
                     });
                     return;
@@ -964,7 +966,7 @@ impl App {
             return;
         };
         let n = tab.session.doc().page_count();
-        let r = tab.session.execute("Merge documents", |tx| {
+        let r = tab.session.execute(tr("Merge documents"), |tx| {
             let mut at = n;
             let mut total = 0;
             for (_, src) in &sources {
@@ -978,11 +980,11 @@ impl App {
         match r {
             Ok(total) => {
                 tab.ui.goto = Some(n);
-                self.notify(format!("Added {total} page(s)"));
+                self.notify(tf!("Added {} page(s)", total));
             }
             Err(e) => {
                 self.dialog = Some(Dialog::Error {
-                    title: "Cannot merge".into(),
+                    title: tr("Cannot merge").into(),
                     detail: e.to_string(),
                 })
             }
@@ -1014,12 +1016,14 @@ impl App {
                     .map_or_else(|| "image".into(), |n| n.to_string_lossy().into_owned());
                 let session = DocumentSession::from_new_document(doc, &format!("{stem}.pdf"));
                 self.add_tab(session);
-                self.notify("Opened the picture as a PDF page. Save to create the PDF file.");
+                self.notify(tr(
+                    "Opened the picture as a PDF page. Save to create the PDF file.",
+                ));
                 ctx.request_repaint();
             }
             Err(e) => {
                 self.dialog = Some(Dialog::Error {
-                    title: "Cannot open image".into(),
+                    title: tr("Cannot open image").into(),
                     detail: format!("{}\n\n{e}", path.display()),
                 });
             }
@@ -1041,13 +1045,13 @@ impl App {
             match std::fs::read(f) {
                 Ok(b) => datas.push(b),
                 Err(e) => {
-                    self.notify_error(format!("Could not read {}: {e}", f.display()));
+                    self.notify_error(tf!("Could not read {}: {}", f.display(), e));
                     return;
                 }
             }
         }
         let n = datas.len();
-        let r = tab.session.execute("Insert image pages", |tx| {
+        let r = tab.session.execute(tr("Insert image pages"), |tx| {
             let mut last = None;
             for (i, d) in datas.iter().enumerate() {
                 last = Some(pdf_engine::imagedoc::insert_image_page(tx, at + i, d)?);
@@ -1057,7 +1061,7 @@ impl App {
         match r {
             Ok(_) => {
                 tab.ui.goto = Some(at);
-                self.notify(format!("Inserted {n} image page(s)."));
+                self.notify(tf!("Inserted {} image page(s).", n));
             }
             Err(e) => self.notify_error(e.to_string()),
         }

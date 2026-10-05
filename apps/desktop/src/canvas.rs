@@ -1,5 +1,6 @@
 //! The document canvas: layout, virtualized page painting, tiles, zoom/scroll.
 
+use crate::i18n::tr;
 use crate::state::*;
 use editor_core::jobs::{Job, JobKind};
 use editor_core::tiles::{
@@ -198,7 +199,7 @@ impl App {
             ui.painter().text(
                 rect.center(),
                 egui::Align2::CENTER_CENTER,
-                "This document has no pages",
+                tr("This document has no pages"),
                 egui::FontId::proportional(16.0),
                 self.pal.text_dim,
             );

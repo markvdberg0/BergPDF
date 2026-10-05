@@ -1298,18 +1298,33 @@ fn is_subsequence(needle: &str, hay: &str) -> bool {
 
 /// Search commands by title, description, category and keywords.
 pub fn search_commands(query: &str, enabled: impl Fn(CommandId) -> bool) -> Vec<CommandId> {
+    search_commands_with(query, enabled, |s| s)
+}
+
+/// [`search_commands`] that also matches the texts as shown in another language: `translate` maps a
+/// title, description or category name to its translation (English keywords always match too).
+pub fn search_commands_with(
+    query: &str,
+    enabled: impl Fn(CommandId) -> bool,
+    translate: impl Fn(&'static str) -> &'static str,
+) -> Vec<CommandId> {
     let mut scored: Vec<(i32, CommandId)> = REGISTRY
         .iter()
         .filter(|c| enabled(c.id))
         .filter_map(|c| {
             let hay = format!(
-                "{} {} {} {}",
+                "{} {} {} {} {} {} {}",
                 c.title,
+                translate(c.title),
                 c.keywords,
                 c.category.title(),
-                c.description
+                translate(c.category.title()),
+                c.description,
+                translate(c.description)
             );
-            let title = score(query, c.title).map(|s| s + 500);
+            let title = score(query, c.title)
+                .max(score(query, translate(c.title)))
+                .map(|s| s + 500);
             let rest = score(query, &hay);
             title.or(rest).map(|s| (s, c.id))
         })

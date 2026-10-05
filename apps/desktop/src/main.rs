@@ -15,6 +15,7 @@ mod exec;
 mod fontpick;
 mod forms_ui;
 mod gpu;
+mod i18n;
 mod icons;
 mod interaction;
 mod measure_ui;

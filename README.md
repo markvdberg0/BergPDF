@@ -33,6 +33,8 @@ Edit, annotate, sign, measure, fill in forms and make scans searchable. Offline,
 Tabs, thumbnails, bookmarks, links, full-text search, fit page / fit width / any zoom, single or continuous
 pages, a dark page view, a command palette (Ctrl+K) and a right-click menu for what you can do right there.
 Pictures (PNG, JPEG) open as one-page PDFs.
+The interface is available in English, Dutch (Nederlands) and German (Deutsch); BergPDF follows your system
+language, or you pick one in Preferences.
 
 **Annotate**
 Highlight, underline, strikeout, squiggly, sticky notes, text boxes, callouts (click the point, then place

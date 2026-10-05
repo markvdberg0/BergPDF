@@ -5,7 +5,9 @@
 //! missing the dialog says exactly where to put them instead of failing silently.
 
 use crate::dialogs::modal;
+use crate::i18n::tr;
 use crate::state::*;
+use crate::tf;
 use editor_core::ocr::{OcrPageSpec, recognize_pages};
 use egui::RichText;
 use pdf_engine::doc::PageId;
@@ -126,7 +128,7 @@ fn start_model_download() -> ModelDownload {
                 &c2,
             )
         });
-        let _ = tx.send(r.unwrap_or_else(|_| Err("The download stopped unexpectedly.".into())));
+        let _ = tx.send(r.unwrap_or_else(|_| Err(tr("The download stopped unexpectedly.").into())));
     });
     ModelDownload {
         rx,
@@ -170,11 +172,13 @@ impl App {
             return;
         }
         if !self.tabs[self.active].session.doc().capabilities().can_edit {
-            self.notify_error("This document cannot be modified, so text cannot be added to it.");
+            self.notify_error(tr(
+                "This document cannot be modified, so text cannot be added to it.",
+            ));
             return;
         }
         if self.ocr_job.is_some() {
-            self.notify("Text recognition is already running.");
+            self.notify(tr("Text recognition is already running."));
             return;
         }
         self.dialog = Some(Dialog::Ocr(Box::new(OcrDialogState {
@@ -201,7 +205,7 @@ impl App {
                         Ok(()) => {
                             st.models_ok = pdf_ocr::models_present(&model_dir());
                             st.error = None;
-                            self.notify("OCR models installed.");
+                            self.notify(tr("OCR models installed."));
                         }
                         Err(e) => st.error = Some(e),
                     }
@@ -211,7 +215,7 @@ impl App {
                 }
                 Err(mpsc::TryRecvError::Disconnected) => {
                     st.download = None;
-                    st.error = Some("The download stopped unexpectedly.".into());
+                    st.error = Some(tr("The download stopped unexpectedly.").into());
                 }
             }
         }
@@ -223,9 +227,9 @@ impl App {
             .trim_end_matches('/')
             .to_string();
         modal(ctx, "ocr_dialog", |ui| {
-            ui.heading("Recognize text (OCR)");
+            ui.heading(tr("Recognize text (OCR)"));
             ui.label(
-                RichText::new("Makes scanned pages searchable and their text selectable by adding an invisible text layer. How the pages look does not change.")
+                RichText::new(tr("Makes scanned pages searchable and their text selectable by adding an invisible text layer. How the pages look does not change."))
                     .size(12.0)
                     .color(self.pal.text_dim),
             );
@@ -233,7 +237,7 @@ impl App {
             if !st.models_ok {
                 ui.colored_label(
                     self.pal.danger,
-                    "The text-recognition models are not installed.",
+                    tr("The text-recognition models are not installed."),
                 );
                 match &st.download {
                     Some(d) => {
@@ -245,18 +249,16 @@ impl App {
                             egui::ProgressBar::new((got as f32 / tot as f32).min(1.0))
                                 .text(format!("{:.1} MB", got as f64 / 1_048_576.0)),
                         );
-                        if ui.button("Cancel download").clicked() {
+                        if ui.button(tr("Cancel download")).clicked() {
                             cancel_download = true;
                         }
                     }
                     None => {
                         ui.label(
-                            RichText::new(format!(
-                                "One click installs them: BergPDF will connect to {host}, download the two model files (about 12 MB) and check them against built-in checksums. Nothing else is sent. After that OCR works offline."
-                            ))
+                            RichText::new(tf!("One click installs them: BergPDF will connect to {}, download the two model files (about 12 MB) and check them against built-in checksums. Nothing else is sent. After that OCR works offline.", host))
                             .size(12.0),
                         );
-                        if ui.button("Download the OCR models").clicked() {
+                        if ui.button(tr("Download the OCR models")).clicked() {
                             begin_download = true;
                         }
                     }
@@ -264,7 +266,7 @@ impl App {
                 ui.add_space(6.0);
                 ui.label(
                     RichText::new(
-                        "Or install them yourself (no network needed): put the two model files in this folder:",
+                        tr("Or install them yourself (no network needed): put the two model files in this folder:"),
                     )
                     .size(12.0),
                 );
@@ -290,30 +292,30 @@ impl App {
                         .size(11.5)
                         .color(self.pal.text_dim),
                 );
-                if ui.button("Copy folder path").clicked() {
+                if ui.button(tr("Copy folder path")).clicked() {
                     ctx.copy_text(dir.display().to_string());
                 }
                 ui.add_space(6.0);
-                if ui.button("Check again").clicked() {
+                if ui.button(tr("Check again")).clicked() {
                     st.models_ok = pdf_ocr::models_present(&dir);
                 }
             } else {
-                ui.label("Pages");
+                ui.label(tr("Pages"));
                 ui.horizontal(|ui| {
-                    ui.radio_value(&mut st.scope, OcrScope::All, "All pages");
-                    ui.radio_value(&mut st.scope, OcrScope::Current, "Current page");
-                    ui.radio_value(&mut st.scope, OcrScope::Selected, "Selected thumbnails");
+                    ui.radio_value(&mut st.scope, OcrScope::All, tr("All pages"));
+                    ui.radio_value(&mut st.scope, OcrScope::Current, tr("Current page"));
+                    ui.radio_value(&mut st.scope, OcrScope::Selected, tr("Selected thumbnails"));
                 });
                 ui.checkbox(
                     &mut st.include_pages_with_text,
-                    "Also recognise pages that already contain text",
+                    tr("Also recognise pages that already contain text"),
                 );
                 ui.add_space(4.0);
                 ui.label(
                     RichText::new(
-                        "Works for printed text in the Latin alphabet. Accented letters (é, ë, ü…) are not in the \
+                        tr("Works for printed text in the Latin alphabet. Accented letters (é, ë, ü…) are not in the \
                          recognition alphabet and come out as plain or wrong letters; handwriting, very small print \
-                         and rotated pages do poorly. Check important numbers by eye.",
+                         and rotated pages do poorly. Check important numbers by eye."),
                     )
                     .size(11.5)
                     .color(self.pal.text_dim),
@@ -326,12 +328,14 @@ impl App {
             ui.add_space(8.0);
             ui.horizontal(|ui| {
                 if ui
-                    .add_enabled(st.models_ok, egui::Button::new("Start"))
+                    .add_enabled(st.models_ok, egui::Button::new(tr("Start")))
                     .clicked()
                 {
                     start = true;
                 }
-                if ui.button("Close").clicked() || ui.input(|i| i.key_pressed(egui::Key::Escape)) {
+                if ui.button(tr("Close")).clicked()
+                    || ui.input(|i| i.key_pressed(egui::Key::Escape))
+                {
                     cancel = true;
                 }
             });
@@ -361,7 +365,7 @@ impl App {
     fn start_ocr(&mut self, st: &OcrDialogState) -> Result<(), String> {
         let ti = self.active;
         let selected = self.selected_pages();
-        let tab = self.tabs.get_mut(ti).ok_or("No document is open.")?;
+        let tab = self.tabs.get_mut(ti).ok_or(tr("No document is open."))?;
         let infos = tab.session.pages().map_err(|e| e.to_string())?;
         let cur = tab.session.view.current_page;
         let mut specs: Vec<OcrPageSpec> = Vec::new();
@@ -384,7 +388,7 @@ impl App {
             });
         }
         if specs.is_empty() {
-            return Err("There is nothing to recognise: every chosen page already has text. Tick “Also recognise pages that already contain text” to run anyway.".into());
+            return Err(tr("There is nothing to recognise: every chosen page already has text. Tick “Also recognise pages that already contain text” to run anyway.").into());
         }
         let snap = tab.session.snapshot().map_err(|e| e.to_string())?;
         let dir = model_dir();
@@ -422,18 +426,20 @@ impl App {
         let (done, total) = (job.done.load(Ordering::Relaxed), job.total);
         let mut stop = false;
         modal(ctx, "ocr_progress", |ui| {
-            ui.heading("Recognizing text…");
+            ui.heading(tr("Recognizing text…"));
             ui.add(
                 egui::ProgressBar::new(done as f32 / total.max(1) as f32)
                     .desired_width(320.0)
-                    .text(format!("page {} of {}", (done + 1).min(total), total)),
+                    .text(tf!("page {} of {}", (done + 1).min(total), total)),
             );
             ui.label(
-                RichText::new("This runs on your computer and can take a few seconds per page.")
-                    .size(12.0)
-                    .color(self.pal.text_dim),
+                RichText::new(tr(
+                    "This runs on your computer and can take a few seconds per page.",
+                ))
+                .size(12.0)
+                .color(self.pal.text_dim),
             );
-            if ui.button("Cancel").clicked() {
+            if ui.button(tr("Cancel")).clicked() {
                 stop = true;
             }
         });
@@ -454,7 +460,7 @@ impl App {
                 return;
             }
             Err(mpsc::TryRecvError::Disconnected) => {
-                Err("Recognition stopped unexpectedly.".into())
+                Err(tr("Recognition stopped unexpectedly.").into())
             }
         };
         let cancelled = job.cancel.load(Ordering::Relaxed);
@@ -465,7 +471,7 @@ impl App {
         match outcome {
             Err(e) => {
                 self.dialog = Some(Dialog::Error {
-                    title: "Text recognition failed".into(),
+                    title: tr("Text recognition failed").into(),
                     detail: e,
                 });
             }
@@ -484,19 +490,16 @@ impl App {
                     self.notify(if cancelled {
                         "Cancelled."
                     } else {
-                        "No pages were recognised."
+                        tr("No pages were recognised.")
                     });
                     return;
                 }
                 match tab
                     .session
-                    .execute("Recognize text", |tx| add_ocr_text_layers(tx, &pages))
+                    .execute(tr("Recognize text"), |tx| add_ocr_text_layers(tx, &pages))
                 {
-                    Ok(words) if words > 0 => self.notify(format!(
-                        "Recognised {words} words on {n_pages} page(s){}. Search and copy now work; the page looks the same.",
-                        if cancelled { " before cancelling" } else { "" }
-                    )),
-                    Ok(_) => self.notify("No text was found on those pages."),
+                    Ok(words) if words > 0 => self.notify(tf!("Recognised {} words on {} page(s){}. Search and copy now work; the page looks the same.", words, n_pages, if cancelled { tr(" before cancelling") } else { "" })),
+                    Ok(_) => self.notify(tr("No text was found on those pages.")),
                     Err(e) => self.notify_error(e.to_string()),
                 }
             }

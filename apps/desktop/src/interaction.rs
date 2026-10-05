@@ -2,6 +2,7 @@
 //! plus the overlay painting that visualises them.
 
 use crate::canvas::ViewCtx;
+use crate::i18n::tr;
 use crate::state::*;
 use editor_core::selection::TextSelection;
 use editor_core::tools::Tool;
@@ -230,10 +231,10 @@ impl App {
             }
         }
         let label = match tool {
-            Tool::Note => "Add note",
-            Tool::Stamp => "Add stamp",
-            Tool::Callout => "Add callout",
-            _ => "Add text box",
+            Tool::Note => tr("Add note"),
+            Tool::Stamp => tr("Add stamp"),
+            Tool::Callout => tr("Add callout"),
+            _ => tr("Add text box"),
         };
         self.add_annotation(page, spec, label);
     }
@@ -339,12 +340,12 @@ impl App {
                     Tool::Rectangle => self.add_annotation(
                         page,
                         self.new_spec(AnnotationKind::Rectangle { rect: r }),
-                        "Add rectangle",
+                        tr("Add rectangle"),
                     ),
                     Tool::Ellipse => self.add_annotation(
                         page,
                         self.new_spec(AnnotationKind::Ellipse { rect: r }),
-                        "Add ellipse",
+                        tr("Add ellipse"),
                     ),
                     Tool::FreeText => {
                         // Sizes are judged on screen, so a rotated page behaves like an upright one.
@@ -405,9 +406,9 @@ impl App {
                     page,
                     self.new_spec(kind),
                     if tool == Tool::Arrow {
-                        "Add arrow"
+                        tr("Add arrow")
                     } else {
-                        "Add line"
+                        tr("Add line")
                     },
                 );
             }
@@ -416,7 +417,7 @@ impl App {
                     self.add_annotation(
                         page,
                         self.new_spec(AnnotationKind::Ink { strokes: vec![pts] }),
-                        "Add drawing",
+                        tr("Add drawing"),
                     );
                 }
             }
@@ -424,7 +425,7 @@ impl App {
                 self.add_annotation(
                     page,
                     self.new_spec(AnnotationKind::Polygon { points: pts }),
-                    "Add polygon",
+                    tr("Add polygon"),
                 );
             }
             Tool::Polyline if pts.len() >= 2 => {
@@ -433,7 +434,7 @@ impl App {
                     start_ending: LineEnding::None,
                     end_ending: LineEnding::None,
                 };
-                self.add_annotation(page, self.new_spec(kind), "Add polyline");
+                self.add_annotation(page, self.new_spec(kind), tr("Add polyline"));
             }
             _ => {}
         }
@@ -451,9 +452,9 @@ impl App {
             return;
         }
         let (kind, label) = match tool {
-            Tool::Highlight => (AnnotationKind::Highlight { quads }, "Highlight text"),
-            Tool::Underline => (AnnotationKind::Underline { quads }, "Underline text"),
-            _ => (AnnotationKind::StrikeOut { quads }, "Strike out text"),
+            Tool::Highlight => (AnnotationKind::Highlight { quads }, tr("Highlight text")),
+            Tool::Underline => (AnnotationKind::Underline { quads }, tr("Underline text")),
+            _ => (AnnotationKind::StrikeOut { quads }, tr("Strike out text")),
         };
         let spec = self.new_spec(kind);
         self.add_annotation(page, spec, label);
@@ -793,9 +794,9 @@ impl App {
                 Interaction::Move { delta } if delta.0.abs() + delta.1.abs() > 0.01 => {
                     let sel = self.tabs[ti].session.selection.annotations.clone();
                     let label = if sel.len() > 1 {
-                        "Move annotations"
+                        tr("Move annotations")
                     } else {
-                        "Move annotation"
+                        tr("Move annotation")
                     };
                     let r = self.tabs[ti].session.execute(label, |tx| {
                         for (_, id) in &sel {
@@ -819,9 +820,11 @@ impl App {
                             | AnnotationKind::FreeText { rect: r, .. } => *r = rect,
                             _ => {}
                         }
-                        let res = self.tabs[ti].session.execute("Resize annotation", |tx| {
-                            annot::update_annotation(tx, id, &spec)
-                        });
+                        let res = self.tabs[ti]
+                            .session
+                            .execute(tr("Resize annotation"), |tx| {
+                                annot::update_annotation(tx, id, &spec)
+                            });
                         if let Err(e) = res {
                             self.notify_error(e.to_string());
                         }
@@ -1138,7 +1141,7 @@ impl App {
                             painter.text(
                                 r.left_top() + Vec2::new(5.0, 3.0),
                                 egui::Align2::LEFT_TOP,
-                                "Callout text",
+                                tr("Callout text"),
                                 egui::FontId::proportional(
                                     (12.0 * vc.px_per_pt as f32).clamp(8.0, 40.0),
                                 ),

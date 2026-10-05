@@ -101,6 +101,17 @@ pub struct GraphicsPrefs {
     pub present: PresentChoice,
 }
 
+/// The language of the interface.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum Language {
+    /// Use the operating system's language when BergPDF has it, otherwise English.
+    #[default]
+    System,
+    English,
+    Dutch,
+    German,
+}
+
 /// Defaults applied to newly created annotations.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
@@ -301,6 +312,8 @@ pub struct Preferences {
     pub render_cache_mb: u32,
     /// Graphics API and frame presentation.
     pub graphics: GraphicsPrefs,
+    /// Interface language.
+    pub language: Language,
     /// Snap measurement points to line ends, corners, intersections and midpoints of the page.
     pub snap_to_geometry: bool,
     /// Whether the PDF Copilot panel is open.
@@ -337,6 +350,7 @@ impl Default for Preferences {
             right_sidebar_width: 300.0,
             render_cache_mb: 384,
             graphics: GraphicsPrefs::default(),
+            language: Language::default(),
             snap_to_geometry: true,
             show_copilot: false,
             ai: AiSettings::default(),
@@ -434,6 +448,12 @@ pub static SETTINGS: &[SettingInfo] = &[
         title: "Snap to drawing geometry",
         description: "Measurements snap to line ends, corners, intersections and midpoints.",
         keywords: "snap magnet cad corner endpoint intersection midpoint measure",
+    },
+    SettingInfo {
+        key: "language",
+        title: "Language",
+        description: "Interface language: English, Nederlands or Deutsch (or follow the system).",
+        keywords: "language taal sprache dutch nederlands german deutsch english translate interface",
     },
     SettingInfo {
         key: "graphics",

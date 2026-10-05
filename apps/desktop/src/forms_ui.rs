@@ -6,7 +6,9 @@
 
 use crate::canvas::ViewCtx;
 use crate::dialogs::modal;
+use crate::i18n::tr;
 use crate::state::*;
+use crate::tf;
 use editor_core::tools::Tool;
 use egui::{Color32, Pos2, RichText, Stroke};
 use pdf_engine::EngineError;
@@ -55,13 +57,13 @@ impl App {
         if let Some((f, w)) = hit {
             self.activate_widget(f, w);
         } else if self.tool == Tool::FillForm && form.fields.is_empty() {
-            self.notify("This document has no form fields.");
+            self.notify(tr("This document has no form fields."));
         }
     }
 
     fn activate_widget(&mut self, f: &FormField, w: &WidgetInfo) {
         if f.read_only {
-            self.notify(format!("“{}” is read-only.", f.name));
+            self.notify(tf!("“{}” is read-only.", f.name));
             return;
         }
         let ti = self.active;
@@ -98,37 +100,42 @@ impl App {
             FieldKind::Checkbox => {
                 let on = !matches!(f.value.as_str(), "" | "Off");
                 let id = f.id;
-                let r = self.tabs[ti]
-                    .session
-                    .execute(if on { "Uncheck box" } else { "Check box" }, |tx| {
-                        forms::set_checkbox(tx, id, !on)
-                    });
+                let r = self.tabs[ti].session.execute(
+                    if on {
+                        tr("Uncheck box")
+                    } else {
+                        tr("Check box")
+                    },
+                    |tx| forms::set_checkbox(tx, id, !on),
+                );
                 if let Err(e) = r {
                     self.notify_error(e.to_string());
                 }
             }
             FieldKind::Radio => {
                 let Some(state) = w.on_state.clone() else {
-                    self.notify("This radio button has no selectable state.");
+                    self.notify(tr("This radio button has no selectable state."));
                     return;
                 };
                 let id = f.id;
                 let r = self.tabs[ti]
                     .session
-                    .execute("Select option", |tx| forms::set_radio(tx, id, &state));
+                    .execute(tr("Select option"), |tx| forms::set_radio(tx, id, &state));
                 if let Err(e) = r {
                     self.notify_error(e.to_string());
                 }
             }
             FieldKind::PushButton => {
-                self.notify(
+                self.notify(tr(
                     "Buttons that run actions are not executed: BergPDF never runs scripts.",
-                );
+                ));
             }
             FieldKind::Signature => {
-                self.notify("Signature fields can be viewed, but signing is not supported.");
+                self.notify(tr(
+                    "Signature fields can be viewed, but signing is not supported.",
+                ));
             }
-            FieldKind::Unknown => self.notify("This field type is not supported."),
+            FieldKind::Unknown => self.notify(tr("This field type is not supported.")),
         }
     }
 
@@ -179,7 +186,7 @@ impl App {
     pub fn dialog_fill_field(&mut self, ctx: &egui::Context, st: &mut FillFieldState) -> bool {
         let mut choice: Option<bool> = None;
         modal(ctx, "fill_field", |ui| {
-            ui.heading("Fill field");
+            ui.heading(tr("Fill field"));
             ui.label(RichText::new(&st.name).size(12.0).color(self.pal.text_dim));
             ui.add_space(4.0);
             if st.options.is_empty() {
@@ -198,7 +205,7 @@ impl App {
                 }
                 if let Some(m) = st.max_len {
                     ui.label(
-                        RichText::new(format!("{} / {m} characters", st.value.chars().count()))
+                        RichText::new(tf!("{} / {} characters", st.value.chars().count(), m))
                             .size(11.0)
                             .color(self.pal.text_dim),
                     );
@@ -227,7 +234,9 @@ impl App {
                 if ui.button("OK").clicked() {
                     choice = Some(true);
                 }
-                if ui.button("Cancel").clicked() || ui.input(|i| i.key_pressed(egui::Key::Escape)) {
+                if ui.button(tr("Cancel")).clicked()
+                    || ui.input(|i| i.key_pressed(egui::Key::Escape))
+                {
                     choice = Some(false);
                 }
             });
@@ -239,12 +248,13 @@ impl App {
                 let (id, value) = (st.field, st.value.clone());
                 let r = self.tabs[self.active]
                     .session
-                    .execute("Fill field", |tx| forms::set_text_value(tx, id, &value));
+                    .execute(tr("Fill field"), |tx| forms::set_text_value(tx, id, &value));
                 match r {
                     Ok(()) => false,
                     Err(EngineError::MissingGlyphs { chars, .. }) => {
-                        st.error = Some(format!(
-                            "The bundled font cannot show these characters: {chars}. Remove or replace them."
+                        st.error = Some(tf!(
+                            "The bundled font cannot show these characters: {}. Remove or replace them.",
+                            chars
                         ));
                         true
                     }
@@ -265,9 +275,9 @@ impl App {
             st.policy = FormPolicy::Independent;
         }
         modal(ctx, "form_policy", |ui| {
-            ui.heading("These pages contain form fields");
+            ui.heading(tr("These pages contain form fields"));
             ui.label(
-                RichText::new("Choose what happens to the fields on the new copies.")
+                RichText::new(tr("Choose what happens to the fields on the new copies."))
                     .size(12.0)
                     .color(self.pal.text_dim),
             );
@@ -283,30 +293,38 @@ impl App {
             opt(
                 ui,
                 FormPolicy::Independent,
-                "Independent fields (recommended)",
-                "Each copy gets its own fields with new names (for example name_2). Filling one copy never changes another.",
+                tr("Independent fields (recommended)"),
+                tr(
+                    "Each copy gets its own fields with new names (for example name_2). Filling one copy never changes another.",
+                ),
                 true,
             );
             opt(
                 ui,
                 FormPolicy::Linked,
-                "Linked fields",
-                "Copies share the same fields, so typing in one updates every copy. Only possible within one document.",
+                tr("Linked fields"),
+                tr(
+                    "Copies share the same fields, so typing in one updates every copy. Only possible within one document.",
+                ),
                 !cross_document,
             );
             opt(
                 ui,
                 FormPolicy::Flatten,
-                "Flatten (static copy)",
-                "Field contents are drawn onto the copy as plain page content and the fields are removed there.",
+                tr("Flatten (static copy)"),
+                tr(
+                    "Field contents are drawn onto the copy as plain page content and the fields are removed there.",
+                ),
                 true,
             );
             ui.add_space(6.0);
             ui.horizontal(|ui| {
-                if ui.button("Continue").clicked() {
+                if ui.button(tr("Continue")).clicked() {
                     choice = Some(true);
                 }
-                if ui.button("Cancel").clicked() || ui.input(|i| i.key_pressed(egui::Key::Escape)) {
+                if ui.button(tr("Cancel")).clicked()
+                    || ui.input(|i| i.key_pressed(egui::Key::Escape))
+                {
                     choice = Some(false);
                 }
             });
