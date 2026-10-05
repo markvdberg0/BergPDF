@@ -5,7 +5,7 @@
 //!
 //! Coordinates are in a 100 × 100 box with y pointing down.
 
-/// Product name (a working name until it has been cleared).
+/// Product name (not yet checked against existing trademarks).
 pub const NAME: &str = "BergPDF";
 
 /// Mountain outline, left to right: the Aiguille du Midi spires, Mont Maudit, the long rounded

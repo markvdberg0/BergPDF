@@ -1,6 +1,6 @@
 # BergPDF — plan, status and evidence
 
-“BergPDF” is an internal working name, not a cleared product name.
+The product name “BergPDF” has not been checked against existing trademarks.
 
 Goal: a native, offline, Rust-only desktop PDF editor in the class of PDF-XChange Editor, for
 Windows 11 x86_64 and macOS Apple Silicon, with an original look and feel.
