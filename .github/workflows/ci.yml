@@ -1,6 +1,9 @@
-# Quality gate on the three first-class build targets: format, clippy, tests, licence check.
-# It builds no installers and publishes nothing; installers come from release.yml (tags or a
-# manual run).
+# Quality gate: format and clippy once (Linux), tests on the three first-class build targets, and the
+# licence/advisory check. It builds no installers and publishes nothing; installers come from
+# release.yml (tags or a manual run).
+#
+# Speed: the jobs run side by side, Rust build output is cached (it is saved by runs on main, and pull
+# requests read it), and the OCR models and veraPDF jars are cached too.
 name: ci
 
 on:
@@ -20,12 +23,33 @@ permissions:
 
 env:
   CARGO_TERM_COLOR: always
+  # Warnings are errors, so a warning that only appears on one platform fails that platform's tests.
   RUSTFLAGS: "-D warnings"
+  # Less debug information: faster linking and smaller caches.
+  CARGO_PROFILE_DEV_DEBUG: "0"
+  CARGO_PROFILE_TEST_DEBUG: "0"
 
 jobs:
-  gate:
-    name: ${{ matrix.name }}
+  lint:
+    name: format + clippy
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned toolchain
+        run: rustup show
+      - uses: Swatinem/rust-cache@v2
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - name: Format
+        run: cargo fmt --all -- --check
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+  test:
+    name: tests ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
@@ -38,42 +62,65 @@ jobs:
       - name: Install pinned toolchain
         run: rustup show
       - uses: Swatinem/rust-cache@v2
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
       - name: Require independent oracles on runners where they are installed
         if: runner.os != 'Windows'
         shell: bash
         run: echo "BERG_REQUIRE_ORACLES=1" >> "$GITHUB_ENV"
-      - name: Linux system packages (headless render checks use poppler as an oracle)
+      - name: Linux system packages (poppler is an oracle; Java runs veraPDF)
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y poppler-utils
+        run: sudo apt-get update && sudo apt-get install -y poppler-utils default-jre-headless
       - name: macOS oracle tools
         if: runner.os == 'macOS'
         run: brew install poppler
-      - name: OCR models (explicit download, checksum-verified; Linux job is the one that requires them)
+
+      # The Linux job is the one that requires the OCR models and veraPDF.
+      - name: Cache the OCR models
+        if: runner.os == 'Linux'
+        id: models
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/ocr-models
+          key: ocr-models-${{ hashFiles('crates/pdf-ocr/src/lib.rs') }}
+      - name: OCR models (explicit download, checksum-verified)
+        if: runner.os == 'Linux' && steps.models.outputs.cache-hit != 'true'
+        shell: bash
+        run: cargo xtask fetch-ocr-models "$RUNNER_TEMP/ocr-models"
+      - name: Use the OCR models
         if: runner.os == 'Linux'
         shell: bash
         run: |
-          cargo xtask fetch-ocr-models "$RUNNER_TEMP/ocr-models"
           echo "BERG_OCR_MODELS=$RUNNER_TEMP/ocr-models" >> "$GITHUB_ENV"
           echo "BERG_REQUIRE_OCR=1" >> "$GITHUB_ENV"
-      - name: veraPDF (independent PDF/A validator for the tests; Linux job requires it)
+      - name: Cache veraPDF (independent PDF/A validator)
         if: runner.os == 'Linux'
+        id: vera
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/verapdf
+          key: verapdf-1.28.2
+      - name: Fetch veraPDF
+        if: runner.os == 'Linux' && steps.vera.outputs.cache-hit != 'true'
         shell: bash
         run: |
-          sudo apt-get install -y default-jre-headless maven
+          sudo apt-get install -y maven
           mkdir -p "$RUNNER_TEMP/verapdf" && cd "$RUNNER_TEMP/verapdf"
           printf '<project xmlns="http://maven.apache.org/POM/4.0.0"><modelVersion>4.0.0</modelVersion><groupId>local</groupId><artifactId>vera-fetch</artifactId><version>1</version><dependencies><dependency><groupId>org.verapdf.apps</groupId><artifactId>greenfield-apps</artifactId><version>1.28.2</version></dependency></dependencies></project>' > pom.xml
           mvn -q -B dependency:copy-dependencies -DoutputDirectory=lib
+      - name: Use veraPDF
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
           echo "BERG_VERAPDF=$RUNNER_TEMP/verapdf/lib" >> "$GITHUB_ENV"
           echo "BERG_REQUIRE_VERAPDF=1" >> "$GITHUB_ENV"
-      - name: Format
-        run: cargo fmt --all -- --check
-      - name: Clippy
-        run: cargo clippy --workspace --all-targets -- -D warnings
+
       - name: Tests
         run: cargo test --workspace
 
   supply-chain:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: EmbarkStudios/cargo-deny-action@v2

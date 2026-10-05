@@ -41,7 +41,14 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: Build the program folder (static CRT on Windows)
         run: cargo xtask dist
+      - name: Cache cargo-packager
+        id: packager
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin/cargo-packager*
+          key: cargo-packager-0.11.8-${{ runner.os }}
       - name: Install cargo-packager
+        if: steps.packager.outputs.cache-hit != 'true'
         # Pinned: packaging/windows/installer.nsi is a copy of this version's NSIS template.
         run: cargo install cargo-packager --version 0.11.8 --locked
       - name: Build the installer
