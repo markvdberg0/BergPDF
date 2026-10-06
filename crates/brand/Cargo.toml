@@ -1,6 +1,6 @@
 [package]
 name = "brand"
-description = "BergPDF identity: name, the Mont Blanc outline logo and a tiny software rasteriser for icons"
+description = "BergPDF identity: name, the mountain logo and the helpers that turn the logo artwork into icons"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -8,6 +8,7 @@ license.workspace = true
 publish.workspace = true
 
 [dependencies]
+png = "0.18"
 
 [lints]
 workspace = true

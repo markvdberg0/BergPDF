@@ -206,7 +206,8 @@ mod tests {
                 if p.is_dir() {
                     stack.push(p);
                 } else if p.extension().is_some_and(|x| x == "rs") {
-                    let src = std::fs::read_to_string(&p).unwrap();
+                    // Checked out with CRLF line ends on Windows: the texts are compared with LF.
+                    let src = std::fs::read_to_string(&p).unwrap().replace("\r\n", "\n");
                     // Only the code before the test module counts.
                     let src = src.split("#[cfg(test)]").next().unwrap_or("");
                     for marker in ["tr(", "tf!("] {

@@ -89,7 +89,7 @@ fn main() -> eframe::Result {
         viewport: egui::ViewportBuilder::default()
             .with_title("BergPDF")
             .with_icon(egui::IconData {
-                rgba: brand::render_rgba(256, true),
+                rgba: brand::render_rgba(256),
                 width: 256,
                 height: 256,
             })

@@ -1,144 +1,171 @@
-//! BergPDF identity: the product name and the logo — an outline of the Mont Blanc massif
-//! (“Berg” is Dutch for mountain). The logo is plain vector data so the UI can draw it with its
-//! own painter, and [`render_rgba`] can rasterise it for window/application icons without any
-//! binary asset files or image libraries.
+//! BergPDF identity: the product name and the logo — two white mountain outlines on a red square
+//! (“Berg” is Dutch for mountain).
 //!
-//! Coordinates are in a 100 × 100 box with y pointing down.
+//! The artwork is a raster master (`assets/brand/logo-master.png`) from which `cargo xtask icons`
+//! generates every icon file. The program embeds the 512 px result for its window icon
+//! ([`render_rgba`]), and the UI draws a vector trace of the mountains ([`strokes`]) in its own
+//! colours. Trace coordinates are in a 100 × 100 box with y pointing down.
+
+use std::io::Cursor;
 
 /// Product name (not yet checked against existing trademarks).
 pub const NAME: &str = "BergPDF";
 
-/// Mountain outline, left to right: the Aiguille du Midi spires, Mont Maudit, the long rounded
-/// Mont Blanc summit, the Dôme du Goûter shoulder and the descent to the right.
+/// Silhouette: left foot, the small step, the high peak, the saddle, the second peak and the right foot.
 pub const OUTLINE: &[(f32, f32)] = &[
-    (6.0, 82.0),
-    (20.0, 60.0),
-    (24.0, 62.0),
-    (30.0, 44.0),
-    (33.0, 50.0),
-    (38.0, 40.0),
-    (44.0, 52.0),
-    (50.0, 38.0),
-    (56.0, 44.0),
-    (62.0, 26.0),
-    (66.0, 21.0),
-    (71.0, 20.0),
-    (76.0, 24.0),
-    (80.0, 32.0),
-    (84.0, 38.0),
-    (92.0, 56.0),
-    (96.0, 82.0),
+    (5.2, 74.5),
+    (22.6, 50.6),
+    (25.3, 53.4),
+    (44.3, 24.8),
+    (62.5, 51.8),
+    (71.4, 41.7),
+    (94.8, 74.5),
 ];
 
-/// Snow line across the summit dome.
-pub const SNOW: &[(f32, f32)] = &[
-    (62.0, 42.0),
-    (65.0, 37.0),
-    (68.0, 42.0),
-    (71.0, 37.0),
-    (74.0, 42.0),
-    (77.0, 37.0),
-    (80.0, 42.0),
+/// Ground line under both mountains.
+pub const GROUND: &[(f32, f32)] = &[(5.2, 74.5), (94.8, 74.5)];
+
+/// Crack running down the high peak.
+pub const RIDGE_HIGH: &[(f32, f32)] = &[
+    (43.2, 30.2),
+    (43.4, 40.1),
+    (48.4, 44.3),
+    (50.5, 53.2),
+    (67.2, 66.7),
+    (71.4, 72.8),
 ];
 
-/// Ground line under the massif.
-pub const GROUND: &[(f32, f32)] = &[(6.0, 82.0), (96.0, 82.0)];
+/// Crack running down the second peak.
+pub const RIDGE_LOW: &[(f32, f32)] = &[
+    (72.2, 46.9),
+    (72.6, 52.3),
+    (76.5, 55.4),
+    (78.6, 62.5),
+    (87.4, 67.2),
+];
 
 /// Stroke width of the logo in the 100-unit box.
-pub const STROKE: f32 = 3.4;
+pub const STROKE: f32 = 2.6;
 
 /// All strokes of the logo: `(points, is_accent)`.
-pub fn strokes() -> [(&'static [(f32, f32)], bool); 3] {
-    [(OUTLINE, false), (GROUND, false), (SNOW, true)]
+pub fn strokes() -> [(&'static [(f32, f32)], bool); 4] {
+    [
+        (OUTLINE, false),
+        (GROUND, false),
+        (RIDGE_HIGH, true),
+        (RIDGE_LOW, true),
+    ]
 }
 
-/// Colours (RGBA).
-pub mod color {
-    /// Icon background (deep slate).
-    pub const BACKGROUND: [u8; 4] = [0x14, 0x21, 0x2E, 0xFF];
-    /// Mountain outline.
-    pub const OUTLINE: [u8; 4] = [0xF2, 0xF5, 0xF8, 0xFF];
-    /// Snow line (copper accent).
-    pub const ACCENT: [u8; 4] = [0xE8, 0x83, 0x3A, 0xFF];
+/// A decoded picture, RGBA8.
+pub struct Image {
+    pub width: u32,
+    pub height: u32,
+    pub rgba: Vec<u8>,
 }
 
-fn dist_to_segment(p: (f32, f32), a: (f32, f32), b: (f32, f32)) -> f32 {
-    let (abx, aby) = (b.0 - a.0, b.1 - a.1);
-    let len2 = abx * abx + aby * aby;
-    let t = if len2 <= f32::EPSILON {
-        0.0
-    } else {
-        (((p.0 - a.0) * abx + (p.1 - a.1) * aby) / len2).clamp(0.0, 1.0)
+/// Decode an 8-bit PNG (grey, RGB or RGBA; palettes are expanded).
+pub fn decode_png(bytes: &[u8]) -> Option<Image> {
+    let mut dec = png::Decoder::new(Cursor::new(bytes));
+    dec.set_transformations(png::Transformations::EXPAND);
+    let mut reader = dec.read_info().ok()?;
+    let mut buf = vec![0u8; reader.output_buffer_size()?];
+    let info = reader.next_frame(&mut buf).ok()?;
+    if info.bit_depth != png::BitDepth::Eight {
+        return None;
+    }
+    let px = &buf[..info.buffer_size()];
+    let rgba = match info.color_type {
+        png::ColorType::Rgba => px.to_vec(),
+        png::ColorType::Rgb => px
+            .chunks_exact(3)
+            .flat_map(|c| [c[0], c[1], c[2], 255])
+            .collect(),
+        png::ColorType::Grayscale => px.iter().flat_map(|g| [*g, *g, *g, 255]).collect(),
+        png::ColorType::GrayscaleAlpha => px
+            .chunks_exact(2)
+            .flat_map(|c| [c[0], c[0], c[0], c[1]])
+            .collect(),
+        png::ColorType::Indexed => return None,
     };
-    let (cx, cy) = (a.0 + t * abx, a.1 + t * aby);
-    ((p.0 - cx).powi(2) + (p.1 - cy).powi(2)).sqrt()
+    Some(Image {
+        width: info.width,
+        height: info.height,
+        rgba,
+    })
 }
 
-fn polyline_hit(poly: &[(f32, f32)], p: (f32, f32), half: f32) -> bool {
-    poly.windows(2)
-        .any(|w| dist_to_segment(p, w[0], w[1]) <= half)
-}
-
-fn in_rounded_square(x: f32, y: f32, radius: f32) -> bool {
-    // Box is 0..100; corner circles of `radius`.
-    let cx = x.clamp(radius, 100.0 - radius);
-    let cy = y.clamp(radius, 100.0 - radius);
-    (x - cx).powi(2) + (y - cy).powi(2) <= radius * radius
-}
-
-/// Rasterise the logo to RGBA8 (`size × size`). With `background` the logo sits on a rounded
-/// dark square (application icon); without, only the strokes are drawn over transparency.
-/// Uses 4 × 4 supersampling for smooth edges.
-pub fn render_rgba(size: u32, background: bool) -> Vec<u8> {
+/// Scale `src` to `size × size` by averaging the source pixels under each target pixel
+/// (weighted by alpha, so transparent corners do not bleed colour).
+pub fn resize(src: &Image, size: u32) -> Vec<u8> {
     let n = size as usize;
+    let (sw, sh) = (src.width as usize, src.height as usize);
     let mut out = vec![0u8; n * n * 4];
-    let ss = 4usize;
-    let half = STROKE / 2.0;
-    // Inset the artwork a little so it breathes inside the rounded square.
-    let (scale, off) = if background { (0.78, 11.0) } else { (1.0, 0.0) };
     for py in 0..n {
+        let (y0, y1) = (
+            py as f32 * sh as f32 / n as f32,
+            (py + 1) as f32 * sh as f32 / n as f32,
+        );
         for px in 0..n {
+            let (x0, x1) = (
+                px as f32 * sw as f32 / n as f32,
+                (px + 1) as f32 * sw as f32 / n as f32,
+            );
             let mut acc = [0.0f32; 4];
-            for sy in 0..ss {
-                for sx in 0..ss {
-                    let x = (px as f32 + (sx as f32 + 0.5) / ss as f32) / n as f32 * 100.0;
-                    let y = (py as f32 + (sy as f32 + 0.5) / ss as f32) / n as f32 * 100.0;
-                    let mut col: Option<[u8; 4]> = None;
-                    if background && in_rounded_square(x, y, 22.0) {
-                        col = Some(color::BACKGROUND);
-                    }
-                    let (ax, ay) = ((x - off) / scale, (y - off) / scale);
-                    let hh = half;
-                    for (poly, accent) in strokes() {
-                        if polyline_hit(poly, (ax, ay), hh) {
-                            col = Some(if accent {
-                                color::ACCENT
-                            } else {
-                                color::OUTLINE
-                            });
-                        }
-                    }
-                    if let Some(c) = col {
-                        let a = f32::from(c[3]) / 255.0;
-                        acc[0] += f32::from(c[0]) * a;
-                        acc[1] += f32::from(c[1]) * a;
-                        acc[2] += f32::from(c[2]) * a;
-                        acc[3] += a;
-                    }
+            let mut area = 0.0f32;
+            for sy in (y0.floor() as usize)..(y1.ceil() as usize).min(sh) {
+                let wy = (y1.min(sy as f32 + 1.0) - y0.max(sy as f32)).max(0.0);
+                for sx in (x0.floor() as usize)..(x1.ceil() as usize).min(sw) {
+                    let w = wy * (x1.min(sx as f32 + 1.0) - x0.max(sx as f32)).max(0.0);
+                    let i = (sy * sw + sx) * 4;
+                    let a = f32::from(src.rgba[i + 3]) / 255.0;
+                    acc[0] += f32::from(src.rgba[i]) * a * w;
+                    acc[1] += f32::from(src.rgba[i + 1]) * a * w;
+                    acc[2] += f32::from(src.rgba[i + 2]) * a * w;
+                    acc[3] += a * w;
+                    area += w;
                 }
             }
-            let cnt = (ss * ss) as f32;
-            let a = acc[3] / cnt;
-            let i = (py * n + px) * 4;
-            if a > 0.0 {
-                out[i] = (acc[0] / acc[3]).round() as u8;
-                out[i + 1] = (acc[1] / acc[3]).round() as u8;
-                out[i + 2] = (acc[2] / acc[3]).round() as u8;
-                out[i + 3] = (a * 255.0).round() as u8;
+            if area > 0.0 && acc[3] > 0.0 {
+                let o = (py * n + px) * 4;
+                out[o] = (acc[0] / acc[3]).round() as u8;
+                out[o + 1] = (acc[1] / acc[3]).round() as u8;
+                out[o + 2] = (acc[2] / acc[3]).round() as u8;
+                out[o + 3] = (acc[3] / area * 255.0).round() as u8;
             }
         }
     }
     out
+}
+
+/// Turn the square logo master into an application icon: scaled to `size`, corners rounded.
+pub fn icon_from_master(master: &Image, size: u32) -> Vec<u8> {
+    let mut px = resize(master, size);
+    let n = size as f32;
+    let radius = n * 0.22;
+    let half = n / 2.0;
+    for y in 0..size {
+        for x in 0..size {
+            // Signed distance to a rounded square, in pixels (negative inside).
+            let (dx, dy) = (
+                ((x as f32 + 0.5) - half).abs() - (half - radius),
+                ((y as f32 + 0.5) - half).abs() - (half - radius),
+            );
+            let d = dx.max(0.0).hypot(dy.max(0.0)) + dx.max(dy).min(0.0) - radius;
+            let cover = (0.5 - d).clamp(0.0, 1.0);
+            let i = ((y * size + x) * 4 + 3) as usize;
+            px[i] = (f32::from(px[i]) * cover).round() as u8;
+        }
+    }
+    px
+}
+
+/// The application icon (`size × size` RGBA8), from the embedded 512 px icon.
+pub fn render_rgba(size: u32) -> Vec<u8> {
+    match decode_png(include_bytes!("../../../assets/icons/bergpdf.png")) {
+        Some(img) => resize(&img, size),
+        None => vec![0; (size * size * 4) as usize],
+    }
 }
 
 #[cfg(test)]
@@ -155,21 +182,33 @@ mod tests {
     }
 
     #[test]
-    fn rendering_has_ink_and_transparent_corners() {
-        let px = render_rgba(64, true);
+    fn the_embedded_icon_is_red_with_white_mountains_and_round_corners() {
+        let px = render_rgba(64);
         assert_eq!(px.len(), 64 * 64 * 4);
-        // Corner of the rounded square is transparent; the centre-bottom has the background.
-        assert_eq!(px[3], 0);
-        let mid = ((48 * 64) + 32) * 4;
-        assert_eq!(px[mid + 3], 255);
-        // Some pixel is the light outline colour.
+        assert_eq!(px[3], 0, "corner is transparent");
+        let mid = ((10 * 64) + 32) * 4;
+        assert!(
+            px[mid] > 0xC0 && px[mid + 1] < 0x60 && px[mid + 3] == 255,
+            "red field"
+        );
         assert!(
             px.chunks_exact(4)
-                .any(|p| p[0] > 0xE0 && p[1] > 0xE0 && p[3] == 255)
+                .any(|p| p[0] > 0xE0 && p[1] > 0xE0 && p[2] > 0xE0 && p[3] == 255),
+            "white strokes"
         );
-        // Without background the corner is transparent and strokes exist.
-        let bare = render_rgba(64, false);
-        assert!(bare.chunks_exact(4).any(|p| p[3] == 255));
-        assert_eq!(bare[3], 0);
+    }
+
+    #[test]
+    fn resizing_keeps_a_flat_colour() {
+        let img = Image {
+            width: 8,
+            height: 8,
+            rgba: [10, 20, 30, 255].repeat(64),
+        };
+        assert!(
+            resize(&img, 3)
+                .chunks_exact(4)
+                .all(|p| p == [10, 20, 30, 255])
+        );
     }
 }

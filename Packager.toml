@@ -6,7 +6,7 @@ name = "bergpdf"
 product-name = "BergPDF"
 # Reverse-domain identifier; change it to one you own before distributing.
 identifier = "app.bergpdf.desktop"
-version = "0.2.1"
+version = "0.2.2"
 description = "Offline PDF editor"
 authors = ["BergPDF"]
 out-dir = "dist/packages"
@@ -17,6 +17,8 @@ license-file = "LICENSE"
 resources = [
   { src = "LICENSE", target = "LICENSE" },
   { src = "README.md", target = "README.md" },
+  # The icon Explorer shows for .pdf files that open with BergPDF (see packaging/windows/installer.nsi).
+  { src = "assets/icons/pdf-file.ico", target = "pdf-file.ico" },
   { src = "docs/THIRD_PARTY_LICENSES.md", target = "THIRD_PARTY_LICENSES.md" },
   { src = "docs/DEPENDENCIES.md", target = "DEPENDENCIES.md" },
 ]

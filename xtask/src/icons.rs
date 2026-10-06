@@ -1,10 +1,18 @@
-//! Generate application icons (PNG, ICO, ICNS) from the vector logo in the `brand` crate.
+//! Generate application icons (PNG, ICO, ICNS) from the logo master `assets/brand/logo-master.png`.
 
 use std::io;
 use std::path::Path;
 
+fn master() -> io::Result<&'static brand::Image> {
+    static MASTER: std::sync::OnceLock<Option<brand::Image>> = std::sync::OnceLock::new();
+    MASTER
+        .get_or_init(|| brand::decode_png(include_bytes!("../../assets/brand/logo-master.png")))
+        .as_ref()
+        .ok_or_else(|| io::Error::other("assets/brand/logo-master.png is not a readable 8-bit PNG"))
+}
+
 fn png_bytes(size: u32) -> io::Result<Vec<u8>> {
-    let rgba = brand::render_rgba(size, true);
+    let rgba = brand::icon_from_master(master()?, size);
     let mut out = Vec::new();
     {
         let mut enc = png::Encoder::new(&mut out, size, size);
