@@ -214,6 +214,10 @@ impl Protection {
             permissions: rights.to_permissions(),
         })
         .map_err(|e| EngineError::InvalidArgument(sanitize(&e.to_string())))?;
+        // lopdf leaves `/Length 256` out of the encryption dictionary it writes for a new state, but readers such
+        // as poppler need it to derive the key (the files decrypt to garbage there). The state it builds when it
+        // *reads* a dictionary has it, so the new dictionary is read back once and that state is the one used.
+        let state = reread(&state, user)?;
         Ok(Protection {
             state,
             password: user.to_string(),
@@ -224,6 +228,24 @@ impl Protection {
             file_id: Some(file_id),
         })
     }
+}
+
+/// The state lopdf derives from reading the dictionary of `state` (with the user password), which carries the key
+/// length that a freshly built state lacks.
+fn reread(state: &EncryptionState, user: &str) -> Result<EncryptionState> {
+    let bad = |what: &str| {
+        EngineError::InvalidArgument(format!("protection could not be set up: {what}"))
+    };
+    let dict = state.encode().map_err(|e| bad(&e.to_string()))?;
+    let mut probe = Document::new();
+    probe.objects.insert((1, 0), Object::Dictionary(dict));
+    probe.trailer.set("Encrypt", Object::Reference((1, 0)));
+    let algorithm =
+        lopdf::encryption::PasswordAlgorithm::try_from(&probe).map_err(|e| bad(&e.to_string()))?;
+    let password = algorithm
+        .sanitize_password(user)
+        .map_err(|e| bad(&e.to_string()))?;
+    EncryptionState::decode(&probe, password).map_err(|e| bad(&e.to_string()))
 }
 
 fn cipher_of(state: &EncryptionState) -> Cipher {
