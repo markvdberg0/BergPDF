@@ -128,7 +128,13 @@ fn pdftotext(bytes: &[u8], pw_flag: &str, password: &str) -> Option<String> {
         "pdftotext failed: {}",
         String::from_utf8_lossy(&out.stderr)
     );
-    Some(String::from_utf8_lossy(&out.stdout).into_owned())
+    // The reader's own complaints go along, so a failure says why.
+    Some(format!(
+        "{}
+[reader's messages: {}]",
+        String::from_utf8_lossy(&out.stdout),
+        String::from_utf8_lossy(&out.stderr).trim()
+    ))
 }
 
 #[test]
