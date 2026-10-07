@@ -197,7 +197,9 @@ impl Tool {
                 "Click to add points; double-click or Enter to finish; Esc cancels."
             }
             Tool::Ink => "Drag to draw freehand.",
-            Tool::Stamp => "Drag a box to place the stamp.",
+            Tool::Stamp => {
+                "Drag a box to place the stamp. With a stamp of your own chosen, a click places it at its own size."
+            }
             Tool::EditText => {
                 "Click text or an image to edit it. Outlined text can be edited; grey text shows why it can't."
             }

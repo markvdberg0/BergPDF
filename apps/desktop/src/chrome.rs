@@ -74,6 +74,8 @@ pub fn command_icon(c: C) -> Icon {
         C::TranslateDocument => Icon::Translate,
         C::ShowSignatures => Icon::Shield,
         C::DrawSignature => Icon::Pencil,
+        C::SignFromImage => Icon::AddImage,
+        C::NewStamp => Icon::Stamp,
         C::FileProperties => Icon::Info,
         C::FormFlatten => Icon::Merge,
         C::EditUndo => Icon::Undo,
@@ -399,7 +401,7 @@ impl App {
                         };
                         s.cmds(ui, ctx, ids);
                     });
-                    self.group(ui, tr("Stamps"), |s, ui| s.cmds(ui, ctx, &[C::ToolStamp]));
+                    self.group(ui, tr("Stamps"), |s, ui| s.cmds(ui, ctx, &[C::ToolStamp, C::NewStamp]));
                     self.group(ui, tr("Selection"), |s, ui| s.cmds(ui, ctx, &[C::ToolSelect, C::EditDuplicate, C::EditDelete]));
                 }
                 RibbonTab::Forms => {
@@ -413,7 +415,7 @@ impl App {
                 }
                 RibbonTab::Sign => {
                     self.group(ui, tr("Digital signature"), |s, ui| s.cmds(ui, ctx, &[C::SignDocument, C::ShowSignatures]));
-                    self.group(ui, tr("Handwritten signature"), |s, ui| s.cmds(ui, ctx, &[C::DrawSignature, C::ToolPlaceSignature]));
+                    self.group(ui, tr("Handwritten signature"), |s, ui| s.cmds(ui, ctx, &[C::DrawSignature, C::SignFromImage, C::ToolPlaceSignature]));
                     ui.vertical(|ui| {
                         ui.add_space(6.0);
                         ui.label(RichText::new(tr("A digital signature proves the file is unchanged since signing.\nA handwritten signature is only a picture of your signature.")).size(11.0).color(s_dim(&self.pal)));
@@ -867,6 +869,8 @@ fn ribbon_label(id: C, title: &'static str) -> &'static str {
         C::SignDocument => tr("Sign"),
         C::ShowSignatures => tr("Signatures"),
         C::DrawSignature => tr("Draw Signature"),
+        C::SignFromImage => tr("Signature from Picture"),
+        C::NewStamp => tr("New Stamp"),
         C::ToolPlaceSignature => tr("Place Signature"),
         C::ToolFillForm => tr("Fill Form"),
         C::FormFlatten => tr("Flatten"),

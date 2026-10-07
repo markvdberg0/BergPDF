@@ -32,6 +32,7 @@ pub mod save;
 pub mod serialize;
 pub mod sign;
 pub mod snap;
+pub mod stampimage;
 pub mod sysfonts;
 pub mod text;
 pub mod textdoc;

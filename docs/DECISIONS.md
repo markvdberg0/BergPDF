@@ -357,3 +357,17 @@ colour) are only reachable through the printer's defaults. **macOS/Linux**: the 
 `printing` is the only crate allowed to use `unsafe` (the workspace forbids it): `unsafe_code = "deny"` with a single
 `#![allow]` in `windows.rs`, every block with the reason it is sound; the device context is closed by `Drop`. The
 author's "print" permission of a protected document is honoured.
+
+## D-038 — Own stamps and a signature from a picture: a Stamp annotation whose appearance is the picture
+A picture (PNG/JPEG) becomes a `Stamp` annotation (`/BergImage true`) whose appearance stream draws the image
+XObject (RGB, plus an `SMask` for transparency): the PDF stays standard, any viewer shows it, and BergPDF reads the
+picture back out of the appearance, so the annotation can be moved, resized, duplicated and saved like any other.
+Importing (`pdf_engine::stampimage`): pictures are decoded with size limits first, JPEG orientation is applied,
+anything over 1600 px is scaled down. For a scan or photo *without* transparency the user can have the paper made
+transparent: the paper level is taken from the picture itself (the level 90 % of the pixels are darker than), the
+darkest channel decides how much ink there is, and empty margins are cut away. A logo with its own transparency keeps it.
+The saved signature is one thing, either a drawing or a picture (`signature.png`); saving one replaces the other.
+Own stamps (`editor_core::stamps`) are a text with its own wording and colour, or a picture, kept in `stamps.toml`
+plus PNG files in `stamps/` next to it. Everything read back is validated (names, colours, file names without
+folders, counts). Cost: the picture is stored in every document it is placed in (a few tens of kB for a typical
+signature), and a text stamp is still the bundled bold font in a box.

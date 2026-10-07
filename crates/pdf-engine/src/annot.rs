@@ -154,6 +154,11 @@ pub enum AnnotationKind {
     Ink { strokes: Vec<Vec<Point>> },
     /// Text stamp (e.g. "APPROVED").
     StampText { rect: Rect, label: String },
+    /// A picture used as a stamp or a signature (a `Stamp` whose appearance is the picture).
+    ImageStamp {
+        rect: Rect,
+        image: std::sync::Arc<crate::stampimage::StampImage>,
+    },
 }
 
 /// A complete, regenerable annotation description.
@@ -227,7 +232,7 @@ impl AnnotationSpec {
             AnnotationKind::Polygon { .. } => "Polygon",
             AnnotationKind::PolyLine { .. } => "PolyLine",
             AnnotationKind::Ink { .. } => "Ink",
-            AnnotationKind::StampText { .. } => "Stamp",
+            AnnotationKind::StampText { .. } | AnnotationKind::ImageStamp { .. } => "Stamp",
         }
     }
 
@@ -262,7 +267,8 @@ impl AnnotationSpec {
             AnnotationKind::Rectangle { rect }
             | AnnotationKind::Ellipse { rect }
             | AnnotationKind::Cloud { rect }
-            | AnnotationKind::StampText { rect, .. } => rect.abs(),
+            | AnnotationKind::StampText { rect, .. }
+            | AnnotationKind::ImageStamp { rect, .. } => rect.abs(),
             AnnotationKind::Line {
                 start,
                 end,
@@ -847,6 +853,23 @@ fn build(tx: &mut Tx<'_>, spec: &AnnotationSpec) -> Result<(Dictionary, Stream)>
                 }
             }
         }
+        AnnotationKind::ImageStamp { rect: r, image } => {
+            dict.set("BergImage", true);
+            let r = r.abs();
+            let image_id = image.add_to(tx);
+            ap.resources = gs_resources(opacity, false);
+            ap.resources
+                .set("XObject", dictionary! { "Im0" => image_id });
+            ap.content.push_str(&format!(
+                "/GS gs
+q {} 0 0 {} {} {} cm /Im0 Do Q
+",
+                fmt_num(r.width()),
+                fmt_num(r.height()),
+                fmt_num(r.x0),
+                fmt_num(r.y0)
+            ));
+        }
         AnnotationKind::StampText { rect: r, label } => {
             dict.set("Name", name("Draft"));
             dict.set("Subj", text_obj(label));
@@ -1424,6 +1447,20 @@ fn build_freetext(
 // Reading back into a spec
 // ---------------------------------------------------------------------------------------
 
+/// The picture of an image stamp: the image XObject inside its appearance stream.
+fn read_stamp_image(doc: &Document, d: &Dictionary) -> Option<crate::stampimage::StampImage> {
+    let ap = objutil::dict_dict(doc, d, b"AP")?;
+    let Object::Stream(form) = ap.get(b"N").ok().and_then(|o| objutil::deref(doc, o))? else {
+        return None;
+    };
+    let res = objutil::dict_dict(doc, &form.dict, b"Resources")?;
+    let xo = objutil::dict_dict(doc, res, b"XObject")?;
+    let Object::Stream(s) = xo.get(b"Im0").ok().and_then(|o| objutil::deref(doc, o))? else {
+        return None;
+    };
+    crate::stampimage::StampImage::read_from(doc, &s.dict, s)
+}
+
 fn parse_spec(doc: &Document, d: &Dictionary) -> Option<AnnotationSpec> {
     let subtype = objutil::dict_name(doc, d, b"Subtype")?;
     let rect = d.get(b"Rect").ok().and_then(|r| objutil::rect(doc, r))?;
@@ -1549,6 +1586,10 @@ fn parse_spec(doc: &Document, d: &Dictionary) -> Option<AnnotationSpec> {
                 callout,
             }
         }
+        b"Stamp" if d.has(b"BergImage") => AnnotationKind::ImageStamp {
+            rect,
+            image: std::sync::Arc::new(read_stamp_image(doc, d)?),
+        },
         b"Stamp" => {
             let subj = d
                 .get(b"Subj")
@@ -1744,6 +1785,10 @@ impl AnnotationSpec {
             AnnotationKind::StampText { rect, label } => AnnotationKind::StampText {
                 rect: mr(rect),
                 label: label.clone(),
+            },
+            AnnotationKind::ImageStamp { rect, image } => AnnotationKind::ImageStamp {
+                rect: mr(rect),
+                image: image.clone(),
             },
         };
         s

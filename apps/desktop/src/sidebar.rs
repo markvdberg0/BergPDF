@@ -691,12 +691,14 @@ impl App {
                     AnnotationKind::FreeText { .. } => tr("Border"),
                     _ => tr("Line color"),
                 };
-                form_row(ui, color_label, |ui| {
-                    let mut c = [spec.color.0, spec.color.1, spec.color.2];
-                    if ui.color_edit_button_rgb(&mut c).changed() {
-                        spec.color = Rgb(c[0], c[1], c[2]);
-                    }
-                });
+                if !matches!(spec.kind, AnnotationKind::ImageStamp { .. }) {
+                    form_row(ui, color_label, |ui| {
+                        let mut c = [spec.color.0, spec.color.1, spec.color.2];
+                        if ui.color_edit_button_rgb(&mut c).changed() {
+                            spec.color = Rgb(c[0], c[1], c[2]);
+                        }
+                    });
+                }
                 if matches!(
                     spec.kind,
                     AnnotationKind::Rectangle { .. }
@@ -761,6 +763,7 @@ impl App {
                         | AnnotationKind::Note { .. }
                         | AnnotationKind::Squiggly { .. }
                         | AnnotationKind::StampText { .. }
+                        | AnnotationKind::ImageStamp { .. }
                 ) || matches!(spec.kind, AnnotationKind::StampText { .. })
                 {
                     form_row(ui, tr("Line width"), |ui| {
@@ -895,6 +898,9 @@ impl App {
         );
         ui.add_space(8.0);
         use editor_core::tools::ToolFamily;
+        if t == Tool::Stamp {
+            self.stamp_picker(ui);
+        }
         if t.family() == ToolFamily::Annotation {
             ui.label(
                 RichText::new(tr("Defaults for new markup"))

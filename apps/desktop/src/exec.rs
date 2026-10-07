@@ -105,7 +105,7 @@ impl App {
             }
             C::SignDocument => has && can_edit,
             C::OcrDocument => has && can_edit && self.ocr_job.is_none(),
-            C::DrawSignature => true,
+            C::DrawSignature | C::SignFromImage | C::NewStamp => true,
             C::ToolSignArea => self.sign_return.is_some(),
             C::FormFlatten => {
                 has && can_edit
@@ -182,6 +182,8 @@ impl App {
             C::FileConvertPdfA => self.open_pdfa_dialog(),
             C::ShowSignatures => self.open_signatures(),
             C::DrawSignature => self.open_draw_signature(),
+            C::SignFromImage => self.open_signature_from_image(),
+            C::NewStamp => self.open_new_stamp(),
             C::FileExportImage => self.export_page_image(),
             C::FormFlatten => self.request_flatten(),
             C::FileClose => self.request_close(self.active),

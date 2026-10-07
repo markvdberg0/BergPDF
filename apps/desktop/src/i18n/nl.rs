@@ -2272,4 +2272,83 @@ pub static ENTRIES: &[(&str, &str)] = &[
         "This text is drawn with a font that cannot be edited in place. Applying a change replaces it with the font chosen below.",
         "Deze tekst is getekend met een lettertype dat niet ter plekke te bewerken is. Een wijziging toepassen vervangt het door het hieronder gekozen lettertype.",
     ),
+    (
+        "That picture file is too large (over 30 MB).",
+        "Dat afbeeldingsbestand is te groot (meer dan 30 MB).",
+    ),
+    (
+        "Could not read the picture: {}",
+        "De afbeelding kon niet worden gelezen: {}",
+    ),
+    (
+        "The picture is ink on white paper: make the paper transparent",
+        "De afbeelding is inkt op wit papier: maak het papier transparant",
+    ),
+    (
+        "The picture of this stamp is missing.",
+        "De afbeelding van deze stempel ontbreekt.",
+    ),
+    ("Signature picture", "Handtekening als afbeelding"),
+    (
+        "Signature from a picture",
+        "Handtekening uit een afbeelding",
+    ),
+    (
+        "A scan or photo of your signature on white paper works best. This is a picture of your signature, not a digital signature.",
+        "Een scan of foto van je handtekening op wit papier werkt het best. Dit is een afbeelding van je handtekening, geen digitale handtekening.",
+    ),
+    ("Other picture…", "Andere afbeelding…"),
+    ("New stamp", "Nieuwe stempel"),
+    (
+        "Make a stamp of your own: a text in your colour, or a picture such as a logo. It is kept on this computer and shows up in the Stamp tool.",
+        "Maak een eigen stempel: een tekst in je eigen kleur, of een afbeelding zoals een logo. Hij wordt op deze computer bewaard en verschijnt in het Stempel-gereedschap.",
+    ),
+    ("Name of the stamp", "Naam van de stempel"),
+    ("Picture", "Afbeelding"),
+    ("Choose picture…", "Afbeelding kiezen…"),
+    ("Text on the stamp", "Tekst op de stempel"),
+    ("Save stamp", "Stempel opslaan"),
+    ("Choose a picture first.", "Kies eerst een afbeelding."),
+    (
+        "Could not save the stamp: {}",
+        "De stempel kon niet worden opgeslagen: {}",
+    ),
+    (
+        "Could not save the stamps: {}",
+        "De stempels konden niet worden opgeslagen: {}",
+    ),
+    (
+        "Stamp saved. Drag a box on the page, or click, to place it.",
+        "Stempel opgeslagen. Sleep een kader op de pagina, of klik, om hem te plaatsen.",
+    ),
+    ("My stamps", "Mijn stempels"),
+    ("Ask for the text each time", "Elke keer om de tekst vragen"),
+    ("text", "tekst"),
+    ("picture", "afbeelding"),
+    ("Delete this stamp", "Deze stempel verwijderen"),
+    (
+        "You have no stamps of your own yet.",
+        "Je hebt nog geen eigen stempels.",
+    ),
+    ("New stamp…", "Nieuwe stempel…"),
+    (
+        "Add your signature first (Sign → Draw Signature or Signature from Picture).",
+        "Voeg eerst je handtekening toe (Ondertekenen → Handtekening tekenen of Handtekening uit afbeelding).",
+    ),
+    ("Signature from Picture…", "Handtekening uit afbeelding…"),
+    (
+        "Use a scan or photo of your signature (PNG or JPEG) instead of drawing it",
+        "Gebruik een scan of foto van je handtekening (PNG of JPEG) in plaats van te tekenen",
+    ),
+    ("New Stamp…", "Nieuwe stempel…"),
+    (
+        "Make a stamp of your own from a text or a picture and keep it",
+        "Maak een eigen stempel van een tekst of afbeelding en bewaar hem",
+    ),
+    ("Signature from Picture", "Handtekening uit afbeelding"),
+    ("New Stamp", "Nieuwe stempel"),
+    (
+        "Drag a box to place the stamp. With a stamp of your own chosen, a click places it at its own size.",
+        "Sleep een kader om de stempel te plaatsen. Met een eigen stempel gekozen plaatst een klik hem op zijn eigen formaat.",
+    ),
 ];

@@ -33,6 +33,7 @@ mod redact_ui;
 mod sidebar;
 mod sign_ui;
 mod snap_ui;
+mod stamp_ui;
 mod state;
 mod theme;
 mod translate_ui;

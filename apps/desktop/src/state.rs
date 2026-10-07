@@ -128,6 +128,10 @@ pub enum Dialog {
     Signatures(Vec<pdf_engine::sign::SignatureInfo>),
     /// Drawing pad for the handwritten signature.
     DrawSignature(Box<DrawSigState>),
+    /// A picture chosen as the signature.
+    ImageSignature(Box<crate::stamp_ui::PictureState>),
+    /// Make a stamp of one's own.
+    NewStamp(Box<crate::stamp_ui::NewStampState>),
     /// Documents recovered after a crash.
     Recovery(Vec<platform::recovery::RecoveryEntry>),
     /// Fill a text or choice form field.
@@ -324,6 +328,15 @@ pub struct App {
     pub ocr_job: Option<crate::ocr_ui::OcrJob>,
     /// The saved handwritten signature (a drawing).
     pub handwriting: editor_core::handwriting::HandwrittenSignature,
+    /// The saved signature when it is a picture (it replaces the drawing).
+    pub signature_image: Option<std::sync::Arc<pdf_engine::stampimage::StampImage>>,
+    /// The user's own stamps.
+    pub stamps: editor_core::stamps::StampLibrary,
+    /// Pictures of those stamps, read from disk when first needed.
+    pub stamp_images:
+        std::collections::HashMap<String, std::sync::Arc<pdf_engine::stampimage::StampImage>>,
+    /// The stamp the Stamp tool places (`None`: ask for a text each time).
+    pub current_stamp: Option<String>,
     /// What the right-click menu was opened on.
     pub ctx_target: Option<crate::ctxmenu::CtxTarget>,
     /// Snap-to-geometry indexes.

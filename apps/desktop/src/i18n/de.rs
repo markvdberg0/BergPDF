@@ -2308,4 +2308,83 @@ pub static ENTRIES: &[(&str, &str)] = &[
         "This text is drawn with a font that cannot be edited in place. Applying a change replaces it with the font chosen below.",
         "Dieser Text ist mit einer Schrift gezeichnet, die sich nicht direkt bearbeiten lässt. Beim Übernehmen einer Änderung wird sie durch die unten gewählte Schrift ersetzt.",
     ),
+    (
+        "That picture file is too large (over 30 MB).",
+        "Diese Bilddatei ist zu groß (über 30 MB).",
+    ),
+    (
+        "Could not read the picture: {}",
+        "Das Bild konnte nicht gelesen werden: {}",
+    ),
+    (
+        "The picture is ink on white paper: make the paper transparent",
+        "Das Bild ist Tinte auf weißem Papier: Papier transparent machen",
+    ),
+    (
+        "The picture of this stamp is missing.",
+        "Das Bild dieses Stempels fehlt.",
+    ),
+    ("Signature picture", "Unterschrift als Bild"),
+    ("Signature from a picture", "Unterschrift aus einem Bild"),
+    (
+        "A scan or photo of your signature on white paper works best. This is a picture of your signature, not a digital signature.",
+        "Ein Scan oder Foto Ihrer Unterschrift auf weißem Papier funktioniert am besten. Dies ist ein Bild Ihrer Unterschrift, keine digitale Signatur.",
+    ),
+    ("Other picture…", "Anderes Bild…"),
+    ("New stamp", "Neuer Stempel"),
+    (
+        "Make a stamp of your own: a text in your colour, or a picture such as a logo. It is kept on this computer and shows up in the Stamp tool.",
+        "Erstellen Sie einen eigenen Stempel: ein Text in Ihrer Farbe oder ein Bild wie ein Logo. Er wird auf diesem Computer gespeichert und erscheint im Stempel-Werkzeug.",
+    ),
+    ("Name of the stamp", "Name des Stempels"),
+    ("Picture", "Bild"),
+    ("Choose picture…", "Bild auswählen…"),
+    ("Text on the stamp", "Text auf dem Stempel"),
+    ("Save stamp", "Stempel speichern"),
+    ("Choose a picture first.", "Wählen Sie zuerst ein Bild."),
+    (
+        "Could not save the stamp: {}",
+        "Der Stempel konnte nicht gespeichert werden: {}",
+    ),
+    (
+        "Could not save the stamps: {}",
+        "Die Stempel konnten nicht gespeichert werden: {}",
+    ),
+    (
+        "Stamp saved. Drag a box on the page, or click, to place it.",
+        "Stempel gespeichert. Ziehen Sie einen Rahmen auf die Seite oder klicken Sie, um ihn zu platzieren.",
+    ),
+    ("My stamps", "Meine Stempel"),
+    (
+        "Ask for the text each time",
+        "Jedes Mal nach dem Text fragen",
+    ),
+    ("text", "Text"),
+    ("picture", "Bild"),
+    ("Delete this stamp", "Diesen Stempel löschen"),
+    (
+        "You have no stamps of your own yet.",
+        "Sie haben noch keine eigenen Stempel.",
+    ),
+    ("New stamp…", "Neuer Stempel…"),
+    (
+        "Add your signature first (Sign → Draw Signature or Signature from Picture).",
+        "Fügen Sie zuerst Ihre Unterschrift hinzu (Signieren → Unterschrift zeichnen oder Unterschrift aus Bild).",
+    ),
+    ("Signature from Picture…", "Unterschrift aus Bild…"),
+    (
+        "Use a scan or photo of your signature (PNG or JPEG) instead of drawing it",
+        "Verwenden Sie einen Scan oder ein Foto Ihrer Unterschrift (PNG oder JPEG) statt sie zu zeichnen",
+    ),
+    ("New Stamp…", "Neuer Stempel…"),
+    (
+        "Make a stamp of your own from a text or a picture and keep it",
+        "Erstellen Sie einen eigenen Stempel aus Text oder Bild und speichern Sie ihn",
+    ),
+    ("Signature from Picture", "Unterschrift aus Bild"),
+    ("New Stamp", "Neuer Stempel"),
+    (
+        "Drag a box to place the stamp. With a stamp of your own chosen, a click places it at its own size.",
+        "Ziehen Sie einen Rahmen, um den Stempel zu platzieren. Ist ein eigener Stempel gewählt, platziert ein Klick ihn in seiner eigenen Größe.",
+    ),
 ];
