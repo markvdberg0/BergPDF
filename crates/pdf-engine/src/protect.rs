@@ -123,6 +123,9 @@ pub(crate) struct Protection {
     /// The flags stored in the file.
     stored: Rights,
     cipher: Cipher,
+    /// A file identifier for a document that had none (an encrypted file should always carry one; some readers
+    /// fail to decrypt without it). Only set for protection we create ourselves.
+    file_id: Option<Vec<u8>>,
 }
 
 impl std::fmt::Debug for Protection {
@@ -152,6 +155,7 @@ impl Protection {
             owner,
             stored,
             cipher,
+            file_id: None,
         })
     }
 
@@ -174,6 +178,12 @@ impl Protection {
     /// Encrypt plain document bytes the way the original was protected.
     pub(crate) fn seal(&self, plain: &[u8]) -> Result<Vec<u8>> {
         let mut doc = Document::load_mem(plain)?;
+        if !doc.trailer.has(b"ID")
+            && let Some(id) = &self.file_id
+        {
+            let id = Object::string_literal(id.clone());
+            doc.trailer.set("ID", Object::Array(vec![id.clone(), id]));
+        }
         doc.encrypt(&self.state)
             .map_err(|e| EngineError::Save(sanitize(&format!("encryption failed: {e}"))))?;
         let mut out = Vec::new();
@@ -185,8 +195,13 @@ impl Protection {
     /// New AES-256 protection (revision 6) with the given passwords and rights. The caller opens it as owner.
     pub(crate) fn new_aes256(user: &str, owner: &str, rights: Rights) -> Result<Self> {
         let mut key = [0u8; 32];
-        getrandom::fill(&mut key)
-            .map_err(|e| EngineError::Save(format!("no random numbers available: {e}")))?;
+        let mut file_id = vec![0u8; 16];
+        let random = |buf: &mut [u8]| {
+            getrandom::fill(buf)
+                .map_err(|e| EngineError::Save(format!("no random numbers available: {e}")))
+        };
+        random(&mut key)?;
+        random(&mut file_id)?;
         let filter: Arc<dyn CryptFilter> = Arc::new(Aes256CryptFilter);
         let state = EncryptionState::try_from(EncryptionVersion::V5 {
             encrypt_metadata: true,
@@ -199,6 +214,10 @@ impl Protection {
             permissions: rights.to_permissions(),
         })
         .map_err(|e| EngineError::InvalidArgument(sanitize(&e.to_string())))?;
+        // lopdf leaves `/Length 256` out of the encryption dictionary it writes for a new state, but readers such
+        // as poppler need it to derive the key (the files decrypt to garbage there). The state it builds when it
+        // *reads* a dictionary has it, so the new dictionary is read back once and that state is the one used.
+        let state = reread(&state, user)?;
         Ok(Protection {
             state,
             password: user.to_string(),
@@ -206,8 +225,27 @@ impl Protection {
             owner: true,
             stored: rights,
             cipher: Cipher::Aes256,
+            file_id: Some(file_id),
         })
     }
+}
+
+/// The state lopdf derives from reading the dictionary of `state` (with the user password), which carries the key
+/// length that a freshly built state lacks.
+fn reread(state: &EncryptionState, user: &str) -> Result<EncryptionState> {
+    let bad = |what: &str| {
+        EngineError::InvalidArgument(format!("protection could not be set up: {what}"))
+    };
+    let dict = state.encode().map_err(|e| bad(&e.to_string()))?;
+    let mut probe = Document::new();
+    probe.objects.insert((1, 0), Object::Dictionary(dict));
+    probe.trailer.set("Encrypt", Object::Reference((1, 0)));
+    let algorithm =
+        lopdf::encryption::PasswordAlgorithm::try_from(&probe).map_err(|e| bad(&e.to_string()))?;
+    let password = algorithm
+        .sanitize_password(user)
+        .map_err(|e| bad(&e.to_string()))?;
+    EncryptionState::decode(&probe, password).map_err(|e| bad(&e.to_string()))
 }
 
 fn cipher_of(state: &EncryptionState) -> Cipher {

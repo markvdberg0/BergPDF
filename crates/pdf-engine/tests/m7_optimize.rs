@@ -127,8 +127,10 @@ fn check_same_look(a: &[u8], b: &[u8], tolerance: f64) {
         diag.trim().is_empty(),
         "poppler complains about the output: {diag}"
     );
-    let ra = poppler_render(a, 1, 100).unwrap();
-    let rb = poppler_render(b, 1, 100).unwrap();
+    let (Some(ra), Some(rb)) = (poppler_render(a, 1, 100), poppler_render(b, 1, 100)) else {
+        assert!(!oracles_required(), "pdftoppm required but missing");
+        return;
+    };
     assert_eq!((ra.0, ra.1), (rb.0, rb.1));
     let d = mean_abs_diff(&ra.2, &rb.2);
     assert!(
@@ -167,9 +169,12 @@ fn balanced_shrinks_a_bloated_file_and_keeps_it_readable() {
     assert_eq!(rep.after, out.len());
     check_same_look(&input, &out, 6.0);
     our_render_ok(&out);
-    let (n, stderr) = poppler_info(&out).unwrap();
-    assert_eq!(n, Some(1));
-    assert!(stderr.trim().is_empty(), "poppler complains: {stderr}");
+    if let Some((n, stderr)) = poppler_info(&out) {
+        assert_eq!(n, Some(1));
+        assert!(stderr.trim().is_empty(), "poppler complains: {stderr}");
+    } else {
+        assert!(!oracles_required(), "pdfinfo required but missing");
+    }
 }
 
 #[test]
