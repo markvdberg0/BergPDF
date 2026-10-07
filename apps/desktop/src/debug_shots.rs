@@ -168,6 +168,26 @@ fn save_png(path: &std::path::Path, img: &egui::ColorImage) {
     }
 }
 
+/// A made-up scan of a signature: dark blue ink on slightly grey paper.
+fn demo_signature_png() -> Vec<u8> {
+    let (w, h) = (360u32, 140u32);
+    let mut rgba = Vec::new();
+    for y in 0..h {
+        for x in 0..w {
+            let t = x as f32 / w as f32 * 6.0 * std::f32::consts::PI;
+            let cy = h as f32 / 2.0 + (t.sin() * 28.0) * (1.0 - x as f32 / w as f32 * 0.5);
+            let d = (y as f32 - cy).abs();
+            let ink = (1.0 - (d / 2.5)).clamp(0.0, 1.0);
+            let paper = 244.0 - ((x * 7 + y * 3) % 5) as f32;
+            let c = |ink_c: f32| (paper * (1.0 - ink) + ink_c * ink) as u8;
+            rgba.extend_from_slice(&[c(20.0), c(30.0), c(110.0), 255]);
+        }
+    }
+    pdf_engine::stampimage::StampImage::from_rgba(w, h, &rgba)
+        .and_then(|i| i.to_png())
+        .unwrap_or_default()
+}
+
 /// Put the application into the state a scenario shows.
 fn apply(app: &mut App, ctx: &egui::Context, name: &str) {
     use editor_core::command::CommandId as C;
@@ -290,6 +310,64 @@ fn apply(app: &mut App, ctx: &egui::Context, name: &str) {
                 });
                 crate::fontpick::DEBUG_OPEN_FONT_MENU
                     .store(true, std::sync::atomic::Ordering::Relaxed);
+            }
+        }
+        "imagesig" => {
+            if let Ok(p) =
+                crate::stamp_ui::PictureState::from_bytes(demo_signature_png(), "scan".into())
+            {
+                app.dialog = Some(Dialog::ImageSignature(Box::new(p)));
+            }
+        }
+        "newstamp" | "newstamp_pic" => {
+            let mut st = crate::stamp_ui::NewStampState::demo(name == "newstamp_pic");
+            if name == "newstamp_pic" {
+                st.set_demo_picture(demo_signature_png());
+            }
+            app.dialog = Some(Dialog::NewStamp(Box::new(st)));
+        }
+        "stamps" => {
+            if let Some(page) = page {
+                use editor_core::stamps::{StampDef, StampKind};
+                use pdf_engine::geom::Rect;
+                app.set_tool(editor_core::tools::Tool::Stamp);
+                if app.stamps.stamps.is_empty() {
+                    let _ = app.stamps.add(StampDef {
+                        name: "Betaald".into(),
+                        kind: StampKind::Text {
+                            label: "BETAALD".into(),
+                            color: [0.1, 0.5, 0.2],
+                        },
+                    });
+                    let _ = app.stamps.add(StampDef {
+                        name: "Logo".into(),
+                        kind: StampKind::Image {
+                            file: "stamp-1.png".into(),
+                        },
+                    });
+                    app.current_stamp = Some("Betaald".into());
+                    if let Ok(p) =
+                        crate::stamp_ui::PictureState::from_bytes(demo_signature_png(), "x".into())
+                        && let Some(img) = p.image()
+                    {
+                        app.place_picture(
+                            page,
+                            img,
+                            Rect::new(300.0, 600.0, 480.0, 650.0),
+                            "Signature",
+                            "demo",
+                        );
+                    }
+                    let mut spec = app.new_spec(pdf_engine::annot::AnnotationKind::StampText {
+                        rect: Rect::new(80.0, 600.0, 220.0, 640.0),
+                        label: "BETAALD".into(),
+                    });
+                    spec.color = pdf_engine::annot::Rgb(0.1, 0.5, 0.2);
+                    app.add_annotation(page, spec, "demo");
+                    if let Some(t) = app.tabs.first_mut() {
+                        t.session.selection.annotations.clear();
+                    }
+                }
             }
         }
         "dblclick_text" => {

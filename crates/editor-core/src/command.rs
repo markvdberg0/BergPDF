@@ -100,6 +100,8 @@ pub enum CommandId {
     TranslateDocument,
     ShowSignatures,
     DrawSignature,
+    SignFromImage,
+    NewStamp,
     ExportMeasurements,
     PageRotateClockwise,
     PageRotateCounterClockwise,
@@ -1048,6 +1050,22 @@ pub static REGISTRY: &[CommandInfo] = &[
         "Draw your handwritten signature once and keep it for reuse",
         C::Sign,
         "handwritten sign draw ink autograph",
+        []
+    ),
+    cmd!(
+        Id::SignFromImage,
+        "Signature from Picture…",
+        "Use a scan or photo of your signature (PNG or JPEG) instead of drawing it",
+        C::Sign,
+        "signature image picture png jpg jpeg scan photo import upload",
+        []
+    ),
+    cmd!(
+        Id::NewStamp,
+        "New Stamp…",
+        "Make a stamp of your own from a text or a picture and keep it",
+        C::Comment,
+        "stamp custom logo picture image own create",
         []
     ),
     cmd!(

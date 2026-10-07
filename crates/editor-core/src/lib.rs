@@ -11,6 +11,7 @@ pub mod prefs;
 pub mod search;
 pub mod selection;
 pub mod session;
+pub mod stamps;
 pub mod tiles;
 pub mod tools;
 pub mod view;

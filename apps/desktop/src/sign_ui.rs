@@ -486,6 +486,9 @@ impl App {
                         }
                         Err(e) => self.notify_error(tf!("Could not save the signature: {}", e)),
                     }
+                    // One saved signature: the drawing replaces a picture.
+                    let _ = std::fs::remove_file(crate::stamp_ui::signature_image_file());
+                    self.signature_image = None;
                     self.handwriting = sig;
                     self.notify(tr(
                         "Signature saved. Use Place Signature to put it on a page.",
@@ -514,13 +517,18 @@ impl App {
         }
         let Some(pos) = pos else { return };
         let Some(i) = vc.page_at(pos) else { return };
-        if self.handwriting.is_empty() {
-            self.notify(tr("Draw your signature first (Sign → Draw Signature)."));
+        if self.handwriting.is_empty() && self.signature_image.is_none() {
+            self.notify(tr(
+                "Add your signature first (Sign → Draw Signature or Signature from Picture).",
+            ));
             self.open_draw_signature();
             return;
         }
         let page = vc.pages[i].id;
         let c = vc.screen_to_pdf(i, pos);
+        if self.place_signature_picture(page, c) {
+            return;
+        }
         let strokes: Vec<Vec<Point>> = self
             .handwriting
             .to_user_space((c.x, c.y), PLACED_WIDTH_PT)

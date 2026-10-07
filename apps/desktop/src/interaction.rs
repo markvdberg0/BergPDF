@@ -240,7 +240,7 @@ impl App {
     }
 
     /// A box of `w_pt × h_pt` points whose top-left corner *on screen* is at `a`.
-    fn screen_box_at(vc: &ViewCtx, i: usize, a: Point, w_pt: f64, h_pt: f64) -> PRect {
+    pub(crate) fn screen_box_at(vc: &ViewCtx, i: usize, a: Point, w_pt: f64, h_pt: f64) -> PRect {
         let sa = vc.pdf_to_screen(i, a);
         let size = Vec2::new((w_pt * vc.px_per_pt) as f32, (h_pt * vc.px_per_pt) as f32);
         Self::screen_rect_to_pdf(vc, i, Rect::from_min_size(sa, size))
@@ -376,6 +376,12 @@ impl App {
                             text: String::new(),
                             callout: None,
                         });
+                    }
+                    Tool::Stamp if self.current_stamp_def().is_some() => {
+                        let sr = Self::rect_screen(vc, page_index, r);
+                        let tiny = f64::from(sr.width()) < 40.0 * vc.px_per_pt
+                            || f64::from(sr.height()) < 16.0 * vc.px_per_pt;
+                        self.place_custom_stamp(vc, page_index, r, a, tiny);
                     }
                     _ => {
                         let sr = Self::rect_screen(vc, page_index, r);
@@ -845,6 +851,7 @@ impl App {
                             AnnotationKind::Rectangle { rect: r }
                             | AnnotationKind::Ellipse { rect: r }
                             | AnnotationKind::Cloud { rect: r }
+                            | AnnotationKind::ImageStamp { rect: r, .. }
                             | AnnotationKind::StampText { rect: r, .. }
                             | AnnotationKind::FreeText { rect: r, .. } => *r = rect,
                             _ => {}
@@ -923,6 +930,16 @@ impl App {
     ) {
         let ti = self.active;
         let Some(pos) = pos else { return };
+        // A click with one of the user's own stamps chosen places it at its own size.
+        if tool == Tool::Stamp
+            && self.current_stamp_def().is_some()
+            && response.clicked_by(egui::PointerButton::Primary)
+            && let Some(i) = vc.page_at(pos)
+        {
+            let p = vc.screen_to_pdf(i, pos);
+            self.place_custom_stamp(vc, i, PRect::new(p.x, p.y, p.x, p.y), p, true);
+            return;
+        }
         if response.drag_started_by(egui::PointerButton::Primary) {
             let Some(i) = vc.page_at(pos) else { return };
             let p = vc.screen_to_pdf(i, pos);

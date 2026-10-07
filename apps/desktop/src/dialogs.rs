@@ -436,6 +436,12 @@ impl App {
             Dialog::DrawSignature(st) => {
                 keep = self.dialog_draw_signature(ctx, st);
             }
+            Dialog::ImageSignature(st) => {
+                keep = self.dialog_image_signature(ctx, st);
+            }
+            Dialog::NewStamp(st) => {
+                keep = self.dialog_new_stamp(ctx, st);
+            }
             Dialog::Properties(st) => {
                 keep = self.dialog_properties(ctx, st);
             }
