@@ -35,7 +35,12 @@ Also included: open and create password-protected PDFs, permanently redact (blac
 
 ### What's new in this version
 
-*(leave empty for the first submission)*
+* A calmer, more modern interface: clearer panels and dialogs, new icons
+* Your own stamps (a text in your colour, or a picture such as a logo) and your signature from a PNG or JPEG
+* A cloud tool for markup; double-click a text box, note, stamp or line of page text to edit it right there
+* Measuring by dragging, and a selection that shows the moment you click
+* Text in Type 3 fonts can now be replaced by text in another font
+* Typing in the font search no longer ends up in your text
 
 ### Product features
 
@@ -89,7 +94,12 @@ Ook inbegrepen: met een wachtwoord beveiligde pdf's openen en maken, gevoelige t
 
 ### Wat is er nieuw in deze versie
 
-*(leeg laten bij de eerste indiening)*
+* Een rustigere, modernere interface: duidelijkere panelen en dialogen, nieuwe iconen
+* Eigen stempels (een tekst in je kleur of een afbeelding zoals een logo) en je handtekening uit een PNG of JPEG
+* Een wolk-gereedschap voor opmerkingen; dubbelklik op een tekstvak, notitie, stempel of regel paginatekst om die ter plekke te bewerken
+* Meten door te slepen, en een selectie die zichtbaar is zodra je klikt
+* Tekst in Type 3-lettertypen kan nu worden vervangen door tekst in een ander lettertype
+* Wat je in het lettertype-zoekveld typt komt niet meer in je tekst terecht
 
 ### Productfuncties
 
@@ -146,7 +156,12 @@ Außerdem enthalten: passwortgeschützte PDFs öffnen und erstellen, vertraulich
 
 ### Neuigkeiten in dieser Version
 
-*(bei der ersten Einreichung leer lassen)*
+* Eine ruhigere, modernere Oberfläche: klarere Bereiche und Dialoge, neue Symbole
+* Eigene Stempel (ein Text in Ihrer Farbe oder ein Bild wie ein Logo) und Ihre Unterschrift aus einer PNG- oder JPEG-Datei
+* Ein Wolken-Werkzeug für Anmerkungen; Doppelklick auf Textfeld, Notiz, Stempel oder Textzeile zum direkten Bearbeiten
+* Messen durch Ziehen und eine Auswahl, die sofort beim Klicken sichtbar ist
+* Text in Type-3-Schriften kann jetzt durch Text in einer anderen Schrift ersetzt werden
+* Eingaben in der Schriftsuche landen nicht mehr in Ihrem Text
 
 ### Produktfunktionen
 

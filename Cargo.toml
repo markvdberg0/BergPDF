@@ -27,7 +27,7 @@ default-members = [
 ]
 
 [workspace.package]
-version = "0.2.2"
+version = "0.3.0"
 edition = "2024"
 rust-version = "1.92"
 # GNU GPL v3 or later, chosen by the repository owner (docs/DECISIONS.md D-001).
