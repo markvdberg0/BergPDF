@@ -2300,4 +2300,12 @@ pub static ENTRIES: &[(&str, &str)] = &[
         "Ctrl+Enter or click outside to apply, Esc to cancel",
         "Strg+Eingabe oder Klick daneben zum Übernehmen, Esc zum Abbrechen",
     ),
+    (
+        "Enter or click outside to apply, Esc to cancel",
+        "Eingabe oder Klick daneben zum Übernehmen, Esc zum Abbrechen",
+    ),
+    (
+        "This text is drawn with a font that cannot be edited in place. Applying a change replaces it with the font chosen below.",
+        "Dieser Text ist mit einer Schrift gezeichnet, die sich nicht direkt bearbeiten lässt. Beim Übernehmen einer Änderung wird sie durch die unten gewählte Schrift ersetzt.",
+    ),
 ];

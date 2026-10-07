@@ -577,3 +577,87 @@ fn unsupported_text_is_listed_with_a_reason_not_corrupted() {
     assert_eq!(rs.len(), 1);
     assert!(rs[0].editable.as_ref().unwrap_err().contains("Type 3"));
 }
+
+/// A page whose text is drawn with a Type 3 font that names its characters and gives widths.
+fn type3_page_with_names() -> Vec<u8> {
+    use pdf_writer::{Content, Name, Pdf, Rect, Ref, Str};
+    let mut pdf = Pdf::new();
+    let (cat, tree, page, font, content, enc) = (
+        Ref::new(1),
+        Ref::new(2),
+        Ref::new(3),
+        Ref::new(4),
+        Ref::new(5),
+        Ref::new(6),
+    );
+    pdf.catalog(cat).pages(tree);
+    pdf.pages(tree).kids([page]).count(1);
+    {
+        let mut p = pdf.page(page);
+        p.media_box(Rect::new(0.0, 0.0, 200.0, 200.0))
+            .parent(tree)
+            .contents(content);
+        p.resources().fonts().pair(Name(b"F3"), font);
+    }
+    {
+        let mut f = pdf.indirect(font).dict();
+        f.pair(Name(b"Type"), Name(b"Font"));
+        f.pair(Name(b"Subtype"), Name(b"Type3"));
+        f.pair(Name(b"FontBBox"), Rect::new(0.0, 0.0, 1000.0, 1000.0));
+        f.insert(Name(b"FontMatrix"))
+            .array()
+            .items([0.001, 0.0, 0.0, 0.001, 0.0, 0.0]);
+        f.pair(Name(b"FirstChar"), 97);
+        f.pair(Name(b"LastChar"), 99);
+        f.insert(Name(b"Widths")).array().items([600, 600, 600]);
+        f.pair(Name(b"Encoding"), enc);
+    }
+    {
+        let mut e = pdf.indirect(enc).dict();
+        e.pair(Name(b"Type"), Name(b"Encoding"));
+        e.insert(Name(b"Differences"))
+            .array()
+            .item(97)
+            .item(Name(b"a"))
+            .item(Name(b"b"))
+            .item(Name(b"c"));
+    }
+    let mut c = Content::new();
+    c.begin_text()
+        .set_font(Name(b"F3"), 10.0)
+        .next_line(10.0, 100.0)
+        .show(Str(b"abc"))
+        .end_text();
+    pdf.stream(content, &c.finish());
+    pdf.finish()
+}
+
+#[test]
+fn type3_text_is_read_and_can_be_replaced_by_a_bundled_font() {
+    use pdf_engine::fontembed::{FontFamily, FontStyle};
+    let mut doc = open(type3_page_with_names());
+    let page = doc.pages().unwrap()[0].id;
+    let r = find_run(&doc, page, "abc");
+    assert!(r.editable.as_ref().unwrap_err().contains("Type 3"));
+    assert!(r.replaceable, "its text and widths are known");
+    // Three glyphs of 600/1000 em at 10 pt.
+    assert!((r.width_pt - 18.0).abs() < 0.01, "{}", r.width_pt);
+
+    // In its own font the run cannot change...
+    let own = TextEdit {
+        text: Some("xyz".into()),
+        ..Default::default()
+    };
+    assert!(edit_and_reopen(&mut doc, page, &r, &own).is_err());
+    // ...but it can be replaced by text in a bundled font, which is the visible, explicit way.
+    let replace = TextEdit {
+        text: Some("xyz".into()),
+        substitute_font: Some(FontStyle::new(FontFamily::DejaVuSans, false, false)),
+        ..Default::default()
+    };
+    let (re, bytes, report) = edit_and_reopen(&mut doc, page, &r, &replace).unwrap();
+    assert!(report.warnings.iter().any(|w| w.contains("Font changed")));
+    let again = find_run(&re, re.pages().unwrap()[0].id, "xyz");
+    assert!(again.editable.is_ok(), "{:?}", again.editable);
+    assert!(all_text(&bytes).contains("xyz"));
+}

@@ -208,6 +208,8 @@ impl App {
             return;
         };
         let ti = self.active;
+        #[cfg(debug_assertions)]
+        crate::debug_shots::publish_screen(&vc);
 
         // ---- zoom / scroll input ----
         let hovered = response.hovered() && self.dialog.is_none() && !self.palette_open;

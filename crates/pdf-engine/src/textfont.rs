@@ -59,6 +59,9 @@ pub struct FontInfo {
     pub code_len: usize,
     /// Reason text editing with this font is unsupported.
     pub unsupported: Option<String>,
+    /// The text and widths of this font are known although it cannot be edited in place (a Type 3
+    /// font draws its glyphs itself), so a run can still be replaced by text in a bundled font.
+    pub replaceable: bool,
     widths: Widths,
     unicode: HashMap<u32, String>,
     reverse: HashMap<String, u32>,
@@ -157,6 +160,7 @@ impl FontInfo {
             subset,
             code_len: 1,
             unsupported: None,
+            replaceable: false,
             widths: Widths::None,
             unicode: HashMap::new(),
             reverse: HashMap::new(),
@@ -169,7 +173,7 @@ impl FontInfo {
         match subtype.as_str() {
             "Type0" => fi.load_type0(doc, font),
             "Type1" | "MMType1" | "TrueType" => fi.load_simple(doc, font),
-            "Type3" => fi.unsupported = Some("Type 3 fonts cannot be edited".into()),
+            "Type3" => fi.load_type3(doc, font),
             other => fi.unsupported = Some(format!("font type “{other}” is not supported")),
         }
         fi.finish_reverse();
@@ -308,6 +312,33 @@ impl FontInfo {
             }
             self.verified = Some(ok);
         }
+    }
+
+    /// A Type 3 font: its glyphs are little drawings, so the text cannot be edited in this font. The
+    /// character names and widths are still read, which lets a run be replaced by a bundled font.
+    fn load_type3(&mut self, doc: &Document, font: &Dictionary) {
+        self.load_simple(doc, font);
+        if let Some(why) = self.unsupported.take() {
+            // Without a known text or widths there is nothing to carry over.
+            self.unsupported = Some(format!("Type 3 fonts cannot be edited ({why})"));
+            return;
+        }
+        // Widths are in glyph space; the font matrix turns them into text space.
+        let fm = objutil::dict_array(doc, font, b"FontMatrix")
+            .and_then(|a| a.first().and_then(|o| objutil::num(doc, o)))
+            .filter(|v| *v > 0.0)
+            .unwrap_or(0.001);
+        if let Widths::Simple {
+            widths, missing, ..
+        } = &mut self.widths
+        {
+            for w in widths.iter_mut() {
+                *w *= fm * 1000.0;
+            }
+            *missing *= fm * 1000.0;
+        }
+        self.unsupported = Some("Type 3 fonts cannot be edited".into());
+        self.replaceable = true;
     }
 
     fn load_simple(&mut self, doc: &Document, font: &Dictionary) {
@@ -692,8 +723,24 @@ mod tests {
     #[test]
     fn unsupported_fonts_say_why() {
         let doc = Document::new();
-        let t3 = FontInfo::load(&doc, &dictionary! { "Subtype" => "Type3" });
+        // A Type 3 font with nothing to read the text from has nothing to carry over either.
+        let bare = FontInfo::load(&doc, &dictionary! { "Subtype" => "Type3" });
+        assert!(bare.can_edit().is_err() && !bare.replaceable);
+        // One with character names and widths keeps its text and can be replaced by another font.
+        let t3 = FontInfo::load(
+            &doc,
+            &dictionary! {
+                "Subtype" => "Type3",
+                "FontMatrix" => vec![0.01.into(), 0.into(), 0.into(), 0.01.into(), 0.into(), 0.into()],
+                "FirstChar" => 97, "Widths" => vec![50.into(), 60.into()],
+                "Encoding" => dictionary! { "Differences" => vec![Object::Integer(97), Object::Name(b"a".to_vec()), Object::Name(b"b".to_vec())] },
+            },
+        );
         assert!(t3.can_edit().unwrap_err().contains("Type 3"));
+        assert!(t3.replaceable);
+        assert_eq!(t3.unicode_of(97), Some("a"));
+        // 50 glyph units at a font matrix of 0.01 is half an em.
+        assert!((t3.width1000(97) - 500.0).abs() < 0.01);
         let noenc = FontInfo::load(
             &doc,
             &dictionary! { "Subtype" => "TrueType", "BaseFont" => "Foo" },

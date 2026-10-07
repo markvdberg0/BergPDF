@@ -863,7 +863,12 @@ impl App {
             }
         } else if response.double_clicked() {
             self.tabs[ti].ui.interaction = Interaction::None;
-            if !self.start_inline_edit_at(vc, pos) {
+            if self.start_inline_edit_at(vc, pos) {
+                // A text box, note or stamp is being edited where it is.
+            } else if self.start_inline_run_at(vc, pos) {
+                // A line of the page's own text: that is what Edit Text is for.
+                self.set_tool(Tool::EditText);
+            } else {
                 // Jump to the comment editor for the selected annotation.
                 self.right_tab = RightTab::Properties;
                 self.prefs.show_right_sidebar = true;

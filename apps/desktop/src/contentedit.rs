@@ -113,6 +113,11 @@ impl App {
         let objs = self.objects_for(page);
         let pt = vc.screen_to_pdf(i, pos);
         let tol = 2.0 / vc.px_per_pt;
+        if response.double_clicked_by(egui::PointerButton::Primary)
+            && self.start_inline_run_at(vc, pos)
+        {
+            return;
+        }
         if response.drag_started_by(egui::PointerButton::Primary) {
             // Resize handle of the selected image?
             if let Some((sp, ContentRef::Image(id))) = self.tabs[ti].session.selection.content
@@ -245,6 +250,60 @@ impl App {
         }
     }
 
+    /// Apply the text typed into an inline editor over a line of page text, through the same path as the
+    /// Apply button of the properties panel (so the font rules and warnings are the same).
+    pub fn apply_inline_run(
+        &mut self,
+        page: PageId,
+        run: pdf_engine::pagecontent::ObjRef,
+        text: &str,
+        original: &str,
+    ) {
+        if text == original {
+            return;
+        }
+        let ti = self.active;
+        let objs = self.objects_for(page);
+        self.select_content(page, ContentRef::Text(run), &objs);
+        if let Some(d) = self.tabs[ti].ui.edit_draft.as_mut() {
+            d.text = text.to_string();
+        }
+        self.apply_text_draft(None);
+        // Whatever went wrong is explained in the properties panel; open it.
+        if self.tabs[ti]
+            .ui
+            .edit_draft
+            .as_ref()
+            .is_some_and(|d| d.message.as_ref().is_some_and(|(err, _)| *err))
+        {
+            self.right_tab = RightTab::Properties;
+            self.prefs.show_right_sidebar = true;
+        }
+    }
+
+    /// Double-click on a line of page text: edit it right there. Returns whether there was such a line.
+    pub fn start_inline_run_at(&mut self, vc: &ViewCtx, pos: Pos2) -> bool {
+        let ti = self.active;
+        if !self.tabs[ti].session.doc().capabilities().can_edit {
+            return false;
+        }
+        let Some(i) = vc.page_at(pos) else {
+            return false;
+        };
+        let page = vc.pages[i].id;
+        let objs = self.objects_for(page);
+        let pt = vc.screen_to_pdf(i, pos);
+        let Some(run) = Self::run_hit(&objs, pt, 2.0 / vc.px_per_pt)
+            .filter(|r| r.editable.is_ok() || r.replaceable)
+            .cloned()
+        else {
+            return false;
+        };
+        self.select_content(page, ContentRef::Text(run.id), &objs);
+        self.tabs[ti].ui.inline_edit = Some(crate::inline_edit::InlineEdit::start_run(page, &run));
+        true
+    }
+
     fn select_content(&mut self, page: PageId, c: ContentRef, objs: &PageObjects) {
         let ti = self.active;
         self.tabs[ti].session.selection.annotations.clear();
@@ -263,12 +322,18 @@ impl App {
                 original_size: (r.size_pt * 100.0).round() / 100.0,
                 fit_width: false,
                 original_font: r.base_font.clone(),
-                font: None,
-                message: r
-                    .editable
-                    .clone()
-                    .err()
-                    .map(|e| (true, tf!("This text can't be edited: {}.", e))),
+                font: r.replaceable.then(|| replacement_font(&r.base_font)),
+                message: if r.replaceable {
+                    Some((
+                        false,
+                        tr("This text is drawn with a font that cannot be edited in place. Applying a change replaces it with the font chosen below.").into(),
+                    ))
+                } else {
+                    r.editable
+                        .clone()
+                        .err()
+                        .map(|e| (true, tf!("This text can't be edited: {}.", e)))
+                },
                 missing: None,
                 report: None,
             });
@@ -779,7 +844,7 @@ impl App {
                         .color(self.pal.text_dim),
                 );
                 ui.add_space(4.0);
-                let editable = run.editable.is_ok() && can_edit;
+                let editable = (run.editable.is_ok() || run.replaceable) && can_edit;
                 ui.label(
                     RichText::new(format!(
                         "Font: {}{}{}",
@@ -797,7 +862,9 @@ impl App {
                     ))
                     .size(12.0),
                 );
-                if let Err(reason) = &run.editable {
+                if let Err(reason) = &run.editable
+                    && !run.replaceable
+                {
                     ui.colored_label(
                         self.pal.danger,
                         tf!("This text can't be edited: {}.", reason),
@@ -822,7 +889,7 @@ impl App {
                                 Some(s) => s.family.title().to_string(),
                             };
                             egui::ComboBox::from_id_salt("edit_font").selected_text(label).width(190.0).close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside).show_ui(ui, |ui| {
-                                if ui.selectable_label(d.font.is_none(), tr("Keep the original font")).clicked() {
+                                if !run.replaceable && ui.selectable_label(d.font.is_none(), tr("Keep the original font")).clicked() {
                                     d.font = None;
                                 }
                                 let mut fam = d.font.map_or(pdf_engine::fontembed::FontFamily::DejaVuSans, |s| s.family);
@@ -896,7 +963,7 @@ impl App {
                 if revert && let Some(d) = self.tabs[ti].ui.edit_draft.as_mut() {
                     d.text = d.original.clone();
                     d.size = d.original_size;
-                    d.font = None;
+                    d.font = run.replaceable.then(|| replacement_font(&run.base_font));
                     d.missing = None;
                     d.message = None;
                 }
@@ -975,6 +1042,17 @@ impl App {
         let _ = ctx;
         true
     }
+}
+
+/// The bundled font a run is replaced with when its own font cannot be edited: a regular sans, bold or
+/// italic when the original's name says so.
+fn replacement_font(base_font: &str) -> pdf_engine::fontembed::FontStyle {
+    let n = base_font.to_lowercase();
+    pdf_engine::fontembed::FontStyle::new(
+        pdf_engine::fontembed::FontFamily::DejaVuSans,
+        n.contains("bold"),
+        n.contains("italic") || n.contains("oblique"),
+    )
 }
 
 /// A readable font name without the subset tag ("ABCDEF+Arial-BoldMT" → "Arial-BoldMT").

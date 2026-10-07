@@ -13,7 +13,28 @@ enum Phase {
     Waiting,
 }
 
+/// A point of a page a scenario wants "clicked", and where it is on screen (published by the canvas).
+pub static CLICK_TARGET: std::sync::Mutex<
+    Option<(pdf_engine::doc::PageId, pdf_engine::geom::Point)>,
+> = std::sync::Mutex::new(None);
+pub static CLICK_SCREEN: std::sync::Mutex<Option<egui::Pos2>> = std::sync::Mutex::new(None);
+
+/// The canvas tells where the wanted page point is on screen.
+pub fn publish_screen(vc: &crate::canvas::ViewCtx) {
+    let Ok(target) = CLICK_TARGET.lock() else {
+        return;
+    };
+    if let Some((page, pt)) = *target
+        && let Some(i) = vc.pages.iter().position(|p| p.id == page)
+        && let Ok(mut s) = CLICK_SCREEN.lock()
+    {
+        *s = Some(vc.pdf_to_screen(i, pt));
+    }
+}
+
 pub struct DebugShots {
+    /// Pointer events for the next frames (inside this window only), one list per frame.
+    script: std::collections::VecDeque<Vec<egui::Event>>,
     dir: PathBuf,
     scenarios: Vec<String>,
     index: usize,
@@ -37,10 +58,36 @@ pub fn from_env() -> Option<DebugShots> {
         index: 0,
         phase: Phase::Settle(40),
         started: false,
+        script: Default::default(),
     })
 }
 
+/// Pointer events that double-click at `pos` (to try a scenario the way a hand would).
+fn double_click(pos: egui::Pos2) -> Vec<Vec<egui::Event>> {
+    let button = |pressed| egui::Event::PointerButton {
+        pos,
+        button: egui::PointerButton::Primary,
+        pressed,
+        modifiers: egui::Modifiers::NONE,
+    };
+    vec![
+        vec![egui::Event::PointerMoved(pos)],
+        vec![],
+        vec![button(true)],
+        vec![button(false)],
+        vec![button(true)],
+        vec![button(false)],
+    ]
+}
+
 impl DebugShots {
+    /// Hand the scripted pointer events of this frame to egui.
+    pub fn inject(&mut self, raw: &mut egui::RawInput) {
+        if let Some(events) = self.script.pop_front() {
+            raw.events.extend(events);
+        }
+    }
+
     /// Called every frame.
     pub fn step(&mut self, app: &mut App, ctx: &egui::Context) {
         ctx.request_repaint();
@@ -60,6 +107,24 @@ impl DebugShots {
             Phase::Settle(n) => {
                 if *n > 0 {
                     *n -= 1;
+                    // Halfway through the settling the canvas has said where the wanted point is.
+                    if self.started && *n == 15 && name == "calloutfont" {
+                        // Typing while the font list is open must go to its search field.
+                        self.script.push_back(vec![egui::Event::Text("Ver".into())]);
+                    }
+                    if self.started && *n == 5 && name == "calloutfont" {
+                        let typed = match &app.dialog {
+                            Some(Dialog::TextEntry { text, .. }) => text.clone(),
+                            _ => "<no dialog>".into(),
+                        };
+                        eprintln!("CALLOUT TEXT AFTER TYPING: {typed:?}");
+                    }
+                    if self.started && *n == 15 && name.starts_with("dblclick") {
+                        let at = CLICK_SCREEN.lock().ok().and_then(|s| *s);
+                        if let Some(at) = at {
+                            self.script.extend(double_click(at));
+                        }
+                    }
                     return;
                 }
                 if !self.started {
@@ -176,7 +241,7 @@ fn apply(app: &mut App, ctx: &egui::Context, name: &str) {
                 });
             }
         }
-        "annots" | "inline" => {
+        "annots" | "inline" | "dblclick" => {
             if let Some(page) = page {
                 use pdf_engine::annot::AnnotationKind;
                 use pdf_engine::geom::Rect;
@@ -199,6 +264,11 @@ fn apply(app: &mut App, ctx: &egui::Context, name: &str) {
                         None,
                     );
                 }
+                if name == "dblclick"
+                    && let Ok(mut t) = CLICK_TARGET.lock()
+                {
+                    *t = Some((page, pdf_engine::geom::Point::new(120.0, 580.0)));
+                }
                 if name == "inline" {
                     let list = app.annots_for(page);
                     if let Some(a) = list.iter().find(|a| a.subtype == "FreeText")
@@ -206,6 +276,27 @@ fn apply(app: &mut App, ctx: &egui::Context, name: &str) {
                     {
                         t.ui.inline_edit = crate::inline_edit::InlineEdit::start(page, a);
                     }
+                }
+            }
+        }
+        "calloutfont" => {
+            if let Some(page) = page {
+                app.dialog = Some(Dialog::TextEntry {
+                    page,
+                    tool: editor_core::tools::Tool::Callout,
+                    rect: pdf_engine::geom::Rect::new(100.0, 100.0, 270.0, 148.0),
+                    text: String::new(),
+                    callout: None,
+                });
+                crate::fontpick::DEBUG_OPEN_FONT_MENU
+                    .store(true, std::sync::atomic::Ordering::Relaxed);
+            }
+        }
+        "dblclick_text" => {
+            if let Some(page) = page {
+                app.set_tool(editor_core::tools::Tool::EditText);
+                if let Ok(mut t) = CLICK_TARGET.lock() {
+                    *t = Some((page, pdf_engine::geom::Point::new(110.0, 742.0)));
                 }
             }
         }

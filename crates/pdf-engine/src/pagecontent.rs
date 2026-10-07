@@ -59,6 +59,9 @@ pub struct TextRunInfo {
     pub size_pt: f64,
     /// `Ok` when the run can be edited; otherwise the reason it cannot.
     pub editable: std::result::Result<(), String>,
+    /// The run cannot be edited in its own font but can be replaced by text in a bundled font (give
+    /// `TextEdit::substitute_font`): its font only draws glyphs, its text and width are known.
+    pub replaceable: bool,
     /// Width of the run in points along its baseline.
     pub width_pt: f64,
 }
@@ -363,6 +366,12 @@ impl PageContent {
                 _ if m.det().abs() < 1e-12 => Err("degenerate text matrix".into()),
                 _ => Ok(()),
             };
+            let replaceable = font.is_some_and(|f| f.replaceable)
+                && first.operator != "\""
+                && self.walk.runs[g.runs.clone()]
+                    .iter()
+                    .all(|r| r.in_text_object)
+                && m.det().abs() >= 1e-12;
             out.push(TextRunInfo {
                 id: ObjRef {
                     start: g.span.start,
@@ -376,6 +385,7 @@ impl PageContent {
                 subset: font.is_some_and(|f| f.subset),
                 size_pt: first.params.size.abs() * scale,
                 editable,
+                replaceable,
                 width_pt: w_text * scale,
             });
         }
@@ -476,7 +486,12 @@ impl PageContent {
             .into_iter()
             .find(|t| t.id == run)
             .ok_or(EngineError::StaleReference)?;
-        info.editable.clone().map_err(EngineError::Unsupported)?;
+        if let Err(reason) = info.editable.clone() {
+            // A run whose font only draws glyphs can still be replaced, but only by text in another font.
+            if !(info.replaceable && edit.substitute_font.is_some() && edit.text.is_some()) {
+                return Err(EngineError::Unsupported(reason));
+            }
+        }
         let font = self
             .group_font(g)
             .ok_or_else(|| EngineError::Unsupported("font missing".into()))?

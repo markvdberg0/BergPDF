@@ -300,9 +300,7 @@ impl App {
                         ));
                     }
                     let r = ui.add(edit);
-                    if self.frame_counter.is_multiple_of(2) && !r.has_focus() {
-                        r.request_focus();
-                    }
+                    focus_when_free(ui, &r);
                     ui.add_space(8.0);
                     ui.horizontal(|ui| {
                         let ok = !text.trim().is_empty() || tool == Tool::Note;
@@ -358,9 +356,7 @@ impl App {
                             ))
                             .hint_text(tr("Type here…")),
                     );
-                    if self.frame_counter.is_multiple_of(2) && !r.has_focus() {
-                        r.request_focus();
-                    }
+                    focus_when_free(ui, &r);
                     ui.horizontal(|ui| {
                         ui.label(tr("Size"));
                         ui.add(egui::DragValue::new(size).range(4.0..=200.0).suffix(" pt"));
@@ -1090,5 +1086,16 @@ fn remove_recovery_entry(e: &platform::recovery::RecoveryEntry) {
         .and_then(|n| n.strip_suffix(".recovery.pdf"))
     {
         platform::recovery::remove(&platform::dirs::data_dir().join("recovery"), token);
+    }
+}
+
+/// Put the cursor in a dialog's text field, but only while nothing else wants the keyboard: not while
+/// the user types in another field (the font search, say) or has a menu open.
+pub(crate) fn focus_when_free(ui: &egui::Ui, field: &egui::Response) {
+    if !field.has_focus()
+        && ui.memory(|m| m.focused().is_none())
+        && !egui::Popup::is_any_open(ui.ctx())
+    {
+        field.request_focus();
     }
 }
