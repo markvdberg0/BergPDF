@@ -83,13 +83,53 @@ pub enum Icon {
     Shield,
 }
 
+/// `pts` with every corner rounded by radius `r` (a quadratic curve through the corner, never longer
+/// than half of the adjoining sides). Open paths keep their end points.
+fn rounded(pts: &[(f32, f32)], r: f32, closed: bool) -> Vec<(f32, f32)> {
+    let n = pts.len();
+    let mut out = Vec::new();
+    for i in 0..n {
+        let p = pts[i];
+        if !closed && (i == 0 || i == n - 1) {
+            out.push(p);
+            continue;
+        }
+        let a = pts[(i + n - 1) % n];
+        let b = pts[(i + 1) % n];
+        let (da, db) = ((a.0 - p.0, a.1 - p.1), (b.0 - p.0, b.1 - p.1));
+        let (la, lb) = (da.0.hypot(da.1), db.0.hypot(db.1));
+        let d = r.min(la / 2.0).min(lb / 2.0);
+        let s = (p.0 + da.0 / la * d, p.1 + da.1 / la * d);
+        let e = (p.0 + db.0 / lb * d, p.1 + db.1 / lb * d);
+        for k in 0..=6 {
+            let t = k as f32 / 6.0;
+            let m = 1.0 - t;
+            out.push((
+                m * m * s.0 + 2.0 * m * t * p.0 + t * t * e.0,
+                m * m * s.1 + 2.0 * m * t * p.1 + t * t * e.1,
+            ));
+        }
+    }
+    out
+}
+
+/// Points of the arc of a circle, angles in degrees (0 = right, 90 = down).
+fn arc(c: (f32, f32), r: f32, from: f32, to: f32) -> Vec<(f32, f32)> {
+    (0..=14)
+        .map(|k| {
+            let a = (from + (to - from) * k as f32 / 14.0).to_radians();
+            (c.0 + r * a.cos(), c.1 + r * a.sin())
+        })
+        .collect()
+}
+
 /// Paint an icon in `rect` (square) using `color`.
 pub fn paint(p: &Painter, rect: Rect, icon: Icon, color: Color32) {
     let s = rect.width().min(rect.height());
     let o = rect.center() - Vec2::splat(s / 2.0);
     let u = s / 24.0;
     let pt = |x: f32, y: f32| Pos2::new(o.x + x * u, o.y + y * u);
-    let st = Stroke::new((1.7 * u).max(1.0), color);
+    let st = Stroke::new((1.6 * u).max(1.0), color);
     let line = |a: (f32, f32), b: (f32, f32)| {
         p.line_segment([pt(a.0, a.1), pt(b.0, b.1)], st);
     };
@@ -215,51 +255,113 @@ pub fn paint(p: &Painter, rect: Rect, icon: Icon, color: Color32) {
             line((9.0, 13.0), (15.0, 13.0));
         }
         Icon::Open => {
+            // A folder with its tab, and the front flap.
             poly(
-                &[
-                    (3.0, 8.0),
-                    (3.0, 19.0),
-                    (19.0, 19.0),
-                    (21.0, 10.0),
-                    (8.0, 10.0),
-                    (6.0, 8.0),
-                ],
+                &rounded(
+                    &[
+                        (3.0, 5.0),
+                        (9.0, 5.0),
+                        (11.5, 8.0),
+                        (20.0, 8.0),
+                        (20.0, 19.0),
+                        (3.0, 19.0),
+                    ],
+                    2.0,
+                    true,
+                ),
+                true,
+            );
+            poly(
+                &rounded(&[(3.0, 19.0), (5.5, 11.5), (21.5, 11.5)], 1.5, false),
                 false,
             );
-            line((3.0, 8.0), (3.0, 5.0));
-            line((3.0, 5.0), (9.0, 5.0));
-            line((9.0, 5.0), (11.0, 8.0));
-            line((11.0, 8.0), (18.0, 8.0));
-            line((18.0, 8.0), (18.0, 10.0));
         }
         Icon::Save => {
-            rrect(4.0, 4.0, 20.0, 20.0);
-            rrect(8.0, 4.0, 16.0, 9.0);
-            rrect(7.0, 13.0, 17.0, 20.0);
+            poly(
+                &rounded(
+                    &[
+                        (4.0, 4.0),
+                        (16.0, 4.0),
+                        (20.0, 8.0),
+                        (20.0, 20.0),
+                        (4.0, 20.0),
+                    ],
+                    2.0,
+                    true,
+                ),
+                true,
+            );
+            poly(
+                &rounded(
+                    &[(8.0, 4.0), (8.0, 9.0), (15.0, 9.0), (15.0, 4.0)],
+                    1.0,
+                    false,
+                ),
+                false,
+            );
+            poly(
+                &rounded(
+                    &[(7.0, 20.0), (7.0, 14.0), (17.0, 14.0), (17.0, 20.0)],
+                    1.0,
+                    false,
+                ),
+                false,
+            );
         }
         Icon::SaveAs => {
-            rrect(3.0, 4.0, 17.0, 20.0);
-            rrect(6.0, 4.0, 13.0, 9.0);
-            line((15.0, 17.0), (22.0, 10.0));
-            line((20.0, 8.0), (22.0, 10.0));
+            poly(
+                &rounded(
+                    &[
+                        (3.0, 4.0),
+                        (12.0, 4.0),
+                        (15.0, 7.0),
+                        (15.0, 20.0),
+                        (3.0, 20.0),
+                    ],
+                    2.0,
+                    true,
+                ),
+                true,
+            );
+            poly(
+                &rounded(
+                    &[(6.0, 4.0), (6.0, 8.5), (11.0, 8.5), (11.0, 4.0)],
+                    1.0,
+                    false,
+                ),
+                false,
+            );
+            // A small pencil: the copy is written under a new name.
+            poly(
+                &[
+                    (14.5, 19.5),
+                    (15.0, 16.5),
+                    (20.0, 11.5),
+                    (22.0, 13.5),
+                    (17.0, 18.5),
+                    (14.5, 19.5),
+                ],
+                true,
+            );
         }
         Icon::Close => {
             line((6.0, 6.0), (18.0, 18.0));
             line((18.0, 6.0), (6.0, 18.0));
         }
-        Icon::Undo => {
-            poly(&[(9.0, 5.0), (4.0, 10.0), (9.0, 15.0)], false);
-            poly(
-                &[(4.0, 10.0), (14.0, 10.0), (19.0, 13.0), (19.0, 19.0)],
-                false,
+        Icon::Undo | Icon::Redo => {
+            // An arrow that turns back: head on the left (undo) or right (redo), then a loop.
+            let m = |x: f32| if icon == Icon::Redo { 24.0 - x } else { x };
+            let head = vec![(m(9.0), 4.0), (m(4.0), 9.0), (m(9.0), 14.0)];
+            poly(&rounded(&head, 0.5, false), false);
+            let mut loop_path = vec![(m(4.0), 9.0), (m(14.5), 9.0)];
+            loop_path.extend(
+                arc((14.5, 14.5), 5.5, -90.0, 90.0)
+                    .into_iter()
+                    .skip(1)
+                    .map(|(x, y)| (m(x), y)),
             );
-        }
-        Icon::Redo => {
-            poly(&[(15.0, 5.0), (20.0, 10.0), (15.0, 15.0)], false);
-            poly(
-                &[(20.0, 10.0), (10.0, 10.0), (5.0, 13.0), (5.0, 19.0)],
-                false,
-            );
+            loop_path.push((m(11.0), 20.0));
+            poly(&loop_path, false);
         }
         Icon::Find => {
             circle((10.0, 10.0), 6.0);

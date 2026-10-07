@@ -371,6 +371,13 @@ mod frame_log {
 }
 
 impl eframe::App for App {
+    #[cfg(debug_assertions)]
+    fn raw_input_hook(&mut self, _ctx: &egui::Context, raw_input: &mut egui::RawInput) {
+        if let Some(d) = &mut self.debug_shots {
+            d.inject(raw_input);
+        }
+    }
+
     fn logic(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         frame_log::begin();
         self.frame_counter += 1;

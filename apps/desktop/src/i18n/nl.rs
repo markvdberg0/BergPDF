@@ -2264,4 +2264,12 @@ pub static ENTRIES: &[(&str, &str)] = &[
         "Ctrl+Enter or click outside to apply, Esc to cancel",
         "Ctrl+Enter of klik ernaast om toe te passen, Esc om te annuleren",
     ),
+    (
+        "Enter or click outside to apply, Esc to cancel",
+        "Enter of klik ernaast om toe te passen, Esc om te annuleren",
+    ),
+    (
+        "This text is drawn with a font that cannot be edited in place. Applying a change replaces it with the font chosen below.",
+        "Deze tekst is getekend met een lettertype dat niet ter plekke te bewerken is. Een wijziging toepassen vervangt het door het hieronder gekozen lettertype.",
+    ),
 ];

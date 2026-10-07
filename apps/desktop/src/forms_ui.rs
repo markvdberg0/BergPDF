@@ -200,8 +200,8 @@ impl App {
                     te = te.password(true);
                 }
                 let r = ui.add(te);
-                if self.frame_counter.is_multiple_of(2) && !r.has_focus() && st.error.is_none() {
-                    r.request_focus();
+                if st.error.is_none() {
+                    crate::dialogs::focus_when_free(ui, &r);
                 }
                 if let Some(m) = st.max_len {
                     ui.label(
