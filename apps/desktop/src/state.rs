@@ -138,6 +138,8 @@ pub enum Dialog {
     Scale(Box<ScaleDialog>),
     /// A password-protected document asks for its password.
     Password(Box<crate::protect_ui::PasswordPrompt>),
+    /// Print the document.
+    Print(Box<crate::print_ui::PrintDialog>),
     /// Apply the redaction marks.
     Redact(Box<crate::redact_ui::RedactDialog>),
     /// Password protection of the active document.

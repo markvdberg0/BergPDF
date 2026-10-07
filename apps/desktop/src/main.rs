@@ -24,6 +24,7 @@ mod optimize_ui;
 mod pagefilter;
 mod pdfa_ui;
 mod prefs_ui;
+mod print_ui;
 mod protect_ui;
 mod redact_ui;
 mod sidebar;

@@ -66,6 +66,7 @@ pub fn command_icon(c: C) -> Icon {
         C::FileSaveOptimized => Icon::Optimize,
         C::FileConvertPdfA => Icon::Archive,
         C::FileProtection => Icon::Lock,
+        C::FilePrint => Icon::Print,
         C::RedactMarkSelection => Icon::Redact,
         C::RedactApply => Icon::RedactApply,
         C::ToggleCopilot | C::CopilotSummarize | C::CopilotSummarizeAnnotations => Icon::Sparkle,
@@ -351,7 +352,7 @@ impl App {
             ui.set_min_height(height);
             ui.horizontal(|ui| match self.ribbon_tab {
                 RibbonTab::File => {
-                    self.group(ui, tr("Document"), |s, ui| s.cmds(ui, ctx, &[C::FileOpen, C::FileSave, C::FileSaveAs, C::FileSaveOptimized, C::FileConvertPdfA, C::FileProtection, C::FileClose]));
+                    self.group(ui, tr("Document"), |s, ui| s.cmds(ui, ctx, &[C::FileOpen, C::FileSave, C::FileSaveAs, C::FilePrint, C::FileSaveOptimized, C::FileConvertPdfA, C::FileProtection, C::FileClose]));
                     self.group(ui, tr("Recent"), |s, ui| {
                         let recents = s.prefs.recent_files.clone();
                         if recents.is_empty() {
@@ -854,6 +855,7 @@ fn ribbon_label(id: C, title: &'static str) -> &'static str {
         C::FileSaveOptimized => tr("Optimize"),
         C::FileConvertPdfA => "PDF/A",
         C::FileProtection => tr("Protect"),
+        C::FilePrint => tr("Print"),
         C::ToolRedact => tr("Mark Area"),
         C::RedactMarkSelection => tr("Mark Text"),
         C::RedactApply => tr("Apply"),

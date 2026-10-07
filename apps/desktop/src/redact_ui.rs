@@ -117,7 +117,10 @@ impl App {
                         tr("This cannot be undone. Use Save As to keep your original file."),
                     );
                     ui.add_space(6.0);
-                    ui.checkbox(&mut st.small, tr("Smaller file (150 dpi instead of 300 dpi)"));
+                    ui.checkbox(
+                        &mut st.small,
+                        tr("Smaller file (150 dpi instead of 300 dpi)"),
+                    );
                     ui.checkbox(
                         &mut st.jpeg,
                         tr("Store the pictures as JPEG (smaller; for pages with photographs)"),
@@ -126,10 +129,7 @@ impl App {
                         &mut st.remove_metadata,
                         tr("Also remove the document properties (title, author, …)"),
                     );
-                    ui.checkbox(
-                        &mut st.remove_attachments,
-                        tr("Also remove attached files"),
-                    );
+                    ui.checkbox(&mut st.remove_attachments, tr("Also remove attached files"));
                     if let Some(e) = &st.error {
                         ui.colored_label(danger, e);
                     }
@@ -169,14 +169,16 @@ impl App {
                             danger,
                             tr("These places still contain a word that was removed. Check them:"),
                         );
-                        egui::ScrollArea::vertical().max_height(160.0).show(ui, |ui| {
-                            for l in r.leaks.iter().take(40) {
-                                ui.label(format!("• {l}"));
-                            }
-                            if r.leaks.len() > 40 {
-                                ui.label(tf!("… and {} more", r.leaks.len() - 40));
-                            }
-                        });
+                        egui::ScrollArea::vertical()
+                            .max_height(160.0)
+                            .show(ui, |ui| {
+                                for l in r.leaks.iter().take(40) {
+                                    ui.label(format!("• {l}"));
+                                }
+                                if r.leaks.len() > 40 {
+                                    ui.label(tf!("… and {} more", r.leaks.len() - 40));
+                                }
+                            });
                     }
                     ui.add_space(8.0);
                     ui.horizontal(|ui| {

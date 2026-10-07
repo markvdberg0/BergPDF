@@ -2064,22 +2064,13 @@ pub static ENTRIES: &[(&str, &str)] = &[
         "⚠ Scale not set — measuring in PDF points",
         "⚠ Maßstab nicht festgelegt — Messung in PDF-Punkten",
     ),
-    (
-        "Password Protection…",
-        "Passwortschutz…",
-    ),
+    ("Password Protection…", "Passwortschutz…"),
     (
         "Protect the document with a password, or remove or change its protection",
         "Das Dokument mit einem Passwort schützen oder den Schutz entfernen bzw. ändern",
     ),
-    (
-        "Protect",
-        "Schützen",
-    ),
-    (
-        "Password required",
-        "Passwort erforderlich",
-    ),
+    ("Protect", "Schützen"),
+    ("Password required", "Passwort erforderlich"),
     (
         "“{}” is protected with a password. Enter it to open the document.",
         "„{}“ ist mit einem Passwort geschützt. Geben Sie es ein, um das Dokument zu öffnen.",
@@ -2088,10 +2079,7 @@ pub static ENTRIES: &[(&str, &str)] = &[
         "That password is not correct.",
         "Dieses Passwort ist falsch.",
     ),
-    (
-        "Password protection",
-        "Passwortschutz",
-    ),
+    ("Password protection", "Passwortschutz"),
     (
         "This document is not protected. Choose a password; it is needed to open the document after you save it.",
         "Dieses Dokument ist nicht geschützt. Wählen Sie ein Passwort; es wird zum Öffnen des Dokuments benötigt, nachdem Sie es gespeichert haben.",
@@ -2108,38 +2096,17 @@ pub static ENTRIES: &[(&str, &str)] = &[
         "You opened it with the document's password. What the author allows:",
         "Sie haben es mit dem Passwort des Dokuments geöffnet. Das erlaubt der Autor:",
     ),
-    (
-        "Printing",
-        "Drucken",
-    ),
-    (
-        "Copying text",
-        "Text kopieren",
-    ),
-    (
-        "Editing",
-        "Bearbeiten",
-    ),
+    ("Printing", "Drucken"),
+    ("Copying text", "Text kopieren"),
+    ("Editing", "Bearbeiten"),
     (
         "Enter the owner password to lift the restrictions.",
         "Geben Sie das Besitzerpasswort ein, um die Einschränkungen aufzuheben.",
     ),
-    (
-        "Owner password",
-        "Besitzerpasswort",
-    ),
-    (
-        "Unlock",
-        "Entsperren",
-    ),
-    (
-        "Remove password protection",
-        "Passwortschutz entfernen",
-    ),
-    (
-        "Change password…",
-        "Passwort ändern…",
-    ),
+    ("Owner password", "Besitzerpasswort"),
+    ("Unlock", "Entsperren"),
+    ("Remove password protection", "Passwortschutz entfernen"),
+    ("Change password…", "Passwort ändern…"),
     (
         "The change is written when you save the document.",
         "Die Änderung wird beim Speichern des Dokuments übernommen.",
@@ -2148,38 +2115,20 @@ pub static ENTRIES: &[(&str, &str)] = &[
         "Password to open the document",
         "Passwort zum Öffnen des Dokuments",
     ),
-    (
-        "Repeat the password",
-        "Passwort wiederholen",
-    ),
-    (
-        "Owner password (optional)",
-        "Besitzerpasswort (optional)",
-    ),
+    ("Repeat the password", "Passwort wiederholen"),
+    ("Owner password (optional)", "Besitzerpasswort (optional)"),
     (
         "With an owner password you can restrict what people who only know the password may do. Without one, the password above also unlocks everything.",
         "Mit einem Besitzerpasswort können Sie einschränken, was Personen tun dürfen, die nur das Passwort kennen. Ohne Besitzerpasswort entsperrt das Passwort oben ebenfalls alles.",
     ),
-    (
-        "Allow printing",
-        "Drucken erlauben",
-    ),
-    (
-        "Allow copying text",
-        "Kopieren von Text erlauben",
-    ),
-    (
-        "Allow editing",
-        "Bearbeiten erlauben",
-    ),
+    ("Allow printing", "Drucken erlauben"),
+    ("Allow copying text", "Kopieren von Text erlauben"),
+    ("Allow editing", "Bearbeiten erlauben"),
     (
         "AES 256-bit encryption. If you forget the password the document cannot be opened.",
         "AES-256-Bit-Verschlüsselung. Wenn Sie das Passwort vergessen, lässt sich das Dokument nicht mehr öffnen.",
     ),
-    (
-        "Protect the document",
-        "Dokument schützen",
-    ),
+    ("Protect the document", "Dokument schützen"),
     (
         "That is not the owner password.",
         "Das ist nicht das Besitzerpasswort.",
@@ -2192,10 +2141,7 @@ pub static ENTRIES: &[(&str, &str)] = &[
         "Protection removed. Save the document to write it without a password.",
         "Schutz entfernt. Speichern Sie das Dokument, um es ohne Passwort zu schreiben.",
     ),
-    (
-        "Enter a password.",
-        "Geben Sie ein Passwort ein.",
-    ),
+    ("Enter a password.", "Geben Sie ein Passwort ein."),
     (
         "The two passwords are not the same.",
         "Die beiden Passwörter stimmen nicht überein.",
@@ -2224,14 +2170,8 @@ pub static ENTRIES: &[(&str, &str)] = &[
         "Also remove the document properties (title, author, …)",
         "Auch die Dokumenteigenschaften entfernen (Titel, Autor, …)",
     ),
-    (
-        "Apply Redactions…",
-        "Schwärzungen anwenden…",
-    ),
-    (
-        "Apply redactions",
-        "Schwärzungen anwenden",
-    ),
+    ("Apply Redactions…", "Schwärzungen anwenden…"),
+    ("Apply redactions", "Schwärzungen anwenden"),
     (
         "Could not mark the area: {}",
         "Der Bereich konnte nicht markiert werden: {}",
@@ -2248,30 +2188,15 @@ pub static ENTRIES: &[(&str, &str)] = &[
         "Each of those pages is replaced by a picture of itself with the marked areas painted black, so nothing under a mark stays in the file: no text, no picture, no hidden text. The other words on the page stay searchable. Comments and form fields under a mark are deleted.",
         "Jede dieser Seiten wird durch ein Bild ihrer selbst ersetzt, in dem die markierten Bereiche schwarz sind, sodass unter einer Markierung nichts in der Datei bleibt: kein Text, kein Bild, kein versteckter Text. Die übrigen Wörter der Seite bleiben durchsuchbar. Kommentare und Formularfelder unter einer Markierung werden gelöscht.",
     ),
-    (
-        "Mark",
-        "Markieren",
-    ),
-    (
-        "Mark Area",
-        "Bereich markieren",
-    ),
-    (
-        "Mark Area for Redaction",
-        "Bereich zum Schwärzen markieren",
-    ),
+    ("Mark", "Markieren"),
+    ("Mark Area", "Bereich markieren"),
+    ("Mark Area for Redaction", "Bereich zum Schwärzen markieren"),
     (
         "Mark Selected Text for Redaction",
         "Ausgewählten Text zum Schwärzen markieren",
     ),
-    (
-        "Mark Text",
-        "Text markieren",
-    ),
-    (
-        "Mark for redaction",
-        "Zum Schwärzen markieren",
-    ),
+    ("Mark Text", "Text markieren"),
+    ("Mark for redaction", "Zum Schwärzen markieren"),
     (
         "Mark the selected text for removal; nothing is deleted until you apply the redactions",
         "Den ausgewählten Text zum Entfernen markieren; es wird nichts gelöscht, bis Sie die Schwärzungen anwenden",
@@ -2292,18 +2217,9 @@ pub static ENTRIES: &[(&str, &str)] = &[
         "Permanently remove what lies under the redaction marks (the pages are replaced by pictures; cannot be undone)",
         "Entfernt endgültig, was unter den Markierungen liegt (die Seiten werden durch Bilder ersetzt; nicht rückgängig zu machen)",
     ),
-    (
-        "Redact",
-        "Schwärzen",
-    ),
-    (
-        "Redactions applied",
-        "Schwärzungen angewendet",
-    ),
-    (
-        "Remove",
-        "Entfernen",
-    ),
+    ("Redact", "Schwärzen"),
+    ("Redactions applied", "Schwärzungen angewendet"),
+    ("Remove", "Entfernen"),
     (
         "Smaller file (150 dpi instead of 300 dpi)",
         "Kleinere Datei (150 dpi statt 300 dpi)",
@@ -2332,8 +2248,40 @@ pub static ENTRIES: &[(&str, &str)] = &[
         "{} page(s) replaced, {} word(s) removed, {} comment(s) or field(s) deleted.",
         "{} Seite(n) ersetzt, {} Wort/Wörter entfernt, {} Kommentar(e) oder Feld(er) gelöscht.",
     ),
+    ("… and {} more", "… und {} weitere"),
+    ("Actual size", "Tatsächliche Größe"),
+    ("All pages ({})", "Alle Seiten ({})"),
+    ("Choose a printer.", "Wählen Sie einen Drucker."),
+    ("Copies", "Exemplare"),
     (
-        "… and {} more",
-        "… und {} weitere",
+        "No printer was found on this computer.",
+        "Auf diesem Computer wurde kein Drucker gefunden.",
     ),
+    ("Print", "Drucken"),
+    (
+        "Print the document or some of its pages",
+        "Das Dokument oder einzelne Seiten drucken",
+    ),
+    ("Printer", "Drucker"),
+    ("Printing failed: {}", "Drucken fehlgeschlagen: {}"),
+    (
+        "Printing stopped unexpectedly.",
+        "Das Drucken wurde unerwartet beendet.",
+    ),
+    ("Printing {} page(s) on {}…", "{} Seite(n) auf {} drucken…"),
+    ("Print…", "Drucken…"),
+    ("Sent {} page(s) to {}.", "{} Seite(n) an {} gesendet."),
+    (
+        "Shrink large pages to fit the paper",
+        "Große Seiten auf die Papiergröße verkleinern",
+    ),
+    (
+        "The author of this document did not allow printing. Enter the owner password (Protect) to lift this.",
+        "Der Autor dieses Dokuments hat das Drucken nicht erlaubt. Geben Sie das Besitzerpasswort ein (Schützen), um das aufzuheben.",
+    ),
+    (
+        "There is no document to print.",
+        "Es gibt kein Dokument zum Drucken.",
+    ),
+    ("This page ({})", "Diese Seite ({})"),
 ];

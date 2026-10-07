@@ -37,7 +37,7 @@ own output.
 | Dark **page** view (render-time filter; never edits the file) | Implemented | `pagefilter` unit test; manual GUI |
 | Dark **application** theme (independent of the above) | Implemented | `prefs` test; manual GUI |
 | Tabs, recent files, session restore of open files | Partial | tabs + recent: yes; reopen-last-session: no |
-| Encrypted / password-protected PDFs | **Not supported** | opening reports a clear error; no decryption (crypto features of the PDF library are disabled) |
+| **Password-protected PDFs**: open with the user or owner password (RC4 40/128, AES 128/256), edit, save protected again with the same passwords; add (AES-256), change or remove protection; author's permission flags honoured (edit / print / copy) | Implemented | `m12_protect` (8 tests: all four ciphers, both passwords, wrong password, restricted rights, text read back by poppler `pdftotext -upw/-opw`, no text left in the encrypted file) and 5 `session` tests. Not recovery-filed, not signable, not optimizable/PDF/A while protected (the person removes the protection first). Limits: a non-ASCII *user* password cannot be reached through the owner password on RC4/AES-128 files; public-key encryption unsupported; encrypted files with object streams only covered by lopdf's reader. GUI dialogs not driven (`PLATFORM_CHECKLIST.md`) |
 | Accessibility (screen reader, keyboard-only use of all dialogs) | Partial | keyboard shortcuts everywhere; egui AccessKit exposure not audited |
 
 ## Annotations (comment layer)
@@ -51,7 +51,7 @@ own output.
 | Select, move, resize, duplicate, delete, edit properties | Implemented | GUI; undo tests in `editor_core::session` |
 | Comments panel | Implemented | no reply threads, status or filtering by author |
 | Existing foreign annotations preserved | Implemented | `existing_annotations` fixture, `m0_roundtrip` |
-| File attachment, sound, 3D, redact annotations | Planned | not created or edited |
+| File attachment, sound, 3D annotations | Planned | not created or edited (redaction marks are `/Redact` annotations, see below) |
 
 ## Page organisation and document operations
 
@@ -144,8 +144,8 @@ own output.
 | Unlimited undo/redo with “clean” tracking | Implemented | `session` tests |
 | Autosave recovery files + startup recovery dialog | Implemented | `platform::recovery` tests; GUI (restore flow) |
 | Crash isolation of the render workers | Partial | worker **threads** with panic containment (`jobs` tests); **not** a separate process |
-| Secure **redaction** | **Unavailable (gated)** | no feature offers it; “black rectangle” annotations are never presented as redaction. (OCR and signing are now implemented; redaction remains gated.) |
-| Encryption (password-protected PDFs) | Not supported | no decryption |
+| Secure **redaction**: mark areas or selected text (`/Redact` annotations), then apply: marked pages become a picture with the marks burned in, untouched words stay as invisible text; comments/fields under a mark deleted; leak report | Implemented | `m13_redact` (14 tests): removed words absent from the raw file and from every decoded stream and invisible to poppler; adversarial page with white, invisible-mode and form-XObject text under the mark; picture pixels black; rotated, cropped, negative-origin and UserUnit 2 pages land exactly where they were (render diff); other pages identical when rendered; one revision after save; large pages drop to a lower dpi. Trade-offs in D-036 (pages become pictures). GUI (tool, dialog) not driven |
+| Encryption of the saved file | Implemented | see password-protected PDFs above |
 
 ## Productivity and platform
 
@@ -158,7 +158,7 @@ own output.
 | Preferences stored locally, searchable | Implemented | `prefs` tests |
 | No telemetry, no network use in core flows | Implemented | no network crates in the runtime graph other than what eframe/wgpu pull for windowing; see `SECURITY.md` |
 | Windows 11 x86_64 / macOS Apple Silicon | **Untested** | `PLATFORM_CHECKLIST.md` |
-| Printing | Planned | no implementation |
+| **Printing**: Print dialog (printer, copies, all/this page/range, shrink to fit or actual size); Windows through GDI, macOS/Linux through `lp` | Implemented (Windows tested to a file) | `printing` tests: through the real GDI path into *Microsoft Print to PDF*: valid PDF, right page count for ranges × copies, mixed page sizes (A3 landscape turned and shrunk), text block proportions and position as in the original; placement and range parsing as unit tests. **Not tested**: a physical printer, the CUPS path (`lp_args` is unit-tested), the dialog itself |
 | File associations / “Open with” / Finder & Explorer integration | Planned | |
 | Installer / signed packages | Planned | `cargo xtask dist` makes an *unsigned* folder or `.app` layout (layout unit-tested; never launched on macOS) |
 

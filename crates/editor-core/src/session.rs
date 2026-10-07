@@ -497,7 +497,9 @@ impl DocumentSession {
 
     /// A document opened with limited rights becomes fully editable with the owner password.
     pub fn unlock_as_owner(&mut self, password: &str) -> Result<()> {
-        let unlocked = self.doc.unlock_as_owner(password, &OpenOptions::default())?;
+        let unlocked = self
+            .doc
+            .unlock_as_owner(password, &OpenOptions::default())?;
         self.doc = unlocked;
         self.bump();
         Ok(())

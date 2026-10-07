@@ -582,6 +582,7 @@ dependencies = [
  "pdf-engine",
  "pdf-ocr",
  "platform",
+ "printing",
  "sys-locale",
  "test-support",
  "tracing",
@@ -3818,6 +3819,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "353e1ca18966c16d9deb1c69278edbc5f194139612772bd9537af60ac231e1e6"
 dependencies = [
  "elliptic-curve",
+]
+
+[[package]]
+name = "printing"
+version = "0.2.2"
+dependencies = [
+ "pdf-engine",
+ "tempfile",
+ "test-support",
+ "thiserror 2.0.21",
+ "tracing",
+ "windows",
 ]
 
 [[package]]

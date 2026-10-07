@@ -9,6 +9,7 @@ there is no account and there is no telemetry.** The details:
 
 * It does not collect, store or send usage statistics, crash reports, device identifiers or advertising identifiers.
 * It does not need an account and has no server of its own. The people who make BergPDF receive nothing from it.
+* Passwords you type to open or protect a document are used for that and are never saved or sent anywhere.
 * It does not upload your documents. Opening, editing, signing, searching, measuring, optimising, converting to
   PDF/A and reading scanned pages with OCR all happen on your computer.
 

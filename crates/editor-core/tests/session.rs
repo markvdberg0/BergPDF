@@ -272,8 +272,11 @@ fn protected_copy(rights: pdf_engine::protect::Rights) -> (tempfile::TempDir, st
     use pdf_engine::doc::{OpenOptions, PdfDocument};
     let dir = tempfile::tempdir().unwrap();
     let p = dir.path().join("secret.pdf");
-    let mut doc =
-        PdfDocument::open(fixture_bytes("report-chromium.pdf"), &OpenOptions::default()).unwrap();
+    let mut doc = PdfDocument::open(
+        fixture_bytes("report-chromium.pdf"),
+        &OpenOptions::default(),
+    )
+    .unwrap();
     doc.set_protection("reader", "chief", rights).unwrap();
     let plain = doc.snapshot_bytes().unwrap();
     fs::write(&p, doc.seal(&plain).unwrap()).unwrap();
@@ -397,12 +400,19 @@ fn redaction_marks_are_undoable_but_applying_them_is_final_and_saved_as_a_clean_
     let report = s.apply_redactions(&RedactOptions::default()).unwrap();
     assert_eq!(report.words_removed, 4);
     assert!(s.redaction_marks().is_empty());
-    assert!(!s.can_undo() && !s.can_redo(), "no way back to the removed text");
+    assert!(
+        !s.can_undo() && !s.can_redo(),
+        "no way back to the removed text"
+    );
     assert!(s.is_dirty());
 
     s.save().unwrap();
     let on_disk = fs::read(&p).unwrap();
-    let has = |needle: &str| on_disk.windows(needle.len()).any(|w| w == needle.as_bytes());
+    let has = |needle: &str| {
+        on_disk
+            .windows(needle.len())
+            .any(|w| w == needle.as_bytes())
+    };
     assert!(!has("Second line"), "the removed text is in the saved file");
     assert_eq!(
         on_disk.windows(5).filter(|w| w == b"%%EOF").count(),

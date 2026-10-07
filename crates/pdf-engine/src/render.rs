@@ -16,6 +16,8 @@ use std::sync::Arc;
 
 /// Maximum pixels in a single rendered tile (guards memory use).
 pub const MAX_TILE_PIXELS: u64 = 4096 * 4096;
+/// Maximum pixels of a whole page picture drawn with [`Session::render_tiled`].
+pub const MAX_PICTURE_PIXELS: u64 = 120_000_000;
 
 /// An immutable RGBA8 bitmap with an opaque background (straight == premultiplied).
 #[derive(Clone, Debug)]
@@ -132,6 +134,54 @@ impl Session<'_> {
             height: req.height,
             rgba: pixmap.data_as_u8_slice().to_vec(),
         })
+    }
+
+    /// Render a whole page of any size in tiles of at most 2048 × 2048 pixels, handing each tile (and its
+    /// position in the page picture) to `f`. Returns the size of the whole picture in pixels. Used where a
+    /// page must be drawn at print or redaction quality, which a single tile cannot hold.
+    pub fn render_tiled(
+        &self,
+        page_index: usize,
+        geometry: PageGeometry,
+        view_rotation: Rotation,
+        scale: f64,
+        annotations: bool,
+        f: &mut dyn FnMut(u32, u32, &Bitmap) -> Result<()>,
+    ) -> Result<(u32, u32)> {
+        let size = geometry.view_size(view_rotation);
+        let w = (size.width * scale).ceil().max(1.0) as u32;
+        let h = (size.height * scale).ceil().max(1.0) as u32;
+        if u64::from(w) * u64::from(h) > MAX_PICTURE_PIXELS {
+            return Err(EngineError::LimitExceeded(format!(
+                "a page picture of {w}×{h} pixels is too large"
+            )));
+        }
+        const TILE: u32 = 2048;
+        let mut y = 0;
+        while y < h {
+            let th = TILE.min(h - y);
+            let mut x = 0;
+            while x < w {
+                let tw = TILE.min(w - x);
+                let bmp = self.render_tile_with(
+                    &TileRequest {
+                        page_index,
+                        geometry,
+                        view_rotation,
+                        scale,
+                        x,
+                        y,
+                        width: tw,
+                        height: th,
+                    },
+                    annotations,
+                )?;
+                f(x, y, &bmp)?;
+                x += tw;
+            }
+            y += th;
+        }
+        Ok((w, h))
     }
 
     /// Render a whole page at `scale` device pixels per point (convenience for thumbnails

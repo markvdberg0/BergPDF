@@ -53,7 +53,9 @@ fn file_contains(bytes: &[u8], needle: &str) -> bool {
     let doc = lopdf::Document::load_mem(bytes).unwrap();
     doc.objects.values().any(|o| match o {
         Object::Stream(s) => {
-            let data = s.decompressed_content().unwrap_or_else(|_| s.content.clone());
+            let data = s
+                .decompressed_content()
+                .unwrap_or_else(|_| s.content.clone());
             data.windows(needle.len()).any(|w| w == needle.as_bytes())
         }
         Object::String(b, _) => b.windows(needle.len()).any(|w| w == needle.as_bytes()),
@@ -62,7 +64,11 @@ fn file_contains(bytes: &[u8], needle: &str) -> bool {
 }
 
 /// Pixel box of `rect` (user space) in a bitmap rendered at `scale`.
-fn pixel_box(geom: &pdf_engine::geom::PageGeometry, rect: Rect, scale: f64) -> (u32, u32, u32, u32) {
+fn pixel_box(
+    geom: &pdf_engine::geom::PageGeometry,
+    rect: Rect,
+    scale: f64,
+) -> (u32, u32, u32, u32) {
     let t = geom.pdf_to_view(Rotation::R0);
     let pts = [
         t * Point::new(rect.x0, rect.y0),
@@ -82,7 +88,11 @@ fn pixel_box(geom: &pdf_engine::geom::PageGeometry, rect: Rect, scale: f64) -> (
 
 /// Mean absolute difference over everything *outside* `skip` (pixel box, grown by `grow`).
 fn diff_outside(a: &Bitmap, b: &Bitmap, skip: (u32, u32, u32, u32), grow: u32) -> f64 {
-    assert_eq!((a.width, a.height), (b.width, b.height), "page size changed");
+    assert_eq!(
+        (a.width, a.height),
+        (b.width, b.height),
+        "page size changed"
+    );
     let (mut sum, mut n) = (0u64, 0u64);
     for y in 0..a.height {
         for x in 0..a.width {
@@ -172,7 +182,10 @@ fn the_text_under_a_mark_is_gone_for_every_reader_and_the_rest_stays() {
     // object (the original file kept them in the clear).
     assert!(file_contains(&original, "Second line of text"));
     for word in ["Second", "line of"] {
-        assert!(!file_contains(&saved, word), "{word:?} is still in the file");
+        assert!(
+            !file_contains(&saved, word),
+            "{word:?} is still in the file"
+        );
     }
     assert!(file_contains(&saved, "%PDF-"));
     assert_eq!(
@@ -220,7 +233,10 @@ fn the_page_looks_the_same_except_for_a_black_box() {
         "the original has text there"
     );
     let d = diff_outside(&before, &after, b, 3);
-    assert!(d < 1.5, "the rest of the page changed (mean difference {d})");
+    assert!(
+        d < 1.5,
+        "the rest of the page changed (mean difference {d})"
+    );
 }
 
 #[test]
@@ -246,7 +262,10 @@ fn rotated_cropped_and_scaled_pages_land_exactly_where_they_were() {
         assert!(mean_inside(&after, b) < 6.0, "page {index}: no black box");
         let d = diff_outside(&before, &after, b, 4);
         assert!(d < 2.5, "page {index}: the page moved or changed ({d})");
-        assert!(!file_contains(&saved, word), "page {index}: {word} is still in the file");
+        assert!(
+            !file_contains(&saved, word),
+            "page {index}: {word} is still in the file"
+        );
         if let Some(t) = poppler_text(&saved, index + 1) {
             assert!(!t.contains(word), "page {index}: {t:?}");
         }
@@ -410,7 +429,10 @@ fn jpeg_pictures_and_lower_resolutions_work_and_are_smaller() {
         saved.len()
     })
     .collect();
-    assert!(sizes[1] < sizes[0], "150 dpi is smaller than 300 dpi: {sizes:?}");
+    assert!(
+        sizes[1] < sizes[0],
+        "150 dpi is smaller than 300 dpi: {sizes:?}"
+    );
     assert!(sizes.iter().all(|s| *s < 2_000_000), "{sizes:?}");
 }
 
@@ -440,10 +462,12 @@ fn a_redacted_page_survives_more_edits_and_can_be_saved_again() {
     mark(&mut doc, page, SECOND_LINE);
     redact::apply(&mut doc, &RedactOptions::default()).unwrap();
     // More editing afterwards works, and saving twice in a row stays a clean file.
-    doc.transact(|tx| pageops::rotate_pages(tx, &[page], 1)).unwrap();
+    doc.transact(|tx| pageops::rotate_pages(tx, &[page], 1))
+        .unwrap();
     let first = doc.snapshot_bytes().unwrap();
     doc.rebase(first.clone());
-    doc.transact(|tx| pageops::rotate_pages(tx, &[page], 1)).unwrap();
+    doc.transact(|tx| pageops::rotate_pages(tx, &[page], 1))
+        .unwrap();
     let second = doc.snapshot_bytes().unwrap();
     for bytes in [&first, &second] {
         assert!(!file_contains(bytes, "Second"));
@@ -531,7 +555,10 @@ fn hidden_white_invisible_and_form_text_under_a_mark_is_removed_too() {
     }
     if let Some(t) = poppler_text(&original, 1) {
         for needle in ["ALPHA", "BRAVO", "CHARLIE", "ECHO"] {
-            assert!(t.contains(needle), "an extractor finds {needle} before: {t:?}");
+            assert!(
+                t.contains(needle),
+                "an extractor finds {needle} before: {t:?}"
+            );
         }
     }
     let mut doc = open(original);
@@ -540,12 +567,26 @@ fn hidden_white_invisible_and_form_text_under_a_mark_is_removed_too() {
     let report = redact::apply(&mut doc, &RedactOptions::default()).unwrap();
     assert!(report.words_removed >= 10, "{report:?}");
     let saved = doc.snapshot_bytes().unwrap();
-    for needle in ["ALPHA", "BRAVO", "CHARLIE", "ECHO", "secret", "white on", "inside a form"] {
-        assert!(!file_contains(&saved, needle), "{needle} survived in the file");
+    for needle in [
+        "ALPHA",
+        "BRAVO",
+        "CHARLIE",
+        "ECHO",
+        "secret",
+        "white on",
+        "inside a form",
+    ] {
+        assert!(
+            !file_contains(&saved, needle),
+            "{needle} survived in the file"
+        );
     }
     if let Some(t) = poppler_text(&saved, 1) {
         for needle in ["ALPHA", "BRAVO", "CHARLIE", "ECHO", "secret"] {
-            assert!(!t.contains(needle), "{needle} survived for an extractor: {t:?}");
+            assert!(
+                !t.contains(needle),
+                "{needle} survived for an extractor: {t:?}"
+            );
         }
         assert!(t.contains("FOXTROT"), "text outside the marks stays: {t:?}");
     }

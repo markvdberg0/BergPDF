@@ -141,7 +141,10 @@ fn the_fixture_really_is_encrypted_and_readable_only_with_the_password() {
     ] {
         let bytes = encrypted(m, USER, OWNER, Permissions::all());
         assert!(contains(&helvetica_lines(), WORDS), "fixture sanity");
-        assert!(!contains(&bytes, WORDS), "{m:?}: text is readable in the file");
+        assert!(
+            !contains(&bytes, WORDS),
+            "{m:?}: text is readable in the file"
+        );
         assert!(matches!(
             open_with(&bytes, ""),
             Err(EngineError::PasswordRequired)
@@ -197,7 +200,10 @@ fn edit_save_encrypted_again_and_read_it_with_another_reader() {
             assert!(t.contains(WORDS), "the working copy is plain: {t:?}");
         }
         let sealed = doc.seal(&plain).unwrap().into_owned();
-        assert!(!contains(&sealed, WORDS), "{m:?}: saved file is not encrypted");
+        assert!(
+            !contains(&sealed, WORDS),
+            "{m:?}: saved file is not encrypted"
+        );
         assert!(sealed.windows(8).any(|w| w == b"/Encrypt"));
 
         // Both passwords still open it, the edit is there.
@@ -244,9 +250,7 @@ fn what_the_author_forbids_is_blocked_until_the_owner_password_is_given() {
     assert!(doc.set_protection("a", "b", Rights::ALL).is_err());
 
     // The owner password unlocks everything.
-    let owner_doc = doc
-        .unlock_as_owner(OWNER, &OpenOptions::default())
-        .unwrap();
+    let owner_doc = doc.unlock_as_owner(OWNER, &OpenOptions::default()).unwrap();
     assert!(owner_doc.protection().unwrap().owner);
     assert!(owner_doc.capabilities().can_edit);
     assert!(owner_doc.protection().unwrap().rights.modify);
@@ -279,7 +283,10 @@ fn protection_can_be_removed_and_added() {
     assert!(!doc.capabilities().encrypted);
     let plain = doc.snapshot_bytes().unwrap();
     let out = doc.seal(&plain).unwrap().into_owned();
-    assert!(!out.windows(8).any(|w| w == b"/Encrypt"), "no longer encrypted");
+    assert!(
+        !out.windows(8).any(|w| w == b"/Encrypt"),
+        "no longer encrypted"
+    );
     if let Some(t) = pdftotext(&out, "", "") {
         assert!(t.contains(WORDS), "{t:?}");
     }
@@ -302,7 +309,13 @@ fn protection_can_be_removed_and_added() {
     let sealed = doc.seal(&plain).unwrap().into_owned();
     assert!(!contains(&sealed, WORDS));
     // The empty owner password became the user password: that opens everything.
-    assert!(open_with(&sealed, "reader").unwrap().protection().unwrap().owner);
+    assert!(
+        open_with(&sealed, "reader")
+            .unwrap()
+            .protection()
+            .unwrap()
+            .owner
+    );
     assert!(matches!(
         open_with(&sealed, ""),
         Err(EngineError::PasswordRequired)

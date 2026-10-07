@@ -2016,22 +2016,13 @@ pub static ENTRIES: &[(&str, &str)] = &[
         "⚠ Scale not set — measuring in PDF points",
         "⚠ Schaal niet ingesteld — meting in PDF-punten",
     ),
-    (
-        "Password Protection…",
-        "Wachtwoordbeveiliging…",
-    ),
+    ("Password Protection…", "Wachtwoordbeveiliging…"),
     (
         "Protect the document with a password, or remove or change its protection",
         "Beveilig het document met een wachtwoord, of verwijder of wijzig de beveiliging",
     ),
-    (
-        "Protect",
-        "Beveiligen",
-    ),
-    (
-        "Password required",
-        "Wachtwoord vereist",
-    ),
+    ("Protect", "Beveiligen"),
+    ("Password required", "Wachtwoord vereist"),
     (
         "“{}” is protected with a password. Enter it to open the document.",
         "“{}” is met een wachtwoord beveiligd. Voer het in om het document te openen.",
@@ -2040,10 +2031,7 @@ pub static ENTRIES: &[(&str, &str)] = &[
         "That password is not correct.",
         "Dat wachtwoord is onjuist.",
     ),
-    (
-        "Password protection",
-        "Wachtwoordbeveiliging",
-    ),
+    ("Password protection", "Wachtwoordbeveiliging"),
     (
         "This document is not protected. Choose a password; it is needed to open the document after you save it.",
         "Dit document is niet beveiligd. Kies een wachtwoord; dat is nodig om het document te openen nadat u het hebt opgeslagen.",
@@ -2060,38 +2048,20 @@ pub static ENTRIES: &[(&str, &str)] = &[
         "You opened it with the document's password. What the author allows:",
         "U hebt het geopend met het wachtwoord van het document. Wat de auteur toestaat:",
     ),
-    (
-        "Printing",
-        "Afdrukken",
-    ),
-    (
-        "Copying text",
-        "Tekst kopiëren",
-    ),
-    (
-        "Editing",
-        "Bewerken",
-    ),
+    ("Printing", "Afdrukken"),
+    ("Copying text", "Tekst kopiëren"),
+    ("Editing", "Bewerken"),
     (
         "Enter the owner password to lift the restrictions.",
         "Voer het eigenaarswachtwoord in om de beperkingen op te heffen.",
     ),
-    (
-        "Owner password",
-        "Eigenaarswachtwoord",
-    ),
-    (
-        "Unlock",
-        "Ontgrendelen",
-    ),
+    ("Owner password", "Eigenaarswachtwoord"),
+    ("Unlock", "Ontgrendelen"),
     (
         "Remove password protection",
         "Wachtwoordbeveiliging verwijderen",
     ),
-    (
-        "Change password…",
-        "Wachtwoord wijzigen…",
-    ),
+    ("Change password…", "Wachtwoord wijzigen…"),
     (
         "The change is written when you save the document.",
         "De wijziging wordt vastgelegd als u het document opslaat.",
@@ -2100,10 +2070,7 @@ pub static ENTRIES: &[(&str, &str)] = &[
         "Password to open the document",
         "Wachtwoord om het document te openen",
     ),
-    (
-        "Repeat the password",
-        "Herhaal het wachtwoord",
-    ),
+    ("Repeat the password", "Herhaal het wachtwoord"),
     (
         "Owner password (optional)",
         "Eigenaarswachtwoord (optioneel)",
@@ -2112,26 +2079,14 @@ pub static ENTRIES: &[(&str, &str)] = &[
         "With an owner password you can restrict what people who only know the password may do. Without one, the password above also unlocks everything.",
         "Met een eigenaarswachtwoord kunt u beperken wat mensen die alleen het wachtwoord kennen mogen doen. Zonder eigenaarswachtwoord ontgrendelt het wachtwoord hierboven ook alles.",
     ),
-    (
-        "Allow printing",
-        "Afdrukken toestaan",
-    ),
-    (
-        "Allow copying text",
-        "Tekst kopiëren toestaan",
-    ),
-    (
-        "Allow editing",
-        "Bewerken toestaan",
-    ),
+    ("Allow printing", "Afdrukken toestaan"),
+    ("Allow copying text", "Tekst kopiëren toestaan"),
+    ("Allow editing", "Bewerken toestaan"),
     (
         "AES 256-bit encryption. If you forget the password the document cannot be opened.",
         "AES 256-bits versleuteling. Als u het wachtwoord vergeet, kan het document niet meer worden geopend.",
     ),
-    (
-        "Protect the document",
-        "Document beveiligen",
-    ),
+    ("Protect the document", "Document beveiligen"),
     (
         "That is not the owner password.",
         "Dat is niet het eigenaarswachtwoord.",
@@ -2144,10 +2099,7 @@ pub static ENTRIES: &[(&str, &str)] = &[
         "Protection removed. Save the document to write it without a password.",
         "Beveiliging verwijderd. Sla het document op om het zonder wachtwoord vast te leggen.",
     ),
-    (
-        "Enter a password.",
-        "Voer een wachtwoord in.",
-    ),
+    ("Enter a password.", "Voer een wachtwoord in."),
     (
         "The two passwords are not the same.",
         "De twee wachtwoorden zijn niet gelijk.",
@@ -2176,14 +2128,8 @@ pub static ENTRIES: &[(&str, &str)] = &[
         "Also remove the document properties (title, author, …)",
         "Ook de documenteigenschappen verwijderen (titel, auteur, …)",
     ),
-    (
-        "Apply Redactions…",
-        "Zwartlakken toepassen…",
-    ),
-    (
-        "Apply redactions",
-        "Zwartlakken toepassen",
-    ),
+    ("Apply Redactions…", "Zwartlakken toepassen…"),
+    ("Apply redactions", "Zwartlakken toepassen"),
     (
         "Could not mark the area: {}",
         "Kon het gebied niet markeren: {}",
@@ -2200,14 +2146,8 @@ pub static ENTRIES: &[(&str, &str)] = &[
         "Each of those pages is replaced by a picture of itself with the marked areas painted black, so nothing under a mark stays in the file: no text, no picture, no hidden text. The other words on the page stay searchable. Comments and form fields under a mark are deleted.",
         "Elk van die pagina's wordt vervangen door een afbeelding van zichzelf waarin de gemarkeerde gebieden zwart zijn, zodat er niets onder een markering in het bestand blijft: geen tekst, geen afbeelding, geen verborgen tekst. De andere woorden op de pagina blijven doorzoekbaar. Opmerkingen en formuliervelden onder een markering worden verwijderd.",
     ),
-    (
-        "Mark",
-        "Markeren",
-    ),
-    (
-        "Mark Area",
-        "Gebied markeren",
-    ),
+    ("Mark", "Markeren"),
+    ("Mark Area", "Gebied markeren"),
     (
         "Mark Area for Redaction",
         "Gebied markeren om zwart te lakken",
@@ -2216,14 +2156,8 @@ pub static ENTRIES: &[(&str, &str)] = &[
         "Mark Selected Text for Redaction",
         "Geselecteerde tekst markeren om zwart te lakken",
     ),
-    (
-        "Mark Text",
-        "Tekst markeren",
-    ),
-    (
-        "Mark for redaction",
-        "Markeren om zwart te lakken",
-    ),
+    ("Mark Text", "Tekst markeren"),
+    ("Mark for redaction", "Markeren om zwart te lakken"),
     (
         "Mark the selected text for removal; nothing is deleted until you apply the redactions",
         "Markeer de geselecteerde tekst voor verwijdering; er wordt niets gewist totdat u het zwartlakken toepast",
@@ -2244,18 +2178,9 @@ pub static ENTRIES: &[(&str, &str)] = &[
         "Permanently remove what lies under the redaction marks (the pages are replaced by pictures; cannot be undone)",
         "Verwijder definitief wat onder de markeringen ligt (de pagina's worden vervangen door afbeeldingen; kan niet ongedaan worden gemaakt)",
     ),
-    (
-        "Redact",
-        "Zwartlakken",
-    ),
-    (
-        "Redactions applied",
-        "Zwartlakken toegepast",
-    ),
-    (
-        "Remove",
-        "Verwijderen",
-    ),
+    ("Redact", "Zwartlakken"),
+    ("Redactions applied", "Zwartlakken toegepast"),
+    ("Remove", "Verwijderen"),
     (
         "Smaller file (150 dpi instead of 300 dpi)",
         "Kleiner bestand (150 dpi in plaats van 300 dpi)",
@@ -2284,8 +2209,43 @@ pub static ENTRIES: &[(&str, &str)] = &[
         "{} page(s) replaced, {} word(s) removed, {} comment(s) or field(s) deleted.",
         "{} pagina('s) vervangen, {} woord(en) verwijderd, {} opmerking(en) of veld(en) gewist.",
     ),
+    ("… and {} more", "… en nog {}"),
+    ("Actual size", "Ware grootte"),
+    ("All pages ({})", "Alle pagina's ({})"),
+    ("Choose a printer.", "Kies een printer."),
+    ("Copies", "Exemplaren"),
     (
-        "… and {} more",
-        "… en nog {}",
+        "No printer was found on this computer.",
+        "Er is geen printer gevonden op deze computer.",
     ),
+    ("Print", "Afdrukken"),
+    (
+        "Print the document or some of its pages",
+        "Druk het document of enkele pagina's af",
+    ),
+    ("Printer", "Printer"),
+    ("Printing failed: {}", "Afdrukken mislukt: {}"),
+    (
+        "Printing stopped unexpectedly.",
+        "Het afdrukken is onverwacht gestopt.",
+    ),
+    (
+        "Printing {} page(s) on {}…",
+        "{} pagina('s) afdrukken op {}…",
+    ),
+    ("Print…", "Afdrukken…"),
+    ("Sent {} page(s) to {}.", "{} pagina('s) naar {} gestuurd."),
+    (
+        "Shrink large pages to fit the paper",
+        "Grote pagina's verkleinen tot ze op het papier passen",
+    ),
+    (
+        "The author of this document did not allow printing. Enter the owner password (Protect) to lift this.",
+        "De auteur van dit document heeft afdrukken niet toegestaan. Voer het eigenaarswachtwoord in (Beveiligen) om dit op te heffen.",
+    ),
+    (
+        "There is no document to print.",
+        "Er is geen document om af te drukken.",
+    ),
+    ("This page ({})", "Deze pagina ({})"),
 ];

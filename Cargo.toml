@@ -9,6 +9,7 @@ members = [
     "crates/editor-core",
     "crates/pdf-engine",
     "crates/platform",
+    "crates/printing",
     "crates/test-support",
     "xtask",
 ]
@@ -21,6 +22,7 @@ default-members = [
     "crates/editor-core",
     "crates/pdf-engine",
     "crates/platform",
+    "crates/printing",
     "crates/test-support",
 ]
 
@@ -53,6 +55,7 @@ test-support = { path = "crates/test-support" }
 brand = { path = "crates/brand" }
 pdf-sign = { path = "crates/pdf-sign" }
 pdf-ocr = { path = "crates/pdf-ocr" }
+printing = { path = "crates/printing" }
 ai-client = { path = "crates/ai-client" }
 
 [workspace.lints.rust]

@@ -89,6 +89,7 @@ pub enum CommandId {
     FileSaveOptimized,
     FileConvertPdfA,
     FileProtection,
+    FilePrint,
     ToolRedact,
     RedactMarkSelection,
     RedactApply,
@@ -935,6 +936,14 @@ pub static REGISTRY: &[CommandInfo] = &[
         C::File,
         "pdfa pdf/a archive archival long term iso 19005",
         []
+    ),
+    cmd!(
+        Id::FilePrint,
+        "Print…",
+        "Print the document or some of its pages",
+        C::File,
+        "printer paper copies pdf",
+        [(None, Shortcut::cmd(Char('P')))]
     ),
     cmd!(
         Id::FileProtection,

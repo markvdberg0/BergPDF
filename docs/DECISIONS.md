@@ -295,3 +295,65 @@ the GitHub releases stay for everyone else. Choices:
 * **x64 only**; ARM64 Windows runs it under emulation. English, Dutch and German are declared as package languages.
 * **Not done / needs the owner:** the Partner Center account and name reservation, the trademark check of "BergPDF"
   (D-013), submission, and a run on a real Windows 11 machine (checklist). `docs/MICROSOFT_STORE.md` has the steps.
+
+## D-035 — Password-protected PDFs: unlock once into a plain working copy, encrypt again on save
+A protected file is decrypted when it is opened and rewritten as a plain *working copy*; rendering, editing, undo,
+text extraction and every other module work on that copy and know nothing about encryption (the alternative, an
+encryption-aware incremental writer and encryption-aware readers in each module, was rejected as invasive and
+untestable). `pdf_engine::protect::Protection` remembers how the file was protected and `PdfDocument::seal` encrypts
+the bytes of every file written from the document **with the same key and passwords**, so nothing is silently
+stripped and both passwords keep working. Choices that matter:
+* **Owner passwords for RC4 and AES-128 files are handled by us.** lopdf takes any password as the *user* password
+  when it derives the file key, which silently decrypts to garbage when the owner password is used. `protect.rs`
+  checks which password it holds and, for the owner password, recovers the user password from `/O` (ISO 32000-1
+  algorithm 7) before handing it to lopdf. Known limit: a *non-ASCII user password* cannot be recovered this way.
+  Tested with RC4-40, RC4-128, AES-128 and AES-256, opened with both passwords, text checked with poppler.
+* **The author's permission flags are honoured**: with the user password only, editing needs "modify", printing needs
+  "print", copying text (and so Copilot/Translate, which send text away) needs "copy". The owner password lifts it
+  (*Protect ▸ Unlock*). Annotating or form filling alone does not unlock editing (strict, conservative).
+* **New protection** is AES-256 (revision 6) with a random file key; owner password optional (then the user password
+  is also the owner password). *Protect ▸ Remove password protection* needs the owner rights.
+* **Never in the clear on disk by our doing**: protected documents are not written to crash-recovery files, and the
+  operations that would write a copy without the protection (Save As Optimized, PDF/A, signing) are refused with
+  "remove the protection first". Saved files are re-opened with the password to verify them.
+* Not covered: public-key (certificate) encryption and PDF 2.0 revision 5. Encrypted files that also use object
+  streams (common in the wild) could not be produced for tests (lopdf cannot write them) and rest on lopdf's reader
+  (`docs/PLATFORM_CHECKLIST.md`: try real files).
+
+## D-036 — Secure redaction: replace the page by a picture with the marks burned in
+Redaction means that what was under a mark cannot be recovered from the file by any means. Removing it surgically from
+content streams (glyph by glyph, images, vector paths, form XObjects, inline images, shadings, patterns, soft masks,
+optional content…) and *proving* nothing is left needs a complete content-stream interpreter; the interpreter we have
+covers a subset (D-006). Chosen instead (the approach Preview and most "flatten" tools take): **marked pages are
+replaced.** Marking adds standard `/Redact` annotations (reviewable, movable, undoable). Applying
+(`pdf_engine::redact::apply`) renders each marked page without annotations at 300 dpi (150 optional, JPEG optional,
+lower for very large pages, capped at 64 MP), paints the marked areas black **in the pixels**, makes that picture the
+page's only content and resources, and writes the words *no mark touches* back as an invisible text layer (the OCR
+mechanism) so the page stays searchable. Consequences:
+* Secure by construction: hidden, white, invisible-mode and form-XObject text under a mark is gone (adversarial test
+  fixture, checked in the raw bytes, in every decoded stream and with poppler), pictures under a mark are black pixels.
+* Cost, said plainly in the dialog: marked pages become pictures (larger files, no vector sharpness, text that cannot
+  be shown by the bundled fonts is not searchable). Unmarked pages are untouched.
+* Housekeeping so nothing comes back: annotations that touch a mark are deleted (comments and fields can repeat the
+  text), unreferenced objects are dropped, the next save is a **full rewrite** (an incremental save keeps the old
+  revision inside the file), undo is cleared, the structure tree (tagged PDF; it can repeat the text) and page
+  thumbnails/private page data are removed, optional: document properties/XMP and attachments.
+* A report lists where *other* places still show a removed word (properties, XMP, bookmarks, comments, field values and
+  the text of unmarked pages). It is advice: the person decides.
+* Not done: removing in place while keeping vector content and real text, redaction by search term across the whole
+  document in one step (select text and *Mark Text* instead), overlay text, signed files (the signature is
+  invalidated like with any rewrite).
+
+## D-037 — Printing: GDI on Windows (the one place with `unsafe`), CUPS `lp` elsewhere
+New crate `printing`. **Windows**: each page is drawn by the PDF renderer at the printer's resolution (at most 300 dpi;
+the driver scales up) and sent with `StartDoc`/`StretchDIBits`/`EndPage` to a device context from `CreateDCW("WINSPOOL")`.
+Pages go as pictures, so any driver works (including *Microsoft Print to PDF*, which the tests use through
+`DOCINFO.lpszOutput`); the cost is that printed text is not vector (acceptable for paper) and a large print job
+uses CPU time per page. Shrink-to-fit centres the page in the printable area and turns landscape pages on portrait
+paper. Our own Print dialog (printer, copies, pages, sizing) is used instead of the native one: `PrintDlgEx` needs a
+window handle from eframe and brings a COM message loop; the cost is that driver-specific options (duplex, tray,
+colour) are only reachable through the printer's defaults. **macOS/Linux**: the PDF is handed to `lp`
+(`-d`, `-n`, `-o page-ranges=`, `-o print-scaling=`), which is not tested on a CUPS machine here.
+`printing` is the only crate allowed to use `unsafe` (the workspace forbids it): `unsafe_code = "deny"` with a single
+`#![allow]` in `windows.rs`, every block with the reason it is sound; the device context is closed by `Drop`. The
+author's "print" permission of a protected document is honoured.

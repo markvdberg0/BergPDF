@@ -13,6 +13,7 @@ BergPDF is a PDF editor that works on your own computer. Your documents stay on 
 WHAT BERGPDF DOES NOT DO
 - It does not collect, store or send usage statistics, crash reports, device identifiers or advertising identifiers.
 - It does not need an account and has no server of its own. The makers of BergPDF receive nothing from the app.
+- Passwords you type to open or protect a document are used for that and are never saved or sent anywhere.
 - It does not upload your documents. Opening, editing, signing, searching, measuring, optimising, converting to PDF/A and reading scanned pages with OCR all happen on your computer.
 
 WHAT IS STORED ON YOUR COMPUTER
@@ -47,6 +48,7 @@ BergPDF is een PDF-editor die op je eigen computer werkt. Je documenten blijven 
 WAT BERGPDF NIET DOET
 - Het verzamelt, bewaart of verstuurt geen gebruiksstatistieken, crashrapporten, apparaat-ID's of advertentie-ID's.
 - Het heeft geen account nodig en heeft geen eigen server. De makers van BergPDF ontvangen niets van de app.
+- Wachtwoorden die je invoert om een document te openen of te beveiligen worden alleen daarvoor gebruikt en nooit bewaard of ergens naartoe gestuurd.
 - Het uploadt je documenten niet. Openen, bewerken, ondertekenen, zoeken, meten, optimaliseren, converteren naar PDF/A en gescande pagina's lezen met OCR gebeurt allemaal op je eigen computer.
 
 WAT OP JE COMPUTER WORDT BEWAARD

@@ -9,7 +9,9 @@ a legal notice bundle. This file covers what a human has to look at.
 | Crate | Version | Purpose | Notes |
 |---|---|---|---|
 | hayro | 0.8 | rendering, text/glyph geometry | pure Rust; features: embedded fonts/CMaps, SIMD |
-| lopdf | 0.45 (default features off) | object model, parsing, editing | MIT; **no crypto features** → no encrypted PDFs |
+| lopdf | 0.45 (default features off) | object model, parsing, editing, standard-security-handler encryption | MIT; its loader mishandles owner passwords of RC4/AES-128 files, worked around in `pdf_engine::protect` (D-035) |
+| md-5, getrandom | 0.11, 0.4 | owner-password recovery (MD5), random file key for new AES-256 protection | MIT/Apache-2.0; already in the tree through lopdf |
+| windows | 0.62 (Windows only) | GDI printing API in `crates/printing` | MIT/Apache-2.0; the only crate that uses `unsafe` |
 | pdf-writer | 0.15 | build test fixtures only | dev-dependency |
 | pdf-base14-metrics | 0.0.2 | widths of the 14 standard fonts | **very young crate**; licence `MIT AND APAFML` (Adobe font metrics notice) |
 | pdfboss-encoding | 2.13 | PDF simple-font encodings | young/small crate; verified by tests against poppler output |

@@ -154,11 +154,16 @@ impl App {
                     ui.label(tr("This document is not protected. Choose a password; it is needed to open the document after you save it."));
                 }
                 Some(i) => {
-                    ui.label(tf!("This document is protected ({}).", tr(i.cipher.label())));
+                    ui.label(tf!(
+                        "This document is protected ({}).",
+                        tr(i.cipher.label())
+                    ));
                     if i.owner {
                         ui.label(tr("You have the owner password: nothing is restricted."));
                     } else {
-                        ui.label(tr("You opened it with the document's password. What the author allows:"));
+                        ui.label(tr(
+                            "You opened it with the document's password. What the author allows:",
+                        ));
                         for (on, what) in [
                             (i.rights.print, tr("Printing")),
                             (i.rights.copy, tr("Copying text")),
@@ -216,11 +221,7 @@ impl App {
                 };
                 pw(ui, &mut st.user, tr("Password to open the document").into());
                 pw(ui, &mut st.user_again, tr("Repeat the password").into());
-                pw(
-                    ui,
-                    &mut st.owner,
-                    tr("Owner password (optional)").into(),
-                );
+                pw(ui, &mut st.owner, tr("Owner password (optional)").into());
                 ui.label(
                     RichText::new(tr("With an owner password you can restrict what people who only know the password may do. Without one, the password above also unlocks everything."))
                         .size(12.0)
@@ -267,7 +268,9 @@ impl App {
             },
             Act::Remove => match tab.session.remove_protection() {
                 Ok(()) => {
-                    self.notify(tr("Protection removed. Save the document to write it without a password."));
+                    self.notify(tr(
+                        "Protection removed. Save the document to write it without a password.",
+                    ));
                     return false;
                 }
                 Err(e) => st.error = Some(e.to_string()),
@@ -279,9 +282,8 @@ impl App {
                     st.error = Some(tr("The two passwords are not the same.").into());
                 } else if st.owner.is_empty() && !(st.allow_print && st.allow_copy && st.allow_edit)
                 {
-                    st.error = Some(
-                        tr("Enter an owner password to restrict what others may do.").into(),
-                    );
+                    st.error =
+                        Some(tr("Enter an owner password to restrict what others may do.").into());
                 } else {
                     let rights = Rights {
                         print: st.allow_print,

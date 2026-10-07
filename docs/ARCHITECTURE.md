@@ -4,7 +4,8 @@
 apps/desktop   egui/eframe + wgpu shell (the only crate that knows about the UI toolkit)
   └─ editor-core  document session, history, commands/shortcuts, view model, tiles, jobs, prefs
        └─ pdf-engine  PDF reading/editing/rendering; no UI, no threads of its own
-platform       file dialogs, directories, recovery files, link opening (rfd, std only)
+platform       file dialogs, directories, recovery files, link opening, install channel (rfd, std only)
+printing       printers and print jobs: GDI on Windows (the only `unsafe` in the workspace), CUPS `lp` elsewhere
 test-support   fixtures (pdf-writer), oracle helpers (poppler), bitmap diff
 xtask          quality gate, licence inventory, bench, unsigned dist
 ```
@@ -26,6 +27,8 @@ xtask          quality gate, licence inventory, bench, unsigned dist
 | `forms` | field tree, fill (generated appearances), flatten, duplicate/import with Independent/Linked/Flatten |
 | `measure` | units, scales, geometry, `/Measure` persistence, scale registry, report/CSV |
 | `nav`, `caps` | links/outlines; capability detection (encryption, signatures, XFA, JS) and edit blockers |
+| `protect` | password-protected files: unlock into a plain working copy, rights from the permission flags, `seal` (encrypt again on save), new AES-256 protection (D-035) |
+| `redact` | `/Redact` marks and applying them: marked pages replaced by a picture with the marks burned in, invisible text for the rest, clean-up, leak report (D-036) |
 
 Key invariants
 

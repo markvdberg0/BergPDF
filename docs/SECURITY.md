@@ -78,8 +78,14 @@ on macOS, rlimits/seccomp on Linux) is the intended next step and is **not imple
   soak test. No third-party review.
 * `cargo deny` / `cargo audit` are configured for CI; see `EVIDENCE.md` for what was runnable
   in the authoring sandbox.
-* Encrypted PDFs are rejected (no decryption), so permissions flags are not honoured/relevant.
-* **Redaction is not offered.** Drawing a black rectangle does not remove text underneath.
+* **Password-protected PDFs** are decrypted into a plain working copy in memory (D-035). Protected documents are never
+  written to recovery files and the operations that would write an unprotected copy are refused. The permission flags
+  are honoured by BergPDF only; other software may ignore them, so they are a courtesy, not protection.
+* **Redaction** (D-036) replaces each marked page by a picture with the marks burned into the pixels, so nothing under a
+  mark stays in the page; the file is rewritten completely (no old revision) and the report lists other places that still
+  show a removed word. It does not remove information a person typed elsewhere (file names, other documents) and has not
+  been reviewed by a third party. Drawing a black rectangle *annotation* is still not redaction; only *Apply Redactions* is.
+* **`unsafe` code** exists in exactly one place: `crates/printing/src/windows.rs` (the GDI printing API).
 * Signed documents: integrity is checked on request (digest + signature maths with the embedded
   certificate). Certificate trust, validity period, revocation, DocMDP permissions and signing time
   are **not** evaluated.

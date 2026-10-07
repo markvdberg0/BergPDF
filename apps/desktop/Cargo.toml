@@ -18,6 +18,7 @@ platform.workspace = true
 brand.workspace = true
 pdf-ocr.workspace = true
 ai-client.workspace = true
+printing.workspace = true
 eframe = "0.36"
 egui = "0.36"
 tracing.workspace = true

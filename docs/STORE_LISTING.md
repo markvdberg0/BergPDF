@@ -31,7 +31,7 @@ internet, apart from the optional download of the OCR models.
 The interface is available in English, Dutch and German. BergPDF is free software under the GNU General Public
 License v3; the source code is on GitHub.
 
-Good to know: password-protected PDFs, secure redaction and printing are not available yet.
+Also included: open and create password-protected PDFs, permanently redact (black out) sensitive text and images, and print. Good to know: signature certificates are not checked for trust yet.
 
 ### What's new in this version
 
@@ -50,6 +50,9 @@ Good to know: password-protected PDFs, secure redaction and printing are not ava
 * Convert to PDF/A-2b for archiving, with the exact reason when a file cannot be converted
 * Tabs, thumbnails, bookmarks, full-text search and a command palette (Ctrl+K)
 * Unlimited undo and redo, autosave with crash recovery, and safe saving that checks the result first
+* Open and create password-protected PDFs (AES 256); the author's permissions are respected
+* Redact for real: mark text or areas and remove them permanently, nothing stays hidden in the file
+* Print whole documents, single pages or a page range
 * No account, no telemetry; your documents stay on your PC
 * Optional PDF Copilot and in-place translation with your own AI key, only when you press a button
 * Interface in English, Dutch and German; free software under the GPL v3
@@ -82,7 +85,7 @@ BergPDF het internet niet, behalve voor het optionele downloaden van de OCR-mode
 De interface is beschikbaar in het Nederlands, Engels en Duits. BergPDF is vrije software onder de GNU General Public
 License v3; de broncode staat op GitHub.
 
-Goed om te weten: met wachtwoord beveiligde pdf's, veilig zwartlakken (redactie) en afdrukken zijn nog niet beschikbaar.
+Ook inbegrepen: met een wachtwoord beveiligde pdf's openen en maken, gevoelige tekst en afbeeldingen definitief zwartlakken en afdrukken. Goed om te weten: de betrouwbaarheid van handtekeningcertificaten wordt nog niet gecontroleerd.
 
 ### Wat is er nieuw in deze versie
 
@@ -101,6 +104,9 @@ Goed om te weten: met wachtwoord beveiligde pdf's, veilig zwartlakken (redactie)
 * Converteren naar PDF/A-2b voor archivering, met de exacte reden als een bestand niet kan worden geconverteerd
 * Tabbladen, miniaturen, bladwijzers, zoeken in de volledige tekst en een opdrachtenpalet (Ctrl+K)
 * Onbeperkt ongedaan maken en opnieuw uitvoeren, automatisch opslaan met crashherstel en veilig opslaan met controle vooraf
+* Met een wachtwoord beveiligde pdf's openen en maken (AES 256); de rechten van de auteur worden gerespecteerd
+* Echt zwartlakken: markeer tekst of gebieden en verwijder ze definitief, er blijft niets verborgen in het bestand
+* Hele documenten, losse pagina's of een paginabereik afdrukken
 * Geen account, geen telemetrie; je documenten blijven op je pc
 * Optioneel PDF Copilot en vertalen ter plekke met je eigen AI-sleutel, alleen als je op een knop drukt
 * Interface in het Nederlands, Engels en Duits; vrije software onder de GPL v3
@@ -136,7 +142,7 @@ OCR-Modelle.
 Die Oberfläche gibt es auf Deutsch, Englisch und Niederländisch. BergPDF ist freie Software unter der GNU General
 Public License v3; der Quellcode liegt auf GitHub.
 
-Gut zu wissen: Passwortgeschützte PDFs, sicheres Schwärzen und Drucken sind noch nicht verfügbar.
+Außerdem enthalten: passwortgeschützte PDFs öffnen und erstellen, vertrauliche Texte und Bilder endgültig schwärzen und drucken. Gut zu wissen: Signaturzertifikate werden noch nicht auf Vertrauenswürdigkeit geprüft.
 
 ### Neuigkeiten in dieser Version
 
@@ -155,6 +161,9 @@ Gut zu wissen: Passwortgeschützte PDFs, sicheres Schwärzen und Drucken sind no
 * Umwandlung in PDF/A-2b zur Archivierung, mit genauer Begründung, wenn eine Datei nicht umgewandelt werden kann
 * Registerkarten, Miniaturansichten, Lesezeichen, Volltextsuche und eine Befehlspalette (Strg+K)
 * Unbegrenzt rückgängig machen und wiederholen, automatisches Speichern mit Absturzwiederherstellung, sicheres Speichern mit Prüfung
+* Passwortgeschützte PDFs öffnen und erstellen (AES 256); die Rechte des Autors werden respektiert
+* Echt schwärzen: Text oder Bereiche markieren und endgültig entfernen, nichts bleibt in der Datei versteckt
+* Ganze Dokumente, einzelne Seiten oder einen Seitenbereich drucken
 * Kein Konto, keine Telemetrie; Ihre Dokumente bleiben auf Ihrem PC
 * Optional PDF Copilot und Übersetzung direkt im Dokument mit Ihrem eigenen KI-Schlüssel, nur auf Knopfdruck
 * Oberfläche auf Deutsch, Englisch und Niederländisch; freie Software unter der GPL v3

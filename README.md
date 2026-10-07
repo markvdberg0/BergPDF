@@ -72,6 +72,12 @@ document is never changed by it.
 
 <p align="center"><img src="docs/screenshots/translate.png" alt="A document translated in place, opened as a copy" width="720"></p>
 
+**Protect, redact and print**
+Open **password-protected** PDFs (with the user or the owner password), add or remove a password, and respect what the
+author allows. **Redact** for real: mark areas or text, review the red frames, then apply: the marked pages become
+pictures with black boxes, nothing under a box stays in the file, and the rest of the page stays searchable.
+**Print** whole documents, a page or a range, with copies.
+
 **Safe by design**
 Unlimited undo and redo, autosave with crash recovery, atomic saving that checks the result before replacing
 your file, and warnings instead of silent changes.
@@ -103,8 +109,10 @@ used and to try another drawing API.
 ## Status and limits
 
 BergPDF is at version 0.1. It was developed and tested on Linux; the Windows and macOS builds are new, so expect
-rough edges and please [report them](../../issues). Not (yet) available: secure redaction, password-protected
-PDFs, printing, and trust validation of signature certificates (signatures are checked for integrity only).
+rough edges and please [report them](../../issues). Not (yet) available: trust validation of signature certificates
+(signatures are checked for integrity only), certificate-based encryption, and a native print dialog with the printer
+driver's own options. Printing, password-protected PDFs and redaction are new and have been tested with generated files
+and with *Microsoft Print to PDF*, not yet with many real-world files and printers.
 The exact state of every feature, and how it was verified, is in [`docs/FEATURE_MATRIX.md`](docs/FEATURE_MATRIX.md).
 
 ## Build it yourself

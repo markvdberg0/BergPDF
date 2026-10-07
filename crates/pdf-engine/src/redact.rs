@@ -25,7 +25,7 @@ use crate::fontembed::zlib;
 use crate::geom::{Affine, PageGeometry, Point, Rect, Rotation};
 use crate::objutil::{self, name, num_array, reference};
 use crate::pagecontent::{OcrWord, add_ocr_text_layers};
-use crate::render::{self, MAX_TILE_PIXELS, TileRequest};
+use crate::render;
 use crate::text::TextPage;
 use lopdf::{Dictionary, Object, ObjectId, Stream, dictionary};
 use std::collections::BTreeSet;
@@ -138,7 +138,8 @@ pub fn add_mark(tx: &mut Tx<'_>, page: PageId, rect: Rect) -> Result<AnnotId> {
         content.into_bytes(),
     );
     // The form's own origin is the lower left of its bounding box; /Rect places it.
-    ap.dict.set("Matrix", num_array(&[1.0, 0.0, 0.0, 1.0, 0.0, 0.0]));
+    ap.dict
+        .set("Matrix", num_array(&[1.0, 0.0, 0.0, 1.0, 0.0, 0.0]));
     let ap_id = tx.add(Object::Stream(ap));
     let mut dict = Dictionary::new();
     dict.set("Type", name("Annot"));
@@ -358,38 +359,24 @@ fn render_rgb(
     h: u32,
 ) -> Result<Vec<u8>> {
     let mut out = vec![255u8; w as usize * h as usize * 3];
-    // Tiles of about 2048 × 2048 keep every render well inside the per-tile budget.
-    let tile = 2048u32.min((MAX_TILE_PIXELS as f64).sqrt() as u32);
-    let mut y = 0;
-    while y < h {
-        let th = tile.min(h - y);
-        let mut x = 0;
-        while x < w {
-            let tw = tile.min(w - x);
-            let bmp = s.render_tile_with(
-                &TileRequest {
-                    page_index: index,
-                    geometry: *geom,
-                    view_rotation: Rotation::R0,
-                    scale,
-                    x,
-                    y,
-                    width: tw,
-                    height: th,
-                },
-                false,
-            )?;
-            for row in 0..th {
-                let src = &bmp.rgba[(row * tw) as usize * 4..((row + 1) * tw) as usize * 4];
+    s.render_tiled(
+        index,
+        *geom,
+        Rotation::R0,
+        scale,
+        false,
+        &mut |x, y, bmp| {
+            for row in 0..bmp.height {
+                let src =
+                    &bmp.rgba[(row * bmp.width) as usize * 4..((row + 1) * bmp.width) as usize * 4];
                 let dst = ((y + row) as usize * w as usize + x as usize) * 3;
                 for (i, px) in src.chunks_exact(4).enumerate() {
                     out[dst + i * 3..dst + i * 3 + 3].copy_from_slice(&px[..3]);
                 }
             }
-            x += tw;
-        }
-        y += th;
-    }
+            Ok(())
+        },
+    )?;
     Ok(out)
 }
 
@@ -744,11 +731,7 @@ fn find_leaks(doc: &PdfDocument, words: &[String]) -> Vec<String> {
         let data = s
             .decompressed_content()
             .unwrap_or_else(|_| s.content.clone());
-        note(
-            "XMP metadata",
-            &String::from_utf8_lossy(&data),
-            &mut out,
-        );
+        note("XMP metadata", &String::from_utf8_lossy(&data), &mut out);
     }
     // Bookmarks, comments, form values, alternative texts: the strings under the keys that carry text.
     for (id, obj) in &d.objects {
@@ -809,7 +792,10 @@ fn find_text_elsewhere(
             };
             let text = tp.plain_text().to_lowercase();
             if let Some(n) = needles.iter().find(|n| text.contains(n.as_str())) {
-                out.push(format!("Page {}: the page text still contains “{n}”", i + 1));
+                out.push(format!(
+                    "Page {}: the page text still contains “{n}”",
+                    i + 1
+                ));
             }
         }
         Ok(out)

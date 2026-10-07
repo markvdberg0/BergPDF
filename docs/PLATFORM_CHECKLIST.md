@@ -85,6 +85,15 @@ on that OS (with notes), nothing in `FEATURE_MATRIX.md` may be marked “Verifie
 - [ ] Language: Preferences ▸ Language switches the interface at once; with "System" a Dutch / German Windows or macOS shows Dutch / German; check dialogs and the installer-launched first start for text that is cut off or still English
 - [ ] Updates: after the first release is *published*, File ▸ Check for Updates… on the installed older version says a newer one exists (and "latest version" on the newest); the one-time question appears once; behind a company proxy the check fails quietly
 
+## Passwords, redaction, printing (D-035, D-036, D-037; the engines are tested, the dialogs were not driven)
+
+- [ ] A password-protected PDF opens through the password dialog (wrong password: message and the field is cleared; right one: opens); try files made by Word, Acrobat and Preview (RC4, AES-128, AES-256; **encrypted files with object streams are not covered by an automated test**)
+- [ ] Protect: add a password, save, reopen elsewhere (Edge, Acrobat) with it; remove protection; an owner password restricting printing/copying/editing is honoured and *Unlock* with the owner password lifts it
+- [ ] A protected document is never written to the recovery folder (`%APPDATA%\BergPDF\recovery`)
+- [ ] Redact: Mark Area drags a red frame, *Mark Text* on a selection, marks can be moved and deleted; *Apply* on a scanned page, a vector drawing, a page with transparency; the result opened in Acrobat/Edge shows black boxes and selecting/searching finds no removed word; Save keeps one revision (check the file size does not contain the old file)
+- [ ] Redact: the report lists a removed word still present in the title, a bookmark and a comment; a 40-page document redacts without the window being unresponsive for long (the apply step runs on the UI thread)
+- [ ] Print (Ctrl+P): lists the printers, default preselected; a page, a range and 2 copies come out on a real printer in the right order and orientation; a landscape page on portrait paper is turned; *Actual size* vs *shrink*; cancel/busy printer shows a message; macOS/Linux: `lp` jobs appear in the CUPS queue
+
 ## Microsoft Store package (MSIX; see docs/MICROSOFT_STORE.md and D-034)
 
 - [ ] `cargo xtask msix` on Windows 11 builds `dist/packages/*.msix` (the SDK tools are found; no warnings from `makepri`/`makeappx`)

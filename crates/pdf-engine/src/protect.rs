@@ -57,7 +57,8 @@ impl Rights {
     }
 
     fn to_permissions(self) -> Permissions {
-        let mut p = Permissions::COPYABLE_FOR_ACCESSIBILITY | Permissions::PRINTABLE_IN_HIGH_QUALITY;
+        let mut p =
+            Permissions::COPYABLE_FOR_ACCESSIBILITY | Permissions::PRINTABLE_IN_HIGH_QUALITY;
         for (on, flag) in [
             (self.print, Permissions::PRINTABLE),
             (self.modify, Permissions::MODIFIABLE),

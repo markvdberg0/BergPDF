@@ -96,6 +96,7 @@ impl App {
                 has && !self.ai_busy() && self.text_use_allowed()
             }
             C::TranslateDocument => has && self.text_use_allowed(),
+            C::FilePrint => has && self.print_allowed(),
             C::RedactMarkSelection => {
                 has && can_edit && tab.is_some_and(|t| t.session.selection.text.is_some())
             }
@@ -175,6 +176,7 @@ impl App {
             C::OcrDocument => self.open_ocr_dialog(),
             C::FileSaveOptimized => self.open_optimize_dialog(),
             C::FileProtection => self.open_protection_dialog(),
+            C::FilePrint => self.open_print_dialog(),
             C::RedactMarkSelection => self.redact_selection(),
             C::RedactApply => self.open_redact_dialog(),
             C::FileConvertPdfA => self.open_pdfa_dialog(),
@@ -370,9 +372,12 @@ impl App {
             Err(e) => {
                 self.dialog = Some(Dialog::Error {
                     title: tr("Cannot open document").into(),
-                    detail: format!("{}
+                    detail: format!(
+                        "{}
 
-{e}", path.display()),
+{e}",
+                        path.display()
+                    ),
                 });
             }
         }

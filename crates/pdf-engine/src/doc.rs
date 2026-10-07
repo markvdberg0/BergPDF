@@ -194,11 +194,7 @@ impl PdfDocument {
     ///
     /// The protected file is decrypted into a plain working copy; saving encrypts it again (see
     /// [`PdfDocument::seal`]). [`EngineError::WrongPassword`] when the password does not fit.
-    pub fn open_with_password(
-        bytes: Vec<u8>,
-        opts: &OpenOptions,
-        password: &str,
-    ) -> Result<Self> {
+    pub fn open_with_password(bytes: Vec<u8>, opts: &OpenOptions, password: &str) -> Result<Self> {
         if bytes.len() > opts.max_file_size {
             return Err(EngineError::LimitExceeded(format!(
                 "file is {} bytes, limit is {}",
@@ -206,12 +202,12 @@ impl PdfDocument {
                 opts.max_file_size
             )));
         }
-        let (bytes, protection) = match protect::unlock(&bytes, opts.max_decompressed_size, password)
-        {
-            Ok(Some((plain, protection))) => (plain, Some(protection)),
-            Ok(None) => (bytes, None),
-            Err(e) => return Err(e),
-        };
+        let (bytes, protection) =
+            match protect::unlock(&bytes, opts.max_decompressed_size, password) {
+                Ok(Some((plain, protection))) => (plain, Some(protection)),
+                Ok(None) => (bytes, None),
+                Err(e) => return Err(e),
+            };
         let load = lopdf::LoadOptions {
             max_decompressed_size: Some(opts.max_decompressed_size),
             ..Default::default()
@@ -631,4 +627,3 @@ impl PdfDocument {
         self.trailer_touched = false;
     }
 }
-
