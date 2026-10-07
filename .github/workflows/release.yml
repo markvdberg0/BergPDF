@@ -60,6 +60,23 @@ jobs:
           name: installer-${{ matrix.name }}
           path: dist/packages/*.*
           if-no-files-found: error
+      # The Microsoft Store package (docs/MICROSOFT_STORE.md). It is NOT attached to the GitHub release: it is
+      # unsigned (the Store signs it), so it cannot be installed outside the Store. Download it from the workflow
+      # run and upload it in Partner Center. The identity comes from repository variables (Settings > Variables);
+      # without them the package gets a placeholder identity that Partner Center refuses.
+      - name: Build the Microsoft Store package (MSIX)
+        if: runner.os == 'Windows'
+        env:
+          BERG_STORE_IDENTITY_NAME: ${{ vars.STORE_IDENTITY_NAME }}
+          BERG_STORE_PUBLISHER: ${{ vars.STORE_PUBLISHER }}
+          BERG_STORE_PUBLISHER_DISPLAY_NAME: ${{ vars.STORE_PUBLISHER_DISPLAY_NAME }}
+        run: cargo xtask msix
+      - uses: actions/upload-artifact@v4
+        if: runner.os == 'Windows'
+        with:
+          name: store-package
+          path: dist/packages/*.msix
+          if-no-files-found: error
 
   draft-release:
     name: draft release

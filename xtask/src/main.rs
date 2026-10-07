@@ -8,11 +8,13 @@
 //! * `icons`    — regenerate `assets/icons` (PNG, ICO, ICNS) from the vector logo
 //! * `dist [--with-ocr-models]` — release build and an *unsigned* distribution folder (macOS:
 //!   `.app` bundle); the flag downloads, verifies and bundles the OCR models
+//! * `msix [--store …]` — the Microsoft Store package (needs the Windows SDK; see docs/MICROSOFT_STORE.md)
 //!
 //! Nothing here publishes, uploads, signs or notarises anything.
 
 mod bundle;
 mod icons;
+mod msix;
 mod ocr_models;
 
 use std::path::{Path, PathBuf};
@@ -110,7 +112,8 @@ fn dist_rustflags() -> Option<String> {
     Some(f)
 }
 
-fn dist(with_ocr_models: bool) -> Result<(), String> {
+/// Build the program with the `dist` profile (static C runtime on Windows) and return its path.
+fn build_dist_exe() -> Result<PathBuf, String> {
     let mut build = Command::new(std::env::var("CARGO").unwrap_or_else(|_| "cargo".into()));
     build
         .args(["build", "--profile", "dist", "-p", "bergpdf"])
@@ -124,8 +127,7 @@ fn dist(with_ocr_models: bool) -> Result<(), String> {
     if !status.success() {
         return Err(format!("the dist build failed ({status})"));
     }
-    let (os, arch) = (std::env::consts::OS, std::env::consts::ARCH);
-    let exe = if os == "windows" {
+    let exe = if cfg!(windows) {
         "bergpdf.exe"
     } else {
         "bergpdf"
@@ -134,6 +136,17 @@ fn dist(with_ocr_models: bool) -> Result<(), String> {
     if !bin.exists() {
         return Err(format!("{} not found", bin.display()));
     }
+    Ok(bin)
+}
+
+fn dist(with_ocr_models: bool) -> Result<(), String> {
+    let bin = build_dist_exe()?;
+    let (os, arch) = (std::env::consts::OS, std::env::consts::ARCH);
+    let exe = if os == "windows" {
+        "bergpdf.exe"
+    } else {
+        "bergpdf"
+    };
     let version = env!("CARGO_PKG_VERSION");
     let dir = root()
         .join("dist")
@@ -214,9 +227,10 @@ fn main() -> ExitCode {
                 Some(other) => Err(format!("unknown option {other}")),
             }
         }
+        "msix" => msix::build(&std::env::args().skip(2).collect::<Vec<_>>()),
         _ => {
             eprintln!(
-                "usage: cargo xtask <check|licenses|fixtures|bench|icons|fetch-ocr-models [dir]|dist [--with-ocr-models]>"
+                "usage: cargo xtask <check|licenses|fixtures|bench|icons|fetch-ocr-models [dir]|dist [--with-ocr-models]|msix [--store]>"
             );
             return ExitCode::from(2);
         }

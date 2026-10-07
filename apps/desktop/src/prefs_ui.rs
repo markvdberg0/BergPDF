@@ -191,7 +191,9 @@ impl App {
                                             let f = filter.to_lowercase();
                                             let mut any = false;
                                             for p in PAGES {
-                                                for key in p.keys() {
+                                                for key in
+                                                    p.keys().iter().filter(|k| setting_available(k))
+                                                {
                                                     let visible = if f.is_empty() {
                                                         p == PAGES[page_ix]
                                                     } else {
@@ -580,6 +582,12 @@ impl App {
             _ => {}
         }
     }
+}
+
+/// Whether a setting applies to this copy of BergPDF: the Microsoft Store updates its own packages, so a copy
+/// installed from there has no update setting.
+pub fn setting_available(key: &str) -> bool {
+    !(key == "updates" && platform::distribution::is_store())
 }
 
 /// Whether the search text (lower case) matches a setting's title, description or keywords.

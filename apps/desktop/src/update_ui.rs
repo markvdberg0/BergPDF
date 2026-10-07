@@ -46,7 +46,8 @@ fn api_url() -> String {
 impl App {
     /// Start a check in the background. `manual`: the user asked, so the answer is shown in a dialog.
     pub fn start_update_check(&mut self, manual: bool) {
-        if self.update.rx.is_some() {
+        // The Microsoft Store updates its own packages (docs/MICROSOFT_STORE.md).
+        if platform::distribution::is_store() || self.update.rx.is_some() {
             return;
         }
         let (tx, rx) = mpsc::channel();
@@ -69,6 +70,9 @@ impl App {
 
     /// Per frame: ask once, run the daily check, and take in an answer.
     pub fn poll_update(&mut self, ctx: &egui::Context) {
+        if platform::distribution::is_store() {
+            return;
+        }
         if let Some((manual, rx)) = &self.update.rx {
             let manual = *manual;
             let outcome = match rx.try_recv() {

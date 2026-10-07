@@ -271,3 +271,27 @@ on it runs at most once a day in the background; a failure is silent. "Check for
 palette) always works when pressed. `BERG_UPDATE_URL` points the check at another address (https or loopback) for testing.
 Not done on purpose: downloading and running an installer from inside the program. That would need our own signing key
 and signature verification and cannot be tested here on Windows; it can be added later on top of this.
+
+## D-034 — Microsoft Store distribution: an MSIX from the same binary, no own updates inside it
+Windows users are best served by the Microsoft Store: Microsoft signs the package (no SmartScreen warning, no
+certificate for the owner to buy), installs and updates it, and removes it cleanly. `cargo xtask msix` builds the
+package (manifest, logos from `assets/brand/logo-master.png`, `resources.pri`, `makeappx pack`); the NSIS installer and
+the GitHub releases stay for everyone else. Choices:
+* **One binary for both channels.** The package contains a marker file next to the program
+  (`platform::distribution`); `BERG_DISTRIBUTION=store|standalone` overrides it for trying. A second build with a Cargo
+  feature was rejected: it would ship a binary that CI never ran, and doubles the build time.
+* **No update check in the Store copy.** The Store updates its packages and its policy forbids sending people to
+  another download, so D-033's start-up question, status-bar notice, *Check for Updates…* command and *Updates*
+  preference are hidden there (`command_enabled`, ribbon, preferences, palette).
+* **Full trust.** The program is an ordinary desktop program (arbitrary user-chosen files, installed fonts, DirectX 12),
+  so the package declares `runFullTrust` and is *not* sandboxed in an AppContainer. Rewriting for a sandbox was not
+  worth it. Nothing else is requested (the network needs no capability for a full-trust program).
+* **Unsigned package, identity from the owner.** The Store signs what is uploaded. The identity (name, publisher,
+  publisher display name) is assigned by Partner Center and is supplied at build time (flags or `BERG_STORE_*`
+  variables / GitHub repository variables); without it the build uses a placeholder and names the file
+  `…DEVELOPMENT-NOT-FOR-THE-STORE…`.
+* **OCR models** are still downloaded on demand, not bundled (D-023). The package's storage virtualisation keeps them
+  with the Store copy.
+* **x64 only**; ARM64 Windows runs it under emulation. English, Dutch and German are declared as package languages.
+* **Not done / needs the owner:** the Partner Center account and name reservation, the trademark check of "BergPDF"
+  (D-013), submission, and a run on a real Windows 11 machine (checklist). `docs/MICROSOFT_STORE.md` has the steps.

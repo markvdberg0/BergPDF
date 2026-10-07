@@ -11,7 +11,7 @@ fn master() -> io::Result<&'static brand::Image> {
         .ok_or_else(|| io::Error::other("assets/brand/logo-master.png is not a readable 8-bit PNG"))
 }
 
-fn png_bytes(size: u32) -> io::Result<Vec<u8>> {
+pub fn png_bytes(size: u32) -> io::Result<Vec<u8>> {
     let rgba = brand::icon_from_master(master()?, size);
     let mut out = Vec::new();
     {

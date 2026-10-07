@@ -36,10 +36,11 @@ impl App {
             | C::Preferences
             | C::ShortcutReference
             | C::About
-            | C::CheckForUpdates
             | C::NextTab
             | C::PreviousTab => true,
             C::Escape => true,
+            // The Microsoft Store looks after updates of its own packages.
+            C::CheckForUpdates => !platform::distribution::is_store(),
             C::FileSave => tab.is_some_and(|t| t.session.is_dirty()),
             C::FileSaveAs
             | C::FileClose

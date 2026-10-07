@@ -67,6 +67,7 @@ cargo xtask bench                    # release-mode performance numbers (docs/PE
 cargo xtask licenses                 # regenerate docs/THIRD_PARTY_LICENSES.md
 cargo xtask dist                     # release build + unsigned distribution folder in dist/
 cargo xtask dist --with-ocr-models   # the same, with the verified OCR models in ocr-models/
+cargo xtask msix                     # Microsoft Store package (MSIX), Windows SDK needed; see docs/MICROSOFT_STORE.md
 cargo deny check                     # licences, advisories, sources (deny.toml)
 ```
 
@@ -99,6 +100,11 @@ cargo packager --release -f nsis     # Windows: dist/packages/*-setup.exe
 cargo packager --release -f dmg      # macOS
 cargo packager --release -f deb      # Linux
 ```
+
+For the **Microsoft Store** build an MSIX package instead (needs the Windows SDK; unsigned on purpose, the Store signs
+it): `cargo xtask msix`. The identity comes from Partner Center; everything about it, trying the package and submitting
+is in [`docs/MICROSOFT_STORE.md`](docs/MICROSOFT_STORE.md). The Store copy is recognised by a marker file in the package
+and has no update check of its own (D-034); to see that without packaging start BergPDF with `BERG_DISTRIBUTION=store`.
 
 `packaging/windows/bergpdf.iss` is an alternative Windows installer for [Inno Setup](https://jrsoftware.org/isinfo.php).
 Keep `version` in `Packager.toml` equal to the workspace version in `Cargo.toml` (a test checks this).
@@ -152,5 +158,6 @@ badly in the toolbar.
 * [`docs/FEATURE_MATRIX.md`](docs/FEATURE_MATRIX.md): what exists and how it was verified
 * [`docs/SECURITY.md`](docs/SECURITY.md): what the app refuses to do and what is not isolated
 * [`docs/DEPENDENCIES.md`](docs/DEPENDENCIES.md): what we depend on, licences, OCR model notes
+* [`docs/MICROSOFT_STORE.md`](docs/MICROSOFT_STORE.md): the Microsoft Store package, Partner Center steps, listing and certification texts
 * [`docs/PLATFORM_CHECKLIST.md`](docs/PLATFORM_CHECKLIST.md): what still has to be verified by hand on Windows and macOS
 * [`docs/PLAN.md`](docs/PLAN.md), [`docs/EVIDENCE.md`](docs/EVIDENCE.md): history and test evidence

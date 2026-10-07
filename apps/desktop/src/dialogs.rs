@@ -900,7 +900,10 @@ impl App {
                 .map(PaletteItem::Command)
                 .collect();
         if !q.is_empty() {
-            for s in SETTINGS {
+            for s in SETTINGS
+                .iter()
+                .filter(|s| crate::prefs_ui::setting_available(s.key))
+            {
                 let hay = format!(
                     "{} {} {} {} {}",
                     s.title,

@@ -54,7 +54,7 @@ on that OS (with notes), nothing in `FEATURE_MATRIX.md` may be marked “Verifie
 - [ ] High-contrast / reduced-motion behaviour
 
 ## Packaging (needs the owner’s accounts; not done)
-- [ ] Windows: installer (MSI/MSIX), Authenticode signing, SmartScreen reputation
+- [ ] Windows: Authenticode signing of the NSIS installer, SmartScreen reputation (the Microsoft Store package is covered below)
 - [ ] macOS: icon (`.icns`), code signing, hardened runtime, notarisation, universal vs arm64-only
 - [ ] Uninstall removes nothing the user did not expect (recovery files, preferences)
 
@@ -84,3 +84,15 @@ on that OS (with notes), nothing in `FEATURE_MATRIX.md` may be marked “Verifie
 - [ ] macOS: opening a PDF with BergPDF already running (Finder/Dock "Open With") — not handled yet, expected to need Apple-event support
 - [ ] Language: Preferences ▸ Language switches the interface at once; with "System" a Dutch / German Windows or macOS shows Dutch / German; check dialogs and the installer-launched first start for text that is cut off or still English
 - [ ] Updates: after the first release is *published*, File ▸ Check for Updates… on the installed older version says a newer one exists (and "latest version" on the newest); the one-time question appears once; behind a company proxy the check fails quietly
+
+## Microsoft Store package (MSIX; see docs/MICROSOFT_STORE.md and D-034)
+
+- [ ] `cargo xtask msix` on Windows 11 builds `dist/packages/*.msix` (the SDK tools are found; no warnings from `makepri`/`makeappx`)
+- [ ] Installed (developer-mode registration or a test-signed copy): the Start menu shows BergPDF with the right logo and name; the taskbar and Alt+Tab icons have no coloured plate; the tile is sharp at 100 % and 200 % scaling
+- [ ] Settings ▸ Apps ▸ Default apps lists BergPDF for `.pdf`; double-clicking a PDF opens it (the path arrives as the first argument), with BergPDF already running it opens as a tab (D-031 works inside the package: the loopback port and the lock file)
+- [ ] The Store copy has **no** update check: no one-time question after the welcome screen, no *Check for Updates…* in the ribbon or the command palette, no *Updates* preference (also not when searching the preferences); a copy installed with the NSIS installer still has all of them
+- [ ] Preferences, recovery files and downloaded OCR models survive an update of the package and are removed by uninstalling; nothing is written inside `C:\Program Files\WindowsApps`
+- [ ] OCR model download, PDF Copilot "Test connection" and opening a link all work from the packaged app (network, certificates)
+- [ ] Installed fonts appear in the font pickers (the DirectWrite/registry font folders are readable from a full-trust package); DirectX 12 starts (Preferences ▸ Graphics)
+- [ ] Windows App Certification Kit passes on the package
+- [ ] Partner Center accepts the package (identity, version, languages) and the pre-certification report is clean

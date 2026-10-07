@@ -362,7 +362,14 @@ impl App {
                             });
                         }
                     });
-                    self.group(ui, tr("Application"), |s, ui| s.cmds(ui, ctx, &[C::Preferences, C::ShortcutReference, C::CheckForUpdates, C::About]));
+                    self.group(ui, tr("Application"), |s, ui| {
+                        // A Microsoft Store copy is updated by the Store: no "Check for Updates".
+                        if platform::distribution::is_store() {
+                            s.cmds(ui, ctx, &[C::Preferences, C::ShortcutReference, C::About]);
+                        } else {
+                            s.cmds(ui, ctx, &[C::Preferences, C::ShortcutReference, C::CheckForUpdates, C::About]);
+                        }
+                    });
                 }
                 RibbonTab::Home => {
                     self.group(ui, tr("History"), |s, ui| s.cmds(ui, ctx, &[C::EditUndo, C::EditRedo]));
