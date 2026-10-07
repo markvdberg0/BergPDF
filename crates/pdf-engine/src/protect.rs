@@ -123,6 +123,9 @@ pub(crate) struct Protection {
     /// The flags stored in the file.
     stored: Rights,
     cipher: Cipher,
+    /// A file identifier for a document that had none (an encrypted file should always carry one; some readers
+    /// fail to decrypt without it). Only set for protection we create ourselves.
+    file_id: Option<Vec<u8>>,
 }
 
 impl std::fmt::Debug for Protection {
@@ -152,6 +155,7 @@ impl Protection {
             owner,
             stored,
             cipher,
+            file_id: None,
         })
     }
 
@@ -174,6 +178,12 @@ impl Protection {
     /// Encrypt plain document bytes the way the original was protected.
     pub(crate) fn seal(&self, plain: &[u8]) -> Result<Vec<u8>> {
         let mut doc = Document::load_mem(plain)?;
+        if !doc.trailer.has(b"ID")
+            && let Some(id) = &self.file_id
+        {
+            let id = Object::string_literal(id.clone());
+            doc.trailer.set("ID", Object::Array(vec![id.clone(), id]));
+        }
         doc.encrypt(&self.state)
             .map_err(|e| EngineError::Save(sanitize(&format!("encryption failed: {e}"))))?;
         let mut out = Vec::new();
@@ -185,8 +195,13 @@ impl Protection {
     /// New AES-256 protection (revision 6) with the given passwords and rights. The caller opens it as owner.
     pub(crate) fn new_aes256(user: &str, owner: &str, rights: Rights) -> Result<Self> {
         let mut key = [0u8; 32];
-        getrandom::fill(&mut key)
-            .map_err(|e| EngineError::Save(format!("no random numbers available: {e}")))?;
+        let mut file_id = vec![0u8; 16];
+        let random = |buf: &mut [u8]| {
+            getrandom::fill(buf)
+                .map_err(|e| EngineError::Save(format!("no random numbers available: {e}")))
+        };
+        random(&mut key)?;
+        random(&mut file_id)?;
         let filter: Arc<dyn CryptFilter> = Arc::new(Aes256CryptFilter);
         let state = EncryptionState::try_from(EncryptionVersion::V5 {
             encrypt_metadata: true,
@@ -206,6 +221,7 @@ impl Protection {
             owner: true,
             stored: rights,
             cipher: Cipher::Aes256,
+            file_id: Some(file_id),
         })
     }
 }
