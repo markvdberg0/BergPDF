@@ -2286,4 +2286,18 @@ pub static ENTRIES: &[(&str, &str)] = &[
     ("This page ({})", "Diese Seite ({})"),
     ("No font matches", "Keine Schriftart passt"),
     ("Search fonts", "Schriftarten suchen"),
+    ("Cloud", "Wolke"),
+    ("Add cloud", "Wolke hinzufügen"),
+    (
+        "Draw a cloud around an area (a revision cloud)",
+        "Zeichne eine Wolke um einen Bereich (eine Revisionswolke)",
+    ),
+    (
+        "Drag to draw a cloud around the area.",
+        "Ziehen, um eine Wolke um den Bereich zu zeichnen.",
+    ),
+    (
+        "Ctrl+Enter or click outside to apply, Esc to cancel",
+        "Strg+Eingabe oder Klick daneben zum Übernehmen, Esc zum Abbrechen",
+    ),
 ];

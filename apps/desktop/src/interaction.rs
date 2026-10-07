@@ -330,9 +330,9 @@ impl App {
                     self.mark_redaction(page, vec![r]);
                 }
             }
-            Tool::Rectangle | Tool::Ellipse | Tool::FreeText | Tool::Stamp => {
+            Tool::Rectangle | Tool::Ellipse | Tool::Cloud | Tool::FreeText | Tool::Stamp => {
                 let Some((a, mut b)) = two(&pts) else { return };
-                if shift && matches!(tool, Tool::Rectangle | Tool::Ellipse) {
+                if shift && matches!(tool, Tool::Rectangle | Tool::Ellipse | Tool::Cloud) {
                     let d = ((b.x - a.x).abs()).max((b.y - a.y).abs());
                     b = Point::new(
                         a.x + d * (b.x - a.x).signum(),
@@ -353,6 +353,11 @@ impl App {
                         page,
                         self.new_spec(AnnotationKind::Ellipse { rect: r }),
                         tr("Add ellipse"),
+                    ),
+                    Tool::Cloud => self.add_annotation(
+                        page,
+                        self.new_spec(AnnotationKind::Cloud { rect: r }),
+                        tr("Add cloud"),
                     ),
                     Tool::FreeText => {
                         // Sizes are judged on screen, so a rotated page behaves like an upright one.
@@ -547,6 +552,7 @@ impl App {
             Tool::Polygon | Tool::Polyline => self.poly_tool(response, vc, pos, tool, mods),
             Tool::Rectangle
             | Tool::Ellipse
+            | Tool::Cloud
             | Tool::Line
             | Tool::Arrow
             | Tool::Ink
@@ -677,8 +683,22 @@ impl App {
         mods: egui::Modifiers,
     ) {
         let ti = self.active;
+        // A click leaves nothing half-done behind (a pointer held for long counts as neither a click
+        // nor a drag).
+        if !response.is_pointer_button_down_on()
+            && !response.drag_stopped()
+            && matches!(
+                self.tabs[ti].ui.interaction,
+                Interaction::Move { .. } | Interaction::Resize { .. } | Interaction::Panning
+            )
+        {
+            self.tabs[ti].ui.interaction = Interaction::None;
+        }
         let Some(pos) = pos else { return };
-        if response.drag_started_by(egui::PointerButton::Primary) {
+        // Selecting happens on the press, so the selection border shows before the button is released.
+        let pressed = response.is_pointer_button_down_on()
+            && response.ctx.input(|i| i.pointer.primary_pressed());
+        if pressed {
             let Some(i) = vc.page_at(pos) else { return };
             let page = vc.pages[i].id;
             let annots = self.annots_for(page);
@@ -824,6 +844,7 @@ impl App {
                         match &mut spec.kind {
                             AnnotationKind::Rectangle { rect: r }
                             | AnnotationKind::Ellipse { rect: r }
+                            | AnnotationKind::Cloud { rect: r }
                             | AnnotationKind::StampText { rect: r, .. }
                             | AnnotationKind::FreeText { rect: r, .. } => *r = rect,
                             _ => {}
@@ -841,10 +862,50 @@ impl App {
                 _ => {}
             }
         } else if response.double_clicked() {
-            // Jump to the comment editor for the selected annotation.
-            self.right_tab = RightTab::Properties;
-            self.prefs.show_right_sidebar = true;
+            self.tabs[ti].ui.interaction = Interaction::None;
+            if !self.start_inline_edit_at(vc, pos) {
+                // Jump to the comment editor for the selected annotation.
+                self.right_tab = RightTab::Properties;
+                self.prefs.show_right_sidebar = true;
+            }
         }
+    }
+
+    /// Double-click on a text box, note or stamp: edit its text right there. Returns whether one was hit.
+    fn start_inline_edit_at(&mut self, vc: &ViewCtx, pos: Pos2) -> bool {
+        let ti = self.active;
+        let Some(i) = vc.page_at(pos) else {
+            return false;
+        };
+        let page = vc.pages[i].id;
+        let pt = vc.screen_to_pdf(i, pos);
+        let tol = 4.0 / vc.px_per_pt;
+        let annots = self.annots_for(page);
+        let Some(a) = annots
+            .iter()
+            .rev()
+            .filter(|a| is_selectable(a))
+            .find(|a| a.rect.inflate(tol, tol).contains(Point::new(pt.x, pt.y)))
+        else {
+            return false;
+        };
+        let editable = a.spec.as_ref().is_some_and(|s| {
+            matches!(
+                s.kind,
+                AnnotationKind::FreeText { .. }
+                    | AnnotationKind::StampText { .. }
+                    | AnnotationKind::Note { .. }
+            )
+        });
+        if !editable || !self.tabs[ti].session.doc().capabilities().can_edit {
+            return false;
+        }
+        self.tabs[ti]
+            .session
+            .selection
+            .select_annotation(page, a.id, false);
+        self.tabs[ti].ui.inline_edit = crate::inline_edit::InlineEdit::start(page, a);
+        self.tabs[ti].ui.inline_edit.is_some()
     }
 
     fn drag_draw_tool(
@@ -1118,6 +1179,7 @@ impl App {
                 match tool {
                     Tool::Rectangle
                     | Tool::Ellipse
+                    | Tool::Cloud
                     | Tool::FreeText
                     | Tool::Stamp
                     | Tool::Redact
@@ -1125,7 +1187,12 @@ impl App {
                         if sp.len() >= 2 =>
                     {
                         let r = Rect::from_two_pos(sp[0], sp[sp.len() - 1]);
-                        if *tool == Tool::Ellipse {
+                        if *tool == Tool::Cloud {
+                            painter.add(egui::epaint::PathShape::closed_line(
+                                cloud_outline(r, 14.0 * vc.px_per_pt as f32),
+                                st,
+                            ));
+                        } else if *tool == Tool::Ellipse {
                             painter.add(egui::epaint::EllipseShape::stroke(
                                 r.center(),
                                 r.size() / 2.0,
@@ -1184,6 +1251,40 @@ impl App {
             }
         }
     }
+}
+
+/// A scalloped outline just inside `r` (screen space), for the cloud preview.
+fn cloud_outline(r: Rect, scallop: f32) -> Vec<Pos2> {
+    let bump = scallop * 0.32;
+    let inner = r.shrink(bump.min(r.width().min(r.height()) / 2.0));
+    let corners = [
+        inner.left_bottom(),
+        inner.right_bottom(),
+        inner.right_top(),
+        inner.left_top(),
+    ];
+    let mut pts = Vec::new();
+    for s in 0..4 {
+        let (a, b) = (corners[s], corners[(s + 1) % 4]);
+        let d = b - a;
+        let len = d.length();
+        if len < 1.0 {
+            continue;
+        }
+        // On screen the outward side of a clockwise path is on the right of the direction of travel
+        // seen with y pointing down, i.e. the left-hand perpendicular in these coordinates.
+        let n = Vec2::new(d.y, -d.x) / len;
+        let count = (len / scallop).round().max(1.0) as usize;
+        for i in 0..count {
+            for k in 0..6 {
+                let f = k as f32 / 6.0;
+                let t = (i as f32 + f) / count as f32;
+                let h = (std::f32::consts::PI * f).sin() * bump;
+                pts.push(a + d * t + n * h);
+            }
+        }
+    }
+    pts
 }
 
 fn dashed_rect(painter: &egui::Painter, r: Rect, stroke: Stroke) {

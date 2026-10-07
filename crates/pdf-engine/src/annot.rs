@@ -133,6 +133,8 @@ pub enum AnnotationKind {
     Rectangle { rect: Rect },
     /// Ellipse.
     Ellipse { rect: Rect },
+    /// Rectangle drawn with a scalloped, cloud-like border (a `Square` with `/BE << /S /C >>`).
+    Cloud { rect: Rect },
     /// Line or arrow.
     Line {
         start: Point,
@@ -219,7 +221,7 @@ impl AnnotationSpec {
             AnnotationKind::Squiggly { .. } => "Squiggly",
             AnnotationKind::Note { .. } => "Text",
             AnnotationKind::FreeText { .. } => "FreeText",
-            AnnotationKind::Rectangle { .. } => "Square",
+            AnnotationKind::Rectangle { .. } | AnnotationKind::Cloud { .. } => "Square",
             AnnotationKind::Ellipse { .. } => "Circle",
             AnnotationKind::Line { .. } => "Line",
             AnnotationKind::Polygon { .. } => "Polygon",
@@ -259,6 +261,7 @@ impl AnnotationSpec {
             }
             AnnotationKind::Rectangle { rect }
             | AnnotationKind::Ellipse { rect }
+            | AnnotationKind::Cloud { rect }
             | AnnotationKind::StampText { rect, .. } => rect.abs(),
             AnnotationKind::Line {
                 start,
@@ -719,8 +722,13 @@ fn build(tx: &mut Tx<'_>, spec: &AnnotationSpec) -> Result<(Dictionary, Stream)>
                 &bs,
             )?;
         }
-        AnnotationKind::Rectangle { rect: r } | AnnotationKind::Ellipse { rect: r } => {
+        AnnotationKind::Rectangle { rect: r }
+        | AnnotationKind::Ellipse { rect: r }
+        | AnnotationKind::Cloud { rect: r } => {
             dict.set("BS", bs);
+            if matches!(spec.kind, AnnotationKind::Cloud { .. }) {
+                dict.set("BE", dictionary! { "S" => name("C"), "I" => 1i64 });
+            }
             if lw == 0.0 {
                 dict.set("BS", dictionary! { "W" => 0i64 });
             }
@@ -740,7 +748,10 @@ fn build(tx: &mut Tx<'_>, spec: &AnnotationSpec) -> Result<(Dictionary, Stream)>
                 (false, true) => "S",
                 (false, false) => "n",
             };
-            if matches!(spec.kind, AnnotationKind::Rectangle { .. }) {
+            if let AnnotationKind::Cloud { .. } = spec.kind {
+                ap.content.push_str(&cloud_path(r, lw));
+                ap.content.push_str(&format!("{paint}\n"));
+            } else if matches!(spec.kind, AnnotationKind::Rectangle { .. }) {
                 ap.content.push_str(&format!(
                     "{} {} {} {} re {paint}\n",
                     fmt_num(inset.x0),
@@ -904,6 +915,71 @@ fn build(tx: &mut Tx<'_>, spec: &AnnotationSpec) -> Result<(Dictionary, Stream)>
     }
     let stream = form_xobject(rect, ap);
     Ok((dict, stream))
+}
+
+/// Scallop size (points) of the cloud border for a line width.
+fn cloud_scallop(lw: f64) -> f64 {
+    (lw * 7.0).max(12.0)
+}
+
+/// Whether a `Square` annotation asks for a cloudy border (`/BE << /S /C >>`).
+fn is_cloudy(doc: &Document, d: &Dictionary) -> bool {
+    d.get(b"BE")
+        .ok()
+        .and_then(|o| objutil::deref(doc, o))
+        .and_then(|o| o.as_dict().ok())
+        .and_then(|be| objutil::dict_name(doc, be, b"S"))
+        .is_some_and(|s| s == b"C")
+}
+
+/// The outline of a cloud: arcs bulging outwards along the sides of `r`, kept inside `r`.
+fn cloud_path(r: Rect, lw: f64) -> String {
+    let scallop = cloud_scallop(lw);
+    let bump = scallop * 0.32;
+    let inner = Rect::new(
+        r.x0 + bump + lw / 2.0,
+        r.y0 + bump + lw / 2.0,
+        r.x1 - bump - lw / 2.0,
+        r.y1 - bump - lw / 2.0,
+    );
+    if inner.width() < scallop * 0.5 || inner.height() < scallop * 0.5 {
+        // Too small for scallops: a plain rectangle.
+        return format!(
+            "{} {} {} {} re ",
+            fmt_num(r.x0),
+            fmt_num(r.y0),
+            fmt_num(r.width()),
+            fmt_num(r.height())
+        );
+    }
+    // Counter-clockwise, so the outward side is on the right of the direction of travel.
+    let corners = [
+        Point::new(inner.x0, inner.y0),
+        Point::new(inner.x1, inner.y0),
+        Point::new(inner.x1, inner.y1),
+        Point::new(inner.x0, inner.y1),
+    ];
+    let mut out = format!("{} m\n", pt(corners[0]));
+    for side in 0..4 {
+        let (a, b) = (corners[side], corners[(side + 1) % 4]);
+        let len = dist(a, b);
+        let n = (len / scallop).round().max(1.0) as usize;
+        let (ux, uy) = ((b.x - a.x) / len, (b.y - a.y) / len);
+        // Right-hand normal.
+        let (nx, ny) = (uy, -ux);
+        let k = bump * 4.0 / 3.0;
+        for i in 0..n {
+            let t0 = len * i as f64 / n as f64;
+            let t1 = len * (i + 1) as f64 / n as f64;
+            let p0 = Point::new(a.x + ux * t0, a.y + uy * t0);
+            let p1 = Point::new(a.x + ux * t1, a.y + uy * t1);
+            let c0 = Point::new(p0.x + nx * k, p0.y + ny * k);
+            let c1 = Point::new(p1.x + nx * k, p1.y + ny * k);
+            out.push_str(&format!("{} {} {} c\n", pt(c0), pt(c1), pt(p1)));
+        }
+    }
+    out.push_str("h\n");
+    out
 }
 
 fn stroke_setup(spec: &AnnotationSpec, c: &str, lw: f64) -> String {
@@ -1394,6 +1470,7 @@ fn parse_spec(doc: &Document, d: &Dictionary) -> Option<AnnotationSpec> {
         b"Text" => AnnotationKind::Note {
             pos: Point::new(rect.x0, rect.y1),
         },
+        b"Square" if is_cloudy(doc, d) => AnnotationKind::Cloud { rect },
         b"Square" => AnnotationKind::Rectangle { rect },
         b"Circle" => AnnotationKind::Ellipse { rect },
         b"Line" => {
@@ -1637,6 +1714,7 @@ impl AnnotationSpec {
             },
             AnnotationKind::Rectangle { rect } => AnnotationKind::Rectangle { rect: mr(rect) },
             AnnotationKind::Ellipse { rect } => AnnotationKind::Ellipse { rect: mr(rect) },
+            AnnotationKind::Cloud { rect } => AnnotationKind::Cloud { rect: mr(rect) },
             AnnotationKind::Line {
                 start,
                 end,

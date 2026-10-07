@@ -25,6 +25,7 @@ fn tool_icon(t: Tool) -> Icon {
         Tool::Callout => Icon::Callout,
         Tool::Rectangle => Icon::Rect,
         Tool::Ellipse => Icon::Ellipse,
+        Tool::Cloud => Icon::Cloud,
         Tool::Line => Icon::Line,
         Tool::Arrow => Icon::Arrow,
         Tool::Polygon => Icon::Polygon,
@@ -392,9 +393,9 @@ impl App {
                     self.group(ui, tr("Notes"), |s, ui| s.cmds(ui, ctx, &[C::ToolNote, C::ToolFreeText, C::ToolCallout]));
                     self.group(ui, tr("Drawing"), |s, ui| {
                         let ids: &[C] = if essential {
-                            &[C::ToolRectangle, C::ToolEllipse, C::ToolLine, C::ToolArrow, C::ToolInk]
+                            &[C::ToolRectangle, C::ToolEllipse, C::ToolCloud, C::ToolLine, C::ToolArrow, C::ToolInk]
                         } else {
-                            &[C::ToolRectangle, C::ToolEllipse, C::ToolLine, C::ToolArrow, C::ToolPolygon, C::ToolPolyline, C::ToolInk]
+                            &[C::ToolRectangle, C::ToolEllipse, C::ToolCloud, C::ToolLine, C::ToolArrow, C::ToolPolygon, C::ToolPolyline, C::ToolInk]
                         };
                         s.cmds(ui, ctx, ids);
                     });

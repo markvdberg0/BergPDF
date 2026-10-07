@@ -701,6 +701,7 @@ impl App {
                     spec.kind,
                     AnnotationKind::Rectangle { .. }
                         | AnnotationKind::Ellipse { .. }
+                        | AnnotationKind::Cloud { .. }
                         | AnnotationKind::Polygon { .. }
                         | AnnotationKind::FreeText { .. }
                 ) {

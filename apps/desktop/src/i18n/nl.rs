@@ -2250,4 +2250,18 @@ pub static ENTRIES: &[(&str, &str)] = &[
     ("This page ({})", "Deze pagina ({})"),
     ("No font matches", "Geen lettertype komt overeen"),
     ("Search fonts", "Lettertypen zoeken"),
+    ("Cloud", "Wolk"),
+    ("Add cloud", "Wolk toevoegen"),
+    (
+        "Draw a cloud around an area (a revision cloud)",
+        "Teken een wolk rond een gebied (een revisiewolk)",
+    ),
+    (
+        "Drag to draw a cloud around the area.",
+        "Sleep om een wolk rond het gebied te tekenen.",
+    ),
+    (
+        "Ctrl+Enter or click outside to apply, Esc to cancel",
+        "Ctrl+Enter of klik ernaast om toe te passen, Esc om te annuleren",
+    ),
 ];

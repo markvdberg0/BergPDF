@@ -192,6 +192,16 @@ impl App {
             self.finish_measure_poly(vc, tool);
             return;
         }
+        // Press, drag and release draws a two-point measurement in one go.
+        if fixed_points(kind) == Some(2) {
+            if let Some((page, pts)) = self.drag_two_points(response, vc, pos, tool, mods) {
+                self.commit_measurement(page, kind, pts);
+                return;
+            }
+            if response.dragged_by(egui::PointerButton::Primary) {
+                return;
+            }
+        }
         if !response.clicked_by(egui::PointerButton::Primary) {
             return;
         }
@@ -215,6 +225,54 @@ impl App {
             self.tabs[ti].ui.interaction = Interaction::None;
             self.commit_measurement(page, kind, pts);
         }
+    }
+
+    /// Press-drag-release for the tools that take two points. Returns the page and both points once the
+    /// button is released far enough from where it was pressed. A release close to the press keeps the
+    /// first point, so the second one can still be clicked.
+    fn drag_two_points(
+        &mut self,
+        response: &egui::Response,
+        vc: &ViewCtx,
+        pos: Pos2,
+        tool: Tool,
+        mods: egui::Modifiers,
+    ) -> Option<(PageId, Vec<Point>)> {
+        let ti = self.active;
+        if response.drag_started_by(egui::PointerButton::Primary) {
+            if self.tabs[ti].ui.polygon_points.is_empty() {
+                let origin = response
+                    .ctx
+                    .input(|i| i.pointer.press_origin())
+                    .unwrap_or(pos);
+                let i = vc.page_at(origin)?;
+                let (p, _) = self.snap_point(vc, i, origin, &[], None, false);
+                let page = vc.pages[i].id;
+                self.tabs[ti].ui.polygon_points.push(p);
+                self.tabs[ti].ui.interaction = Interaction::Draw {
+                    page,
+                    tool,
+                    points: vec![p],
+                };
+            }
+            return None;
+        }
+        if response.drag_stopped_by(egui::PointerButton::Primary) {
+            let Interaction::Draw { page, points, .. } = self.tabs[ti].ui.interaction.clone()
+            else {
+                return None;
+            };
+            let i = vc.pages.iter().position(|p| p.id == page)?;
+            let a = *points.first()?;
+            let (p, _) = self.snap_point(vc, i, pos, &points, Some(a), mods.shift);
+            if vc.pdf_to_screen(i, a).distance(vc.pdf_to_screen(i, p)) < 4.0 {
+                return None;
+            }
+            self.tabs[ti].ui.polygon_points.clear();
+            self.tabs[ti].ui.interaction = Interaction::None;
+            return Some((page, vec![a, p]));
+        }
+        None
     }
 
     /// Enter / double-click on an open-ended measurement.
@@ -293,7 +351,13 @@ impl App {
             self.region_drag(response, vc, pos, page, scale);
             return;
         }
-        if !response.clicked_by(egui::PointerButton::Primary) {
+        if let Some((page, pts)) = self.drag_two_points(response, vc, pos, Tool::Calibrate, mods) {
+            self.finish_calibration(page, &pts);
+            return;
+        }
+        if response.dragged_by(egui::PointerButton::Primary)
+            || !response.clicked_by(egui::PointerButton::Primary)
+        {
             return;
         }
         let page_idx = match &self.tabs[ti].ui.interaction {
@@ -309,12 +373,7 @@ impl App {
         if pts.len() >= 2 {
             self.tabs[ti].ui.polygon_points.clear();
             self.tabs[ti].ui.interaction = Interaction::None;
-            let len = (pts[0].x - pts[1].x).hypot(pts[0].y - pts[1].y);
-            if len < 1.0 {
-                self.notify(tr("Those two points are too close together to calibrate."));
-                return;
-            }
-            self.open_scale_dialog(page, Some(len));
+            self.finish_calibration(page, &pts);
         } else {
             self.tabs[ti].ui.interaction = Interaction::Draw {
                 page,
@@ -322,6 +381,16 @@ impl App {
                 points: pts,
             };
         }
+    }
+
+    /// The two calibration points are known: ask for their real length.
+    fn finish_calibration(&mut self, page: PageId, pts: &[Point]) {
+        let len = (pts[0].x - pts[1].x).hypot(pts[0].y - pts[1].y);
+        if len < 1.0 {
+            self.notify(tr("Those two points are too close together to calibrate."));
+            return;
+        }
+        self.open_scale_dialog(page, Some(len));
     }
 
     fn region_drag(
