@@ -78,6 +78,12 @@ impl Session<'_> {
 
     /// Render a region of a page.
     pub fn render_tile(&self, req: &TileRequest) -> Result<Bitmap> {
+        self.render_tile_with(req, true)
+    }
+
+    /// Render a region of a page, optionally without the annotations (their appearance streams, form fields,
+    /// comments): what a viewer shows of the page content alone.
+    pub fn render_tile_with(&self, req: &TileRequest, annotations: bool) -> Result<Bitmap> {
         if req.width == 0 || req.height == 0 {
             return Err(EngineError::InvalidArgument("empty tile".into()));
         }
@@ -102,7 +108,10 @@ impl Session<'_> {
         hayro::render_into(
             page,
             &self.render_cache,
-            &InterpreterSettings::default(),
+            &InterpreterSettings {
+                render_annotations: annotations,
+                ..InterpreterSettings::default()
+            },
             &RenderSettings::default(),
             &mut ctx,
             transform,

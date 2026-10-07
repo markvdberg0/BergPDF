@@ -26,6 +26,7 @@ pub mod pagecontent;
 pub mod pageops;
 pub mod pdfa;
 pub mod protect;
+pub mod redact;
 pub mod render;
 pub mod save;
 pub mod serialize;

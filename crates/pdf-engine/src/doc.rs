@@ -615,6 +615,14 @@ impl PdfDocument {
         Ok(out)
     }
 
+    /// After content was *removed* on purpose (redaction): forget every object nothing refers to any more, and make
+    /// the next save a complete rewrite of the file, so no earlier revision (which still holds the removed
+    /// content) is carried along. Not undoable.
+    pub fn discard_unreferenced_and_rewrite_on_save(&mut self) {
+        self.doc.prune_objects();
+        self.base = None;
+    }
+
     /// Establish `bytes` (just written to disk) as the new base revision.
     pub fn rebase(&mut self, bytes: Vec<u8>) {
         self.base = serialize::find_base_info(&bytes);

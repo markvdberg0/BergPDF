@@ -373,3 +373,62 @@ fn protection_is_added_and_removed_through_the_session() {
     s.save().unwrap();
     assert!(DocumentSession::open_path(&p).is_ok(), "plain again");
 }
+
+// ---- redaction ------------------------------------------------------------------------------
+
+#[test]
+fn redaction_marks_are_undoable_but_applying_them_is_final_and_saved_as_a_clean_file() {
+    use pdf_engine::geom::Rect as GRect;
+    use pdf_engine::redact::RedactOptions;
+    let dir = tempfile::tempdir().unwrap();
+    let p = dir.path().join("doc.pdf");
+    fs::write(&p, test_support::fixtures::helvetica_lines()).unwrap();
+    let mut s = DocumentSession::open_path(&p).unwrap();
+    let page = s.pages().unwrap()[0].id;
+    let rect = GRect::new(70.0, 676.0, 300.0, 696.0);
+    s.mark_for_redaction(page, &[rect]).unwrap();
+    assert_eq!(s.redaction_marks().len(), 1);
+    assert_eq!(s.undo_label(), Some("Mark for redaction"));
+    s.undo();
+    assert!(s.redaction_marks().is_empty());
+    s.redo();
+    assert_eq!(s.redaction_marks().len(), 1);
+
+    let report = s.apply_redactions(&RedactOptions::default()).unwrap();
+    assert_eq!(report.words_removed, 4);
+    assert!(s.redaction_marks().is_empty());
+    assert!(!s.can_undo() && !s.can_redo(), "no way back to the removed text");
+    assert!(s.is_dirty());
+
+    s.save().unwrap();
+    let on_disk = fs::read(&p).unwrap();
+    let has = |needle: &str| on_disk.windows(needle.len()).any(|w| w == needle.as_bytes());
+    assert!(!has("Second line"), "the removed text is in the saved file");
+    assert_eq!(
+        on_disk.windows(5).filter(|w| w == b"%%EOF").count(),
+        1,
+        "the file holds one revision only"
+    );
+    // The session goes on working on the saved file.
+    assert!(!s.is_dirty());
+    add_rect(&mut s);
+    s.save().unwrap();
+    let again = DocumentSession::open_path(&p).unwrap();
+    assert_eq!(again.doc().page_count(), 1);
+}
+
+#[test]
+fn a_protected_document_stays_protected_after_redaction() {
+    use pdf_engine::geom::Rect as GRect;
+    use pdf_engine::redact::RedactOptions;
+    let (_d, p) = protected_copy(pdf_engine::protect::Rights::ALL);
+    let mut s = DocumentSession::open_path_with_password(&p, "reader").unwrap();
+    let page = s.pages().unwrap()[0].id;
+    s.mark_for_redaction(page, &[GRect::new(50.0, 600.0, 400.0, 760.0)])
+        .unwrap();
+    s.apply_redactions(&RedactOptions::default()).unwrap();
+    s.save().unwrap();
+    let bytes = fs::read(&p).unwrap();
+    assert!(bytes.windows(8).any(|w| w == b"/Encrypt"));
+    assert!(DocumentSession::open_path_with_password(&p, "reader").is_ok());
+}

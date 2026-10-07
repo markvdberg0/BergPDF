@@ -417,6 +417,45 @@ impl DocumentSession {
         Ok(self.snapshot()?.bytes.as_ref().clone())
     }
 
+    /// Mark an area of a page for redaction (an undoable annotation; nothing is removed yet).
+    pub fn mark_for_redaction(
+        &mut self,
+        page: pdf_engine::doc::PageId,
+        rects: &[pdf_engine::geom::Rect],
+    ) -> Result<()> {
+        let rects = rects.to_vec();
+        self.execute("Mark for redaction", move |tx| {
+            for r in &rects {
+                pdf_engine::redact::add_mark(tx, page, *r)?;
+            }
+            Ok(())
+        })
+    }
+
+    /// The redaction marks of the document.
+    pub fn redaction_marks(&self) -> Vec<pdf_engine::redact::Mark> {
+        pdf_engine::redact::marks(&self.doc)
+    }
+
+    /// Permanently remove what lies under the marks (see `pdf_engine::redact`).
+    ///
+    /// A milestone like signing: the undo history is cleared, because undoing would bring the removed content
+    /// back, and the next save writes a complete new file.
+    pub fn apply_redactions(
+        &mut self,
+        opts: &pdf_engine::redact::RedactOptions,
+    ) -> Result<pdf_engine::redact::RedactionReport> {
+        let report = pdf_engine::redact::apply(&mut self.doc, opts)?;
+        self.undo.clear();
+        self.redo.clear();
+        self.state = self.fresh_state();
+        self.saved_state = None;
+        self.selection = Selection::default();
+        self.search = SearchState::default();
+        self.bump();
+        Ok(report)
+    }
+
     /// How the document is password protected, when it is.
     pub fn protection(&self) -> Option<pdf_engine::protect::ProtectionInfo> {
         self.doc.protection()
