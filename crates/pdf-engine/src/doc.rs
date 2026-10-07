@@ -9,6 +9,7 @@ use crate::caps::Capabilities;
 use crate::error::{EngineError, Result, sanitize};
 use crate::geom::{PageGeometry, Rotation};
 use crate::objutil::{self, MAX_DEPTH};
+use crate::protect::{self, Protection, ProtectionInfo, Rights};
 use crate::serialize::{self, AppendObject, BaseInfo, TrailerInfo};
 use lopdf::{Dictionary, Document, Object, ObjectId};
 use std::collections::{BTreeMap, BTreeSet};
@@ -178,11 +179,26 @@ pub struct PdfDocument {
     trailer_touched: bool,
     base: Option<BaseInfo>,
     pub(crate) caps: Capabilities,
+    /// How the file was protected; saving encrypts it again the same way (see [`crate::protect`]).
+    protection: Option<Protection>,
 }
 
 impl PdfDocument {
-    /// Parse a document from bytes.
+    /// Parse a document from bytes. A password-protected file that opens with the empty password is unlocked;
+    /// otherwise [`EngineError::PasswordRequired`] is returned (see [`PdfDocument::open_with_password`]).
     pub fn open(bytes: Vec<u8>, opts: &OpenOptions) -> Result<Self> {
+        Self::open_with_password(bytes, opts, "")
+    }
+
+    /// Parse a document from bytes, unlocking it with `password` when it is password protected.
+    ///
+    /// The protected file is decrypted into a plain working copy; saving encrypts it again (see
+    /// [`PdfDocument::seal`]). [`EngineError::WrongPassword`] when the password does not fit.
+    pub fn open_with_password(
+        bytes: Vec<u8>,
+        opts: &OpenOptions,
+        password: &str,
+    ) -> Result<Self> {
         if bytes.len() > opts.max_file_size {
             return Err(EngineError::LimitExceeded(format!(
                 "file is {} bytes, limit is {}",
@@ -190,24 +206,23 @@ impl PdfDocument {
                 opts.max_file_size
             )));
         }
+        let (bytes, protection) = match protect::unlock(&bytes, opts.max_decompressed_size, password)
+        {
+            Ok(Some((plain, protection))) => (plain, Some(protection)),
+            Ok(None) => (bytes, None),
+            Err(e) => return Err(e),
+        };
         let load = lopdf::LoadOptions {
             max_decompressed_size: Some(opts.max_decompressed_size),
             ..Default::default()
         };
-        let mut doc = Document::load_mem_with_options(&bytes, load).map_err(|e| {
-            let msg = e.to_string();
-            if msg.to_ascii_lowercase().contains("password") || doc_is_encrypted_hint(&bytes) {
-                EngineError::PasswordRequired
-            } else {
-                EngineError::Parse(sanitize(&msg))
-            }
-        })?;
-        let was_encrypted = doc.is_encrypted() || doc.was_encrypted();
-        // lopdf may have decrypted an empty-password document in memory; we must not
-        // write plaintext objects into an encrypted file, so editing is blocked anyway.
-        let _ = &mut doc;
+        let doc = Document::load_mem_with_options(&bytes, load)
+            .map_err(|e| EngineError::Parse(sanitize(&e.to_string())))?;
         let base = serialize::find_base_info(&bytes);
-        let caps = Capabilities::detect(&doc, &bytes, was_encrypted, base.is_some());
+        let mut caps = Capabilities::detect(&doc, &bytes, protection.is_some(), base.is_some());
+        if let Some(p) = &protection {
+            caps.apply_protection(&p.info());
+        }
         Ok(Self {
             doc,
             original: Arc::new(bytes),
@@ -215,7 +230,76 @@ impl PdfDocument {
             trailer_touched: false,
             base,
             caps,
+            protection,
         })
+    }
+
+    /// How the document is protected, when it is.
+    pub fn protection(&self) -> Option<ProtectionInfo> {
+        self.protection.as_ref().map(Protection::info)
+    }
+
+    /// The password the document was unlocked with (for checking a saved file), when protected.
+    pub fn protection_password(&self) -> Option<&str> {
+        self.protection.as_ref().map(Protection::password)
+    }
+
+    /// Unlock a document that was opened with limited rights by supplying the owner password. Returns a new
+    /// document (the caller replaces the old one; nothing may have been edited, since editing was blocked).
+    pub fn unlock_as_owner(&self, password: &str, opts: &OpenOptions) -> Result<PdfDocument> {
+        let source = self
+            .protection
+            .as_ref()
+            .and_then(Protection::source)
+            .ok_or_else(|| EngineError::InvalidArgument("the document is not protected".into()))?;
+        let doc = Self::open_with_password(source.as_ref().clone(), opts, password)?;
+        if doc.protection().is_some_and(|p| p.owner) {
+            Ok(doc)
+        } else {
+            Err(EngineError::WrongPassword)
+        }
+    }
+
+    /// Encrypt `plain` (the bytes of this document's current revision) the way the document is protected, or
+    /// return it unchanged when it is not. Every file written from this document goes through here.
+    pub fn seal<'a>(&self, plain: &'a [u8]) -> Result<std::borrow::Cow<'a, [u8]>> {
+        match &self.protection {
+            Some(p) => Ok(std::borrow::Cow::Owned(p.seal(plain)?)),
+            None => Ok(std::borrow::Cow::Borrowed(plain)),
+        }
+    }
+
+    /// Protect the document with a password (AES 256). `owner` may be empty (then the user password is also the
+    /// owner password). The next save writes the encrypted file.
+    pub fn set_protection(&mut self, user: &str, owner: &str, rights: Rights) -> Result<()> {
+        if self.restricted() {
+            return Err(EngineError::Unsupported(
+                "only the owner can change the protection".into(),
+            ));
+        }
+        let owner = if owner.is_empty() { user } else { owner };
+        self.protection = Some(Protection::new_aes256(user, owner, rights)?);
+        if let Some(info) = self.protection() {
+            self.caps.apply_protection(&info);
+        }
+        Ok(())
+    }
+
+    /// Remove the password protection; the next save writes a plain file. Only the owner may do this.
+    pub fn remove_protection(&mut self) -> Result<()> {
+        if self.restricted() {
+            return Err(EngineError::Unsupported(
+                "only the owner can remove the protection".into(),
+            ));
+        }
+        self.protection = None;
+        self.caps.encrypted = false;
+        Ok(())
+    }
+
+    /// Opened with the user password and limited rights.
+    fn restricted(&self) -> bool {
+        self.protection().is_some_and(|p| !p.owner)
     }
 
     /// Capabilities and warnings detected at open time.
@@ -540,7 +624,3 @@ impl PdfDocument {
     }
 }
 
-fn doc_is_encrypted_hint(bytes: &[u8]) -> bool {
-    let tail = &bytes[bytes.len().saturating_sub(8192)..];
-    tail.windows(8).any(|w| w == b"/Encrypt")
-}

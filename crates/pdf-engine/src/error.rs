@@ -18,6 +18,9 @@ pub enum EngineError {
     /// The document is encrypted and no (correct) password was supplied.
     #[error("the document is encrypted and requires a password")]
     PasswordRequired,
+    /// A password was supplied but it does not open the document.
+    #[error("that password does not open the document")]
+    WrongPassword,
     /// The document structure is damaged in a way that blocks the operation.
     #[error("malformed document: {0}")]
     Malformed(String),

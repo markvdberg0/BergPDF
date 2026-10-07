@@ -46,6 +46,8 @@ pub struct SaveOptions {
     pub expected_stamp: Option<FileStamp>,
     /// Expected page count for post-write validation (skipped when `None`).
     pub expected_pages: Option<usize>,
+    /// The password to open the written file with when checking it (the file is encrypted).
+    pub password: Option<String>,
     /// Test-only failure injection.
     #[doc(hidden)]
     pub inject: Option<InjectedFailure>,
@@ -103,8 +105,12 @@ fn write_and_replace(
             "verification failed: written bytes differ".into(),
         ));
     }
-    let reopened = PdfDocument::open(written, &OpenOptions::default())
-        .map_err(|e| EngineError::Save(format!("saved file failed validation: {e}")))?;
+    let reopened = PdfDocument::open_with_password(
+        written,
+        &OpenOptions::default(),
+        opts.password.as_deref().unwrap_or(""),
+    )
+    .map_err(|e| EngineError::Save(format!("saved file failed validation: {e}")))?;
     if let Some(n) = opts.expected_pages
         && reopened.page_count() != n
     {

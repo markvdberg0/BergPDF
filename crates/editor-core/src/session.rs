@@ -103,9 +103,15 @@ impl DocumentSession {
 
     /// Open a file from disk.
     pub fn open_path(path: &Path) -> Result<Self> {
+        Self::open_path_with_password(path, "")
+    }
+
+    /// Open a file from disk, unlocking it with `password` when it is password protected
+    /// (`EngineError::PasswordRequired` / `WrongPassword` tell the caller to ask).
+    pub fn open_path_with_password(path: &Path, password: &str) -> Result<Self> {
         let bytes = std::fs::read(path)?;
         let stamp = FileStamp::of(path).ok();
-        let doc = PdfDocument::open(bytes, &OpenOptions::default())?;
+        let doc = PdfDocument::open_with_password(bytes, &OpenOptions::default(), password)?;
         let title = path
             .file_name()
             .map_or_else(|| "Untitled".into(), |n| n.to_string_lossy().into_owned());
@@ -326,17 +332,21 @@ impl DocumentSession {
         self.write_bytes(dest, bytes, check_external)
     }
 
+    /// `bytes` are the plain bytes of the current revision; a protected document is written encrypted again.
     fn write_bytes(&mut self, dest: &Path, bytes: Vec<u8>, check_external: bool) -> Result<()> {
         let pages = self.doc.page_count();
+        let sealed = self.doc.seal(&bytes)?;
         let stamp = save::write_atomic(
             dest,
-            &bytes,
+            &sealed,
             &SaveOptions {
                 expected_stamp: if check_external { self.stamp } else { None },
                 expected_pages: Some(pages),
+                password: self.doc.protection_password().map(str::to_string),
                 inject: None,
             },
         )?;
+        drop(sealed);
         self.doc.rebase(bytes);
         self.saved_state = Some(self.state);
         self.stamp = Some(stamp);
@@ -358,6 +368,11 @@ impl DocumentSession {
         identity: &pdf_engine::sign::Identity,
         opts: &pdf_engine::sign::SignOptions,
     ) -> Result<()> {
+        if self.doc.protection().is_some() {
+            return Err(EngineError::Unsupported(
+                "Remove the password protection before signing; a signed file cannot be encrypted afterwards without breaking the signature.".into(),
+            ));
+        }
         let bytes = self.doc.sign(identity, opts)?;
         let check_external = self.path.as_deref() == Some(dest);
         self.write_bytes(dest, bytes, check_external)?;
@@ -377,20 +392,66 @@ impl DocumentSession {
             .clone()
             .ok_or_else(|| EngineError::InvalidArgument("no path".into()))?;
         let bytes = self.doc.snapshot_bytes()?;
+        let sealed = self.doc.seal(&bytes)?;
         save::write_atomic(
             &path,
-            &bytes,
+            &sealed,
             &SaveOptions {
                 expected_stamp: self.stamp,
                 expected_pages: None,
+                password: self.doc.protection_password().map(str::to_string),
                 inject: Some(inject),
             },
         )
         .map(|_| ())
     }
 
-    /// Bytes suitable for crash-recovery files (current state, no side effects).
+    /// Bytes suitable for crash-recovery files (current state, no side effects). A password-protected document
+    /// has none: a recovery file would hold its content unencrypted.
     pub fn recovery_bytes(&mut self) -> Result<Vec<u8>> {
+        if self.doc.protection().is_some() {
+            return Err(EngineError::Unsupported(
+                "protected documents are not written to recovery files".into(),
+            ));
+        }
         Ok(self.snapshot()?.bytes.as_ref().clone())
+    }
+
+    /// How the document is password protected, when it is.
+    pub fn protection(&self) -> Option<pdf_engine::protect::ProtectionInfo> {
+        self.doc.protection()
+    }
+
+    /// Protect the document with a password (applied when it is saved). Not an undo step.
+    pub fn set_protection(
+        &mut self,
+        user: &str,
+        owner: &str,
+        rights: pdf_engine::protect::Rights,
+    ) -> Result<()> {
+        self.doc.set_protection(user, owner, rights)?;
+        self.protection_changed();
+        Ok(())
+    }
+
+    /// Remove the password protection (applied when it is saved). Not an undo step.
+    pub fn remove_protection(&mut self) -> Result<()> {
+        self.doc.remove_protection()?;
+        self.protection_changed();
+        Ok(())
+    }
+
+    /// A document opened with limited rights becomes fully editable with the owner password.
+    pub fn unlock_as_owner(&mut self, password: &str) -> Result<()> {
+        let unlocked = self.doc.unlock_as_owner(password, &OpenOptions::default())?;
+        self.doc = unlocked;
+        self.bump();
+        Ok(())
+    }
+
+    /// The protection is part of what a save writes, so the document is unsaved afterwards.
+    fn protection_changed(&mut self) {
+        self.mark_unsaved();
+        self.bump();
     }
 }

@@ -4,6 +4,10 @@
 
 use lopdf::{Document, Object};
 
+const RESTRICTED: &str =
+    "The author of this document did not allow changes. Enter the owner password to edit it.";
+const RESIGN: &str = "This document is password protected and signed. Saving encrypts the whole file again, so the signatures will no longer verify.";
+
 /// A reason an edit/save path is limited, shown verbatim to the user.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Limitation(pub String);
@@ -91,13 +95,6 @@ impl Capabilities {
         c.newer_than_1_7 = c.version.as_str() > "1.7";
         c.has_signatures |= bytes_contain(bytes, b"/ByteRange") && bytes_contain(bytes, b"/Sig");
 
-        if c.encrypted {
-            c.edit_blockers.push(Limitation(
-                "This document is encrypted. BergPDF opens it read-only; it never strips \
-                 or re-writes encryption."
-                    .into(),
-            ));
-        }
         if c.has_xfa {
             c.warnings.push(Limitation(
                 "XFA form content detected. XFA forms are not supported; the AcroForm fallback \
@@ -129,6 +126,21 @@ impl Capabilities {
         }
         c.can_edit = c.edit_blockers.is_empty();
         c
+    }
+
+    /// Take the document's password protection into account: what the author restricted, and what saving a
+    /// protected file does to signatures.
+    pub fn apply_protection(&mut self, info: &crate::protect::ProtectionInfo) {
+        self.encrypted = true;
+        self.edit_blockers.retain(|l| l.0 != RESTRICTED);
+        self.warnings.retain(|l| l.0 != RESIGN);
+        if !info.owner && !info.rights.modify {
+            self.edit_blockers.push(Limitation(RESTRICTED.into()));
+        }
+        if self.has_signatures {
+            self.warnings.push(Limitation(RESIGN.into()));
+        }
+        self.can_edit = self.edit_blockers.is_empty();
     }
 
     /// One-line explanation used in error messages when editing is blocked.

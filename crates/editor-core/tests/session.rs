@@ -264,3 +264,112 @@ fn a_failed_signing_destination_leaves_the_original_untouched() {
     assert!(s.sign_and_save(&bad, &id, &SignOptions::default()).is_err());
     assert_eq!(fs::read(&path).unwrap(), before);
 }
+
+// ---- password protection ---------------------------------------------------------------------
+
+/// A protected copy of the fixture on disk (AES-256, separate user and owner passwords).
+fn protected_copy(rights: pdf_engine::protect::Rights) -> (tempfile::TempDir, std::path::PathBuf) {
+    use pdf_engine::doc::{OpenOptions, PdfDocument};
+    let dir = tempfile::tempdir().unwrap();
+    let p = dir.path().join("secret.pdf");
+    let mut doc =
+        PdfDocument::open(fixture_bytes("report-chromium.pdf"), &OpenOptions::default()).unwrap();
+    doc.set_protection("reader", "chief", rights).unwrap();
+    let plain = doc.snapshot_bytes().unwrap();
+    fs::write(&p, doc.seal(&plain).unwrap()).unwrap();
+    (dir, p)
+}
+
+#[test]
+fn a_protected_file_asks_for_its_password_and_saves_protected_again() {
+    let (dir, p) = protected_copy(pdf_engine::protect::Rights::ALL);
+    assert!(matches!(
+        DocumentSession::open_path(&p),
+        Err(EngineError::PasswordRequired)
+    ));
+    assert!(matches!(
+        DocumentSession::open_path_with_password(&p, "nope"),
+        Err(EngineError::WrongPassword)
+    ));
+    let mut s = DocumentSession::open_path_with_password(&p, "reader").unwrap();
+    assert!(s.protection().is_some());
+    add_rect(&mut s);
+    s.save().unwrap();
+    assert!(tmp_files(dir.path()).is_empty());
+
+    // On disk it is still encrypted, and the edit is in it.
+    let on_disk = fs::read(&p).unwrap();
+    assert!(on_disk.windows(8).any(|w| w == b"/Encrypt"));
+    assert!(matches!(
+        DocumentSession::open_path(&p),
+        Err(EngineError::PasswordRequired)
+    ));
+    let mut again = DocumentSession::open_path_with_password(&p, "chief").unwrap();
+    let page = again.pages().unwrap()[0].id;
+    let annots = pdf_engine::annot::read_annotations(again.doc(), page);
+    assert_eq!(annots.len(), 1, "the rectangle was saved");
+    // A second save in the same session keeps working (the base was rebased on plain bytes).
+    add_rect(&mut s);
+    s.save().unwrap();
+    let third = DocumentSession::open_path_with_password(&p, "reader").unwrap();
+    assert_eq!(third.doc().page_count(), s.doc().page_count());
+}
+
+#[test]
+fn protected_documents_are_never_written_to_recovery_files_or_signed() {
+    let (_d, p) = protected_copy(pdf_engine::protect::Rights::ALL);
+    let mut s = DocumentSession::open_path_with_password(&p, "reader").unwrap();
+    add_rect(&mut s);
+    assert!(s.recovery_bytes().is_err());
+    let (_d2, p2) = tmp_copy();
+    let mut plain = DocumentSession::open_path(&p2).unwrap();
+    assert!(plain.recovery_bytes().is_ok());
+}
+
+#[test]
+fn restricted_documents_are_read_only_until_the_owner_password_is_given() {
+    let rights = pdf_engine::protect::Rights {
+        modify: false,
+        ..pdf_engine::protect::Rights::ALL
+    };
+    let (_d, p) = protected_copy(rights);
+    let mut s = DocumentSession::open_path_with_password(&p, "reader").unwrap();
+    assert!(!s.doc().capabilities().can_edit);
+    assert!(
+        s.execute("x", |tx| {
+            let page = pdf_engine::doc::PageId(tx.doc().get_pages()[&1]);
+            pageops::rotate_pages(tx, &[page], 1)
+        })
+        .is_err()
+    );
+    assert!(matches!(
+        s.unlock_as_owner("reader"),
+        Err(EngineError::WrongPassword)
+    ));
+    let rev = s.revision();
+    s.unlock_as_owner("chief").unwrap();
+    assert!(s.revision() > rev);
+    assert!(s.doc().capabilities().can_edit);
+    add_rect(&mut s);
+    s.save().unwrap();
+}
+
+#[test]
+fn protection_is_added_and_removed_through_the_session() {
+    let (_d, p) = tmp_copy();
+    let mut s = DocumentSession::open_path(&p).unwrap();
+    assert!(!s.is_dirty());
+    s.set_protection("pw", "", pdf_engine::protect::Rights::ALL)
+        .unwrap();
+    assert!(s.is_dirty(), "the protection is written by the next save");
+    s.save().unwrap();
+    assert!(matches!(
+        DocumentSession::open_path(&p),
+        Err(EngineError::PasswordRequired)
+    ));
+    let mut s = DocumentSession::open_path_with_password(&p, "pw").unwrap();
+    s.remove_protection().unwrap();
+    assert!(s.is_dirty());
+    s.save().unwrap();
+    assert!(DocumentSession::open_path(&p).is_ok(), "plain again");
+}

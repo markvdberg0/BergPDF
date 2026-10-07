@@ -13,6 +13,8 @@ hayro.workspace = true
 pdf-sign.workspace = true
 image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
 lopdf.workspace = true
+getrandom = "0.4"
+md-5 = "0.11"
 pdf-base14-metrics = "0.0.2"
 pdfboss-encoding = "2"
 subsetter = "0.2"
