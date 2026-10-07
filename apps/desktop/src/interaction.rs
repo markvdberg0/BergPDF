@@ -323,6 +323,13 @@ impl App {
         };
         let min_extent = 3.0;
         match tool {
+            Tool::Redact => {
+                let Some((a, b)) = two(&pts) else { return };
+                let r = PRect::new(a.x, a.y, b.x, b.y).abs();
+                if r.width() >= min_extent && r.height() >= min_extent {
+                    self.mark_redaction(page, vec![r]);
+                }
+            }
             Tool::Rectangle | Tool::Ellipse | Tool::FreeText | Tool::Stamp => {
                 let Some((a, mut b)) = two(&pts) else { return };
                 if shift && matches!(tool, Tool::Rectangle | Tool::Ellipse) {
@@ -544,6 +551,7 @@ impl App {
             | Tool::Arrow
             | Tool::Ink
             | Tool::FreeText
+            | Tool::Redact
             | Tool::Stamp => {
                 self.drag_draw_tool(response, vc, pos, tool, mods);
             }
@@ -1112,6 +1120,7 @@ impl App {
                     | Tool::Ellipse
                     | Tool::FreeText
                     | Tool::Stamp
+                    | Tool::Redact
                     | Tool::SignArea
                         if sp.len() >= 2 =>
                     {

@@ -89,6 +89,9 @@ pub enum CommandId {
     FileSaveOptimized,
     FileConvertPdfA,
     FileProtection,
+    ToolRedact,
+    RedactMarkSelection,
+    RedactApply,
     ToggleCopilot,
     CopilotSummarize,
     CopilotSummarizeAnnotations,
@@ -939,6 +942,30 @@ pub static REGISTRY: &[CommandInfo] = &[
         "Protect the document with a password, or remove or change its protection",
         C::File,
         "password protect encrypt decrypt lock unlock secure owner permissions",
+        []
+    ),
+    cmd!(
+        Id::ToolRedact,
+        "Mark Area for Redaction",
+        "Drag over what must be removed; nothing is deleted until you apply the redactions",
+        C::Content,
+        "redact redaction black out blackout censor remove sensitive confidential hide",
+        []
+    ),
+    cmd!(
+        Id::RedactMarkSelection,
+        "Mark Selected Text for Redaction",
+        "Mark the selected text for removal; nothing is deleted until you apply the redactions",
+        C::Content,
+        "redact redaction black out censor remove sensitive confidential selection text",
+        []
+    ),
+    cmd!(
+        Id::RedactApply,
+        "Apply Redactions…",
+        "Permanently remove what lies under the redaction marks (the pages are replaced by pictures; cannot be undone)",
+        C::Content,
+        "redact redaction apply remove permanently sanitize black out censor",
         []
     ),
     cmd!(

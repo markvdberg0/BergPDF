@@ -96,6 +96,12 @@ impl App {
                 has && !self.ai_busy() && self.text_use_allowed()
             }
             C::TranslateDocument => has && self.text_use_allowed(),
+            C::RedactMarkSelection => {
+                has && can_edit && tab.is_some_and(|t| t.session.selection.text.is_some())
+            }
+            C::RedactApply => {
+                has && can_edit && tab.is_some_and(|t| t.session.redaction_mark_count() > 0)
+            }
             C::SignDocument => has && can_edit,
             C::OcrDocument => has && can_edit && self.ocr_job.is_none(),
             C::DrawSignature => true,
@@ -169,6 +175,8 @@ impl App {
             C::OcrDocument => self.open_ocr_dialog(),
             C::FileSaveOptimized => self.open_optimize_dialog(),
             C::FileProtection => self.open_protection_dialog(),
+            C::RedactMarkSelection => self.redact_selection(),
+            C::RedactApply => self.open_redact_dialog(),
             C::FileConvertPdfA => self.open_pdfa_dialog(),
             C::ShowSignatures => self.open_signatures(),
             C::DrawSignature => self.open_draw_signature(),

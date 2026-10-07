@@ -2212,4 +2212,128 @@ pub static ENTRIES: &[(&str, &str)] = &[
         "The author of this document did not allow copying its text, so PDF Copilot and Translate are not available for it.",
         "Der Autor dieses Dokuments hat das Kopieren des Textes nicht erlaubt, daher sind PDF Copilot und Übersetzen dafür nicht verfügbar.",
     ),
+    (
+        "A very large page was drawn at {} dpi to keep the file workable.",
+        "Eine sehr große Seite wurde mit {} dpi gezeichnet, damit die Datei handhabbar bleibt.",
+    ),
+    (
+        "Also remove attached files",
+        "Auch angehängte Dateien entfernen",
+    ),
+    (
+        "Also remove the document properties (title, author, …)",
+        "Auch die Dokumenteigenschaften entfernen (Titel, Autor, …)",
+    ),
+    (
+        "Apply Redactions…",
+        "Schwärzungen anwenden…",
+    ),
+    (
+        "Apply redactions",
+        "Schwärzungen anwenden",
+    ),
+    (
+        "Could not mark the area: {}",
+        "Der Bereich konnte nicht markiert werden: {}",
+    ),
+    (
+        "Drag over what must be removed. Nothing is deleted until you apply the redactions.",
+        "Ziehen Sie über das, was entfernt werden soll. Es wird nichts gelöscht, bis Sie die Schwärzungen anwenden.",
+    ),
+    (
+        "Drag over what must be removed; nothing is deleted until you apply the redactions",
+        "Über das zu Entfernende ziehen; es wird nichts gelöscht, bis Sie die Schwärzungen anwenden",
+    ),
+    (
+        "Each of those pages is replaced by a picture of itself with the marked areas painted black, so nothing under a mark stays in the file: no text, no picture, no hidden text. The other words on the page stay searchable. Comments and form fields under a mark are deleted.",
+        "Jede dieser Seiten wird durch ein Bild ihrer selbst ersetzt, in dem die markierten Bereiche schwarz sind, sodass unter einer Markierung nichts in der Datei bleibt: kein Text, kein Bild, kein versteckter Text. Die übrigen Wörter der Seite bleiben durchsuchbar. Kommentare und Formularfelder unter einer Markierung werden gelöscht.",
+    ),
+    (
+        "Mark",
+        "Markieren",
+    ),
+    (
+        "Mark Area",
+        "Bereich markieren",
+    ),
+    (
+        "Mark Area for Redaction",
+        "Bereich zum Schwärzen markieren",
+    ),
+    (
+        "Mark Selected Text for Redaction",
+        "Ausgewählten Text zum Schwärzen markieren",
+    ),
+    (
+        "Mark Text",
+        "Text markieren",
+    ),
+    (
+        "Mark for redaction",
+        "Zum Schwärzen markieren",
+    ),
+    (
+        "Mark the selected text for removal; nothing is deleted until you apply the redactions",
+        "Den ausgewählten Text zum Entfernen markieren; es wird nichts gelöscht, bis Sie die Schwärzungen anwenden",
+    ),
+    (
+        "Mark what must go, review the red frames, then apply.\nApplying cannot be undone: the page becomes a picture with black boxes.",
+        "Markieren Sie, was weg soll, prüfen Sie die roten Rahmen und wenden Sie es dann an.\nDas Anwenden lässt sich nicht rückgängig machen: Die Seite wird zu einem Bild mit schwarzen Flächen.",
+    ),
+    (
+        "Marked for redaction. Nothing is removed until you apply the redactions.",
+        "Zum Schwärzen markiert. Es wird nichts entfernt, bis Sie die Schwärzungen anwenden.",
+    ),
+    (
+        "Nothing is marked for redaction.",
+        "Es ist nichts zum Schwärzen markiert.",
+    ),
+    (
+        "Permanently remove what lies under the redaction marks (the pages are replaced by pictures; cannot be undone)",
+        "Entfernt endgültig, was unter den Markierungen liegt (die Seiten werden durch Bilder ersetzt; nicht rückgängig zu machen)",
+    ),
+    (
+        "Redact",
+        "Schwärzen",
+    ),
+    (
+        "Redactions applied",
+        "Schwärzungen angewendet",
+    ),
+    (
+        "Remove",
+        "Entfernen",
+    ),
+    (
+        "Smaller file (150 dpi instead of 300 dpi)",
+        "Kleinere Datei (150 dpi statt 300 dpi)",
+    ),
+    (
+        "Store the pictures as JPEG (smaller; for pages with photographs)",
+        "Bilder als JPEG speichern (kleiner; für Seiten mit Fotos)",
+    ),
+    (
+        "The document has not been saved yet. Use Save As to keep your original.",
+        "Das Dokument wurde noch nicht gespeichert. Verwenden Sie „Speichern unter“, um Ihr Original zu behalten.",
+    ),
+    (
+        "These places still contain a word that was removed. Check them:",
+        "Diese Stellen enthalten noch ein entferntes Wort. Bitte prüfen:",
+    ),
+    (
+        "This cannot be undone. Use Save As to keep your original file.",
+        "Das lässt sich nicht rückgängig machen. Verwenden Sie „Speichern unter“, um Ihre Originaldatei zu behalten.",
+    ),
+    (
+        "{} area(s) on {} page(s) will be removed permanently.",
+        "{} Bereich(e) auf {} Seite(n) werden endgültig entfernt.",
+    ),
+    (
+        "{} page(s) replaced, {} word(s) removed, {} comment(s) or field(s) deleted.",
+        "{} Seite(n) ersetzt, {} Wort/Wörter entfernt, {} Kommentar(e) oder Feld(er) gelöscht.",
+    ),
+    (
+        "… and {} more",
+        "… und {} weitere",
+    ),
 ];

@@ -9,6 +9,8 @@ pub enum Icon {
     Translate,
     Optimize,
     Lock,
+    Redact,
+    RedactApply,
     Archive,
     Open,
     Save,
@@ -151,6 +153,18 @@ pub fn paint(p: &Painter, rect: Rect, icon: Icon, color: Color32) {
             line((12.0, 7.0), (12.0, 13.0));
             poly(&[(8.0, 11.0), (12.0, 15.0), (16.0, 11.0)], false);
             line((8.0, 18.0), (16.0, 18.0));
+        }
+        Icon::Redact => {
+            line((4.0, 6.0), (20.0, 6.0));
+            line((4.0, 18.0), (20.0, 18.0));
+            rrect(4.0, 9.5, 20.0, 14.5);
+            line((7.0, 12.0), (17.0, 12.0));
+        }
+        Icon::RedactApply => {
+            rrect(4.0, 4.0, 20.0, 20.0);
+            line((7.0, 9.0), (17.0, 9.0));
+            rrect(7.0, 12.0, 17.0, 16.0);
+            line((16.0, 20.0), (21.0, 22.0));
         }
         Icon::Lock => {
             rrect(5.0, 11.0, 19.0, 21.0);

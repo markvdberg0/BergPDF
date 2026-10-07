@@ -2164,4 +2164,128 @@ pub static ENTRIES: &[(&str, &str)] = &[
         "The author of this document did not allow copying its text, so PDF Copilot and Translate are not available for it.",
         "De auteur van dit document heeft het kopiëren van de tekst niet toegestaan, daarom zijn PDF Copilot en Vertalen er niet voor beschikbaar.",
     ),
+    (
+        "A very large page was drawn at {} dpi to keep the file workable.",
+        "Een zeer grote pagina is met {} dpi getekend om het bestand werkbaar te houden.",
+    ),
+    (
+        "Also remove attached files",
+        "Ook bijgevoegde bestanden verwijderen",
+    ),
+    (
+        "Also remove the document properties (title, author, …)",
+        "Ook de documenteigenschappen verwijderen (titel, auteur, …)",
+    ),
+    (
+        "Apply Redactions…",
+        "Zwartlakken toepassen…",
+    ),
+    (
+        "Apply redactions",
+        "Zwartlakken toepassen",
+    ),
+    (
+        "Could not mark the area: {}",
+        "Kon het gebied niet markeren: {}",
+    ),
+    (
+        "Drag over what must be removed. Nothing is deleted until you apply the redactions.",
+        "Sleep over wat verwijderd moet worden. Er wordt niets gewist totdat u het zwartlakken toepast.",
+    ),
+    (
+        "Drag over what must be removed; nothing is deleted until you apply the redactions",
+        "Sleep over wat verwijderd moet worden; er wordt niets gewist totdat u het zwartlakken toepast",
+    ),
+    (
+        "Each of those pages is replaced by a picture of itself with the marked areas painted black, so nothing under a mark stays in the file: no text, no picture, no hidden text. The other words on the page stay searchable. Comments and form fields under a mark are deleted.",
+        "Elk van die pagina's wordt vervangen door een afbeelding van zichzelf waarin de gemarkeerde gebieden zwart zijn, zodat er niets onder een markering in het bestand blijft: geen tekst, geen afbeelding, geen verborgen tekst. De andere woorden op de pagina blijven doorzoekbaar. Opmerkingen en formuliervelden onder een markering worden verwijderd.",
+    ),
+    (
+        "Mark",
+        "Markeren",
+    ),
+    (
+        "Mark Area",
+        "Gebied markeren",
+    ),
+    (
+        "Mark Area for Redaction",
+        "Gebied markeren om zwart te lakken",
+    ),
+    (
+        "Mark Selected Text for Redaction",
+        "Geselecteerde tekst markeren om zwart te lakken",
+    ),
+    (
+        "Mark Text",
+        "Tekst markeren",
+    ),
+    (
+        "Mark for redaction",
+        "Markeren om zwart te lakken",
+    ),
+    (
+        "Mark the selected text for removal; nothing is deleted until you apply the redactions",
+        "Markeer de geselecteerde tekst voor verwijdering; er wordt niets gewist totdat u het zwartlakken toepast",
+    ),
+    (
+        "Mark what must go, review the red frames, then apply.\nApplying cannot be undone: the page becomes a picture with black boxes.",
+        "Markeer wat weg moet, controleer de rode kaders en pas het dan toe.\nToepassen kan niet ongedaan worden gemaakt: de pagina wordt een afbeelding met zwarte vlakken.",
+    ),
+    (
+        "Marked for redaction. Nothing is removed until you apply the redactions.",
+        "Gemarkeerd om zwart te lakken. Er wordt niets verwijderd totdat u het zwartlakken toepast.",
+    ),
+    (
+        "Nothing is marked for redaction.",
+        "Er is niets gemarkeerd om zwart te lakken.",
+    ),
+    (
+        "Permanently remove what lies under the redaction marks (the pages are replaced by pictures; cannot be undone)",
+        "Verwijder definitief wat onder de markeringen ligt (de pagina's worden vervangen door afbeeldingen; kan niet ongedaan worden gemaakt)",
+    ),
+    (
+        "Redact",
+        "Zwartlakken",
+    ),
+    (
+        "Redactions applied",
+        "Zwartlakken toegepast",
+    ),
+    (
+        "Remove",
+        "Verwijderen",
+    ),
+    (
+        "Smaller file (150 dpi instead of 300 dpi)",
+        "Kleiner bestand (150 dpi in plaats van 300 dpi)",
+    ),
+    (
+        "Store the pictures as JPEG (smaller; for pages with photographs)",
+        "Afbeeldingen als JPEG opslaan (kleiner; voor pagina's met foto's)",
+    ),
+    (
+        "The document has not been saved yet. Use Save As to keep your original.",
+        "Het document is nog niet opgeslagen. Gebruik Opslaan als om uw origineel te behouden.",
+    ),
+    (
+        "These places still contain a word that was removed. Check them:",
+        "Deze plaatsen bevatten nog een woord dat is verwijderd. Controleer ze:",
+    ),
+    (
+        "This cannot be undone. Use Save As to keep your original file.",
+        "Dit kan niet ongedaan worden gemaakt. Gebruik Opslaan als om uw originele bestand te behouden.",
+    ),
+    (
+        "{} area(s) on {} page(s) will be removed permanently.",
+        "{} gebied(en) op {} pagina('s) worden definitief verwijderd.",
+    ),
+    (
+        "{} page(s) replaced, {} word(s) removed, {} comment(s) or field(s) deleted.",
+        "{} pagina('s) vervangen, {} woord(en) verwijderd, {} opmerking(en) of veld(en) gewist.",
+    ),
+    (
+        "… and {} more",
+        "… en nog {}",
+    ),
 ];

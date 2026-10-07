@@ -25,6 +25,7 @@ mod pagefilter;
 mod pdfa_ui;
 mod prefs_ui;
 mod protect_ui;
+mod redact_ui;
 mod sidebar;
 mod sign_ui;
 mod snap_ui;

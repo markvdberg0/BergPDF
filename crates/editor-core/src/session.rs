@@ -66,6 +66,8 @@ pub struct DocumentSession {
     revision: u64,
     snapshot: Option<Snapshot>,
     pages: Option<(u64, Arc<Vec<PageInfo>>)>,
+    /// Number of redaction marks at a revision (asked every frame by the interface).
+    marks_cache: std::cell::Cell<Option<(u64, usize)>>,
     /// Selection (annotations, text).
     pub selection: Selection,
     /// View state (zoom, scroll, mode).
@@ -95,6 +97,7 @@ impl DocumentSession {
             revision: 0,
             snapshot: None,
             pages: None,
+            marks_cache: std::cell::Cell::new(None),
             selection: Selection::default(),
             view: ViewState::default(),
             search: SearchState::default(),
@@ -430,6 +433,18 @@ impl DocumentSession {
             }
             Ok(())
         })
+    }
+
+    /// How many redaction marks the document has (cached per revision).
+    pub fn redaction_mark_count(&self) -> usize {
+        if let Some((rev, n)) = self.marks_cache.get()
+            && rev == self.revision
+        {
+            return n;
+        }
+        let n = pdf_engine::redact::marks(&self.doc).len();
+        self.marks_cache.set(Some((self.revision, n)));
+        n
     }
 
     /// The redaction marks of the document.

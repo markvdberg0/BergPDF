@@ -56,6 +56,8 @@ pub enum Tool {
     SignArea,
     /// Calibrate the drawing scale from a known length.
     Calibrate,
+    /// Drag an area to mark it for redaction.
+    Redact,
 }
 
 /// Family a tool belongs to.
@@ -90,7 +92,7 @@ impl Tool {
             | Tool::MeasureAngle
             | Tool::Count
             | Tool::Calibrate => ToolFamily::Measure,
-            Tool::PlaceSignature => ToolFamily::Annotation,
+            Tool::PlaceSignature | Tool::Redact => ToolFamily::Annotation,
             Tool::SignArea => ToolFamily::Sign,
             _ => ToolFamily::Annotation,
         }
@@ -130,6 +132,7 @@ impl Tool {
             CommandId::ToolCalibrate => Tool::Calibrate,
             CommandId::ToolPlaceSignature => Tool::PlaceSignature,
             CommandId::ToolSignArea => Tool::SignArea,
+            CommandId::ToolRedact => Tool::Redact,
             _ => return None,
         })
     }
@@ -168,6 +171,7 @@ impl Tool {
             Tool::Calibrate => CommandId::ToolCalibrate,
             Tool::PlaceSignature => CommandId::ToolPlaceSignature,
             Tool::SignArea => CommandId::ToolSignArea,
+            Tool::Redact => CommandId::ToolRedact,
         }
     }
 
@@ -210,6 +214,9 @@ impl Tool {
                 "Click where your handwritten signature should go (a drawing, not a digital signature)."
             }
             Tool::SignArea => "Drag the rectangle where the digital signature will be shown.",
+            Tool::Redact => {
+                "Drag over what must be removed. Nothing is deleted until you apply the redactions."
+            }
         }
     }
 }

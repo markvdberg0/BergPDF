@@ -496,6 +496,9 @@ impl App {
             Dialog::Protection(st) => {
                 keep = self.dialog_protection(ctx, st);
             }
+            Dialog::Redact(st) => {
+                keep = self.dialog_redact(ctx, st);
+            }
             Dialog::UpdateAsk => {
                 keep = self.dialog_update_ask(ctx);
             }

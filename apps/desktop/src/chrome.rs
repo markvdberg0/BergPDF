@@ -45,6 +45,7 @@ fn tool_icon(t: Tool) -> Icon {
         Tool::Calibrate => Icon::Calibrate,
         Tool::PlaceSignature => Icon::Signature,
         Tool::SignArea => Icon::Rect,
+        Tool::Redact => Icon::Redact,
     }
 }
 
@@ -65,6 +66,8 @@ pub fn command_icon(c: C) -> Icon {
         C::FileSaveOptimized => Icon::Optimize,
         C::FileConvertPdfA => Icon::Archive,
         C::FileProtection => Icon::Lock,
+        C::RedactMarkSelection => Icon::Redact,
+        C::RedactApply => Icon::RedactApply,
         C::ToggleCopilot | C::CopilotSummarize | C::CopilotSummarizeAnnotations => Icon::Sparkle,
         C::TranslateDocument => Icon::Translate,
         C::ShowSignatures => Icon::Shield,
@@ -297,6 +300,7 @@ impl App {
                 v.push((RibbonTab::Forms, tr("Forms")));
             }
             v.push((RibbonTab::Sign, tr("Sign")));
+            v.push((RibbonTab::Redact, tr("Redact")));
             v.push((RibbonTab::Copilot, tr("Copilot")));
             if !essential || self.tool_is_measure() {
                 v.push((RibbonTab::Measure, tr("Measure")));
@@ -411,6 +415,15 @@ impl App {
                     ui.vertical(|ui| {
                         ui.add_space(6.0);
                         ui.label(RichText::new(tr("A digital signature proves the file is unchanged since signing.\nA handwritten signature is only a picture of your signature.")).size(11.0).color(s_dim(&self.pal)));
+                    });
+                }
+                RibbonTab::Redact => {
+                    self.group(ui, tr("Mark"), |s, ui| s.cmds(ui, ctx, &[C::ToolRedact, C::RedactMarkSelection]));
+                    self.group(ui, tr("Remove"), |s, ui| s.cmds(ui, ctx, &[C::RedactApply]));
+                    ui.vertical(|ui| {
+                        ui.add_space(6.0);
+                        ui.label(RichText::new(tr("Mark what must go, review the red frames, then apply.
+Applying cannot be undone: the page becomes a picture with black boxes.")).size(11.0).color(s_dim(&self.pal)));
                     });
                 }
                 RibbonTab::Copilot => {
@@ -841,6 +854,9 @@ fn ribbon_label(id: C, title: &'static str) -> &'static str {
         C::FileSaveOptimized => tr("Optimize"),
         C::FileConvertPdfA => "PDF/A",
         C::FileProtection => tr("Protect"),
+        C::ToolRedact => tr("Mark Area"),
+        C::RedactMarkSelection => tr("Mark Text"),
+        C::RedactApply => tr("Apply"),
         C::ToggleCopilot => tr("Copilot"),
         C::CopilotSummarize => tr("Summarize"),
         C::CopilotSummarizeAnnotations => tr("Summarize notes"),

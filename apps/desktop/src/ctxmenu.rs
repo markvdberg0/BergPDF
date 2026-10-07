@@ -134,6 +134,9 @@ impl App {
                 self.run_command(ctx, C::EditCopy);
             }
             ui.separator();
+            if can_edit && Self::menu_item(ui, tr("Mark for redaction"), "") {
+                self.run_command(ctx, C::RedactMarkSelection);
+            }
             ui.add_enabled_ui(can_edit, |ui| {
                 for (label, m) in [
                     (tr("Highlight"), Markup::Highlight),

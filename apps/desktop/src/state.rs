@@ -43,6 +43,7 @@ pub enum RibbonTab {
     Forms,
     Measure,
     Sign,
+    Redact,
     Copilot,
     Organize,
     View,
@@ -137,6 +138,8 @@ pub enum Dialog {
     Scale(Box<ScaleDialog>),
     /// A password-protected document asks for its password.
     Password(Box<crate::protect_ui::PasswordPrompt>),
+    /// Apply the redaction marks.
+    Redact(Box<crate::redact_ui::RedactDialog>),
     /// Password protection of the active document.
     Protection(Box<crate::protect_ui::ProtectionDialog>),
 }
