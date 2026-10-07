@@ -1,0 +1,190 @@
+//! Development aid (debug builds only): `BERG_SHOTS=<folder>;<scenario>,<scenario>…` makes the application draw
+//! each named screen, save what it drew to `<folder>/<scenario>.png` (egui's own frame capture: only this
+//! window's pixels, no screen capture, no input events) and exit. The window opens off-screen without taking focus.
+
+use crate::state::*;
+use std::path::PathBuf;
+
+/// Where the run is.
+enum Phase {
+    /// Frames to wait before the next step.
+    Settle(u32),
+    /// The picture was requested.
+    Waiting,
+}
+
+pub struct DebugShots {
+    dir: PathBuf,
+    scenarios: Vec<String>,
+    index: usize,
+    phase: Phase,
+    started: bool,
+}
+
+/// `Some` when `BERG_SHOTS` is set.
+pub fn from_env() -> Option<DebugShots> {
+    let v = std::env::var("BERG_SHOTS").ok()?;
+    let (dir, list) = v.split_once(';')?;
+    let scenarios: Vec<String> = list
+        .split(',')
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .collect();
+    std::fs::create_dir_all(dir).ok()?;
+    Some(DebugShots {
+        dir: PathBuf::from(dir),
+        scenarios,
+        index: 0,
+        phase: Phase::Settle(40),
+        started: false,
+    })
+}
+
+impl DebugShots {
+    /// Called every frame.
+    pub fn step(&mut self, app: &mut App, ctx: &egui::Context) {
+        ctx.request_repaint();
+        let Some(name) = self.scenarios.get(self.index).cloned() else {
+            std::process::exit(0);
+        };
+        if name == "fontlist" {
+            // The font list outside a combo box (popups are not part of the picture egui captures).
+            egui::Window::new("fontlist")
+                .fixed_pos([400.0, 120.0])
+                .show(ctx, |ui| {
+                    let mut fam = pdf_engine::fontembed::FontFamily::DejaVuSans;
+                    crate::fontpick::family_menu(ui, &mut fam, egui::Id::new("dbg_font_search"));
+                });
+        }
+        match &mut self.phase {
+            Phase::Settle(n) => {
+                if *n > 0 {
+                    *n -= 1;
+                    return;
+                }
+                if !self.started {
+                    // The document is open and the fonts are loaded: set the scenario up and let it settle.
+                    self.started = true;
+                    apply(app, ctx, &name);
+                    self.phase = Phase::Settle(25);
+                    return;
+                }
+                ctx.send_viewport_cmd(egui::ViewportCommand::Screenshot(egui::UserData::default()));
+                self.phase = Phase::Waiting;
+            }
+            Phase::Waiting => {
+                let shot = ctx.input(|i| {
+                    i.events.iter().find_map(|e| match e {
+                        egui::Event::Screenshot { image, .. } => Some(image.clone()),
+                        _ => None,
+                    })
+                });
+                if let Some(img) = shot {
+                    save_png(&self.dir.join(format!("{name}.png")), &img);
+                    self.index += 1;
+                    self.started = false;
+                    self.phase = Phase::Settle(6);
+                }
+            }
+        }
+    }
+}
+
+fn save_png(path: &std::path::Path, img: &egui::ColorImage) {
+    let [w, h] = img.size;
+    let rgba: Vec<u8> = img.pixels.iter().flat_map(|c| c.to_array()).collect();
+    if let Ok(f) = std::fs::File::create(path) {
+        let mut enc = png::Encoder::new(std::io::BufWriter::new(f), w as u32, h as u32);
+        enc.set_color(png::ColorType::Rgba);
+        enc.set_depth(png::BitDepth::Eight);
+        if let Ok(mut wr) = enc.write_header() {
+            let _ = wr.write_image_data(&rgba);
+        }
+    }
+}
+
+/// Put the application into the state a scenario shows.
+fn apply(app: &mut App, ctx: &egui::Context, name: &str) {
+    use editor_core::command::CommandId as C;
+    crate::fontpick::DEBUG_OPEN_FONT_MENU.store(false, std::sync::atomic::Ordering::Relaxed);
+    app.dialog = None;
+    app.palette_open = false;
+    app.prefs.show_left_sidebar = true;
+    app.prefs.show_right_sidebar = true;
+    app.left_tab = LeftTab::Thumbnails;
+    let page = app
+        .tabs
+        .first_mut()
+        .and_then(|t| t.session.pages().ok())
+        .and_then(|p| p.first().map(|i| i.id));
+    match name {
+        "search" => {
+            app.left_tab = LeftTab::Search;
+            if let Some(t) = app.tabs.first_mut() {
+                t.session.search.query = "the".into();
+            }
+            app.start_search();
+        }
+        "prefs" => {
+            app.dialog = Some(Dialog::Preferences {
+                filter: String::new(),
+            })
+        }
+        "note" => app.set_tool(editor_core::tools::Tool::Note),
+        "freetext" => app.set_tool(editor_core::tools::Tool::FreeText),
+        "fontmenu" => {
+            app.set_tool(editor_core::tools::Tool::FreeText);
+            crate::fontpick::DEBUG_OPEN_FONT_MENU.store(true, std::sync::atomic::Ordering::Relaxed);
+        }
+        "collapsed" => {
+            app.prefs.show_left_sidebar = false;
+            app.prefs.show_right_sidebar = false;
+        }
+        "print" => app.run_command(ctx, C::FilePrint),
+        "protect" => app.run_command(ctx, C::FileProtection),
+        "optimize" => app.run_command(ctx, C::FileSaveOptimized),
+        "pdfa" => app.run_command(ctx, C::FileConvertPdfA),
+        "about" => app.dialog = Some(Dialog::About),
+        "shortcuts" => {
+            app.dialog = Some(Dialog::Shortcuts {
+                filter: String::new(),
+                capture: None,
+            })
+        }
+        "palette" => app.palette_open = true,
+        "confirm" => app.dialog = Some(Dialog::ConfirmQuit),
+        "addtext" => {
+            if let Some(page) = page {
+                app.dialog = Some(Dialog::AddText {
+                    page,
+                    at: pdf_engine::geom::Point::new(100.0, 100.0),
+                    text: String::new(),
+                    size: 14.0,
+                    font: pdf_engine::fontembed::FontStyle::default(),
+                    turns: 0,
+                });
+            }
+        }
+        "textentry" => {
+            if let Some(page) = page {
+                app.dialog = Some(Dialog::TextEntry {
+                    page,
+                    tool: editor_core::tools::Tool::Note,
+                    rect: pdf_engine::geom::Rect::new(100.0, 100.0, 100.0, 100.0),
+                    text: String::new(),
+                    callout: None,
+                });
+            }
+        }
+        "redact" => {
+            if let Some(page) = page {
+                app.mark_redaction(
+                    page,
+                    vec![pdf_engine::geom::Rect::new(60.0, 600.0, 300.0, 640.0)],
+                );
+                app.open_redact_dialog();
+            }
+        }
+        _ => {}
+    }
+}

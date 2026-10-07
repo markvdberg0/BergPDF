@@ -300,6 +300,9 @@ pub struct App {
     pub notices: Vec<Notice>,
     pub prefs_dirty: bool,
     pub frame_counter: u64,
+    /// Development aid: draw named screens to picture files (debug builds, BERG_SHOTS).
+    #[cfg(debug_assertions)]
+    pub debug_shots: Option<crate::debug_shots::DebugShots>,
     pub search_focus: bool,
     pub system_dark: bool,
     pub quit_confirmed: bool,

@@ -191,9 +191,9 @@ impl App {
             ui.add_space(4.0);
             if st.options.is_empty() {
                 let mut te = if st.multiline {
-                    egui::TextEdit::multiline(&mut st.value).desired_rows(5)
+                    crate::ui_kit::multiline(&mut st.value).desired_rows(5)
                 } else {
-                    egui::TextEdit::singleline(&mut st.value)
+                    crate::ui_kit::singleline(&mut st.value)
                 }
                 .desired_width(380.0);
                 if st.password {
@@ -231,7 +231,7 @@ impl App {
             }
             ui.add_space(8.0);
             ui.horizontal(|ui| {
-                if ui.button("OK").clicked() {
+                if crate::ui_kit::primary_button(ui, "OK").clicked() {
                     choice = Some(true);
                 }
                 if ui.button(tr("Cancel")).clicked()
@@ -319,7 +319,7 @@ impl App {
             );
             ui.add_space(6.0);
             ui.horizontal(|ui| {
-                if ui.button(tr("Continue")).clicked() {
+                if crate::ui_kit::primary_button(ui, tr("Continue")).clicked() {
                     choice = Some(true);
                 }
                 if ui.button(tr("Cancel")).clicked()

@@ -2248,4 +2248,6 @@ pub static ENTRIES: &[(&str, &str)] = &[
         "Er is geen document om af te drukken.",
     ),
     ("This page ({})", "Deze pagina ({})"),
+    ("No font matches", "Geen lettertype komt overeen"),
+    ("Search fonts", "Lettertypen zoeken"),
 ];

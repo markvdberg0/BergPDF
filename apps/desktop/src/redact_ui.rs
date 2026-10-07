@@ -135,7 +135,7 @@ impl App {
                     }
                     ui.add_space(8.0);
                     ui.horizontal(|ui| {
-                        if ui.button(tr("Apply redactions")).clicked() {
+                        if crate::ui_kit::primary_button(ui, tr("Apply redactions")).clicked() {
                             act = Some(Act::Apply);
                         }
                         if ui.button(tr("Cancel")).clicked()

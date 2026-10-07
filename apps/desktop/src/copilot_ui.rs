@@ -1143,7 +1143,7 @@ impl App {
         {
             let input = &mut self.tabs[ti].ui.copilot.input;
             let resp = ui.add(
-                egui::TextEdit::multiline(input)
+                crate::ui_kit::multiline(input)
                     .desired_rows(2)
                     .desired_width(f32::INFINITY)
                     .hint_text(tr("Ask PDF Copilot…")),
@@ -1314,7 +1314,7 @@ impl App {
                     {
                         changed |= ui
                             .add(
-                                egui::TextEdit::singleline(&mut self.prefs.ai.model)
+                                crate::ui_kit::singleline(&mut self.prefs.ai.model)
                                     .hint_text(provider.default_model())
                                     .desired_width(300.0),
                             )
@@ -1325,7 +1325,7 @@ impl App {
                 ui.label(tr("Server address"));
                 changed |= ui
                     .add(
-                        egui::TextEdit::singleline(&mut self.prefs.ai.base_url)
+                        crate::ui_kit::singleline(&mut self.prefs.ai.base_url)
                             .hint_text(provider.default_base_url())
                             .desired_width(260.0),
                     )
@@ -1334,7 +1334,7 @@ impl App {
                 ui.label(tr("Answer language"));
                 changed |= ui
                     .add(
-                        egui::TextEdit::singleline(&mut self.prefs.ai.answer_language)
+                        crate::ui_kit::singleline(&mut self.prefs.ai.answer_language)
                             .hint_text(tr("same as the question"))
                             .desired_width(260.0),
                     )
@@ -1343,7 +1343,7 @@ impl App {
                 ui.label(tr("Translate into"));
                 changed |= ui
                     .add(
-                        egui::TextEdit::singleline(&mut self.prefs.ai.translate_to)
+                        crate::ui_kit::singleline(&mut self.prefs.ai.translate_to)
                             .hint_text("English")
                             .desired_width(260.0),
                     )
@@ -1390,7 +1390,7 @@ impl App {
         }
         ui.horizontal(|ui| {
             ui.add(
-                egui::TextEdit::singleline(&mut self.ai.key_input)
+                crate::ui_kit::singleline(&mut self.ai.key_input)
                     .password(!self.ai.key_show)
                     .hint_text(tr("Paste your API key"))
                     .desired_width(260.0),

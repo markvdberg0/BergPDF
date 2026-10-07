@@ -86,7 +86,7 @@ impl App {
             ui.horizontal(|ui| {
                 ui.label(tr("Password"));
                 ui.add(
-                    egui::TextEdit::singleline(&mut st.password)
+                    crate::ui_kit::singleline(&mut st.password)
                         .password(true)
                         .desired_width(220.0),
                 );
@@ -107,13 +107,13 @@ impl App {
                 .spacing([8.0, 4.0])
                 .show(ui, |ui| {
                     ui.label(tr("Reason"));
-                    ui.add(egui::TextEdit::singleline(&mut st.reason).desired_width(300.0));
+                    ui.add(crate::ui_kit::singleline(&mut st.reason).desired_width(300.0));
                     ui.end_row();
                     ui.label(tr("Location"));
-                    ui.add(egui::TextEdit::singleline(&mut st.location).desired_width(300.0));
+                    ui.add(crate::ui_kit::singleline(&mut st.location).desired_width(300.0));
                     ui.end_row();
                     ui.label(tr("Contact"));
-                    ui.add(egui::TextEdit::singleline(&mut st.contact).desired_width(300.0));
+                    ui.add(crate::ui_kit::singleline(&mut st.contact).desired_width(300.0));
                     ui.end_row();
                 });
             ui.add_space(4.0);
@@ -149,12 +149,12 @@ impl App {
             }
             ui.add_space(8.0);
             ui.horizontal(|ui| {
-                if ui
-                    .add_enabled(
-                        st.cert_path.is_some(),
-                        egui::Button::new(tr("Sign and save as…")),
-                    )
-                    .clicked()
+                if crate::ui_kit::primary_enabled(
+                    ui,
+                    st.cert_path.is_some(),
+                    tr("Sign and save as…"),
+                )
+                .clicked()
                 {
                     act = Some(Act::Sign);
                 }
@@ -457,11 +457,7 @@ impl App {
                 if ui.button(tr("Clear")).clicked() {
                     st.strokes.clear();
                 }
-                if ui
-                    .add_enabled(
-                        !st.strokes.is_empty(),
-                        egui::Button::new(tr("Save signature")),
-                    )
+                if crate::ui_kit::primary_enabled(ui, !st.strokes.is_empty(), tr("Save signature"))
                     .clicked()
                 {
                     choice = Some(true);

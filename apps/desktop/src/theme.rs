@@ -17,6 +17,8 @@ pub struct Palette {
     pub accent_soft: Color32,
     pub border: Color32,
     pub hover: Color32,
+    /// Raised surfaces: cards, buttons and fields on a panel.
+    pub card: Color32,
     pub page_shadow: Color32,
     pub danger: Color32,
     pub dark: bool,
@@ -34,6 +36,7 @@ impl Palette {
         accent_soft: Color32::from_rgb(0xF3, 0xDD, 0xD2),
         border: Color32::from_rgb(0xE3, 0xE0, 0xD5),
         hover: Color32::from_rgb(0xE8, 0xE5, 0xDA),
+        card: Color32::from_rgb(0xFF, 0xFF, 0xFF),
         page_shadow: Color32::from_black_alpha(50),
         danger: Color32::from_rgb(0xB4, 0x2B, 0x2B),
         dark: false,
@@ -48,6 +51,7 @@ impl Palette {
         accent_soft: Color32::from_rgb(0x4A, 0x30, 0x27),
         border: Color32::from_rgb(0x3A, 0x39, 0x36),
         hover: Color32::from_rgb(0x33, 0x32, 0x30),
+        card: Color32::from_rgb(0x2E, 0x2D, 0x2B),
         page_shadow: Color32::from_black_alpha(140),
         danger: Color32::from_rgb(0xE0, 0x6A, 0x6A),
         dark: true,
@@ -130,7 +134,7 @@ pub fn apply(ctx: &egui::Context, prefs: &Preferences, pal: &Palette) {
     } else {
         Color32::WHITE
     };
-    v.faint_bg_color = pal.hover;
+    v.faint_bg_color = pal.card;
     v.override_text_color = Some(pal.text);
     v.hyperlink_color = pal.accent;
     v.selection.bg_fill = pal.accent_soft;
@@ -138,7 +142,7 @@ pub fn apply(ctx: &egui::Context, prefs: &Preferences, pal: &Palette) {
     v.window_stroke = Stroke::new(1.0, pal.border);
     v.window_corner_radius = CornerRadius::same(12);
     v.menu_corner_radius = CornerRadius::same(10);
-    let r = CornerRadius::same(8);
+    let r = CornerRadius::same(6);
     v.widgets.noninteractive.bg_fill = pal.chrome;
     v.widgets.noninteractive.bg_stroke = Stroke::new(1.0, pal.border);
     v.widgets.noninteractive.fg_stroke = Stroke::new(1.0, pal.text);
@@ -150,7 +154,8 @@ pub fn apply(ctx: &egui::Context, prefs: &Preferences, pal: &Palette) {
     } else {
         Color32::from_rgb(0xE3, 0xE0, 0xD5)
     };
-    v.widgets.inactive.weak_bg_fill = Color32::TRANSPARENT;
+    // Buttons are filled (a quiet raised surface with a hairline border); the ribbon paints its own.
+    v.widgets.inactive.weak_bg_fill = pal.card;
     v.widgets.inactive.bg_stroke = Stroke::new(1.0, pal.border);
     v.widgets.inactive.fg_stroke = Stroke::new(1.0, pal.text);
     v.widgets.inactive.corner_radius = r;
@@ -177,13 +182,22 @@ pub fn apply(ctx: &egui::Context, prefs: &Preferences, pal: &Palette) {
                 5.0
             },
         );
-        s.spacing.button_padding = egui::vec2(8.0, (m.button_h - 16.0) / 2.0);
-        s.spacing.interact_size.y = m.button_h;
-        s.spacing.icon_width = 16.0;
+        s.spacing.button_padding = egui::vec2(12.0, (m.button_h.max(30.0) - 16.0) / 2.0);
+        s.spacing.interact_size.y = m.button_h.max(30.0);
+        // Wide enough that a checkbox is a rounded square, not a circle.
+        s.spacing.icon_width = 20.0;
+        s.spacing.icon_width_inner = 10.0;
+        s.spacing.icon_spacing = 8.0;
+        s.spacing.menu_margin = egui::Margin::same(8);
+        s.spacing.window_margin = egui::Margin::same(16);
         s.spacing.scroll.bar_width = 10.0;
         s.spacing.slider_width = 120.0;
         s.interaction.tooltip_delay = 0.35;
         s.visuals.striped = false;
+        s.visuals.slider_trailing_fill = true;
+        s.visuals.handle_shape = egui::style::HandleShape::Circle;
+        s.text_styles
+            .insert(egui::TextStyle::Heading, egui::FontId::proportional(19.0));
     });
     ctx.set_zoom_factor(prefs.ui_scale.clamp(0.75, 2.5));
 }

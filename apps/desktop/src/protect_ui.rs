@@ -60,7 +60,7 @@ impl App {
             ));
             ui.add_space(6.0);
             let r = ui.add(
-                egui::TextEdit::singleline(&mut st.input)
+                crate::ui_kit::singleline(&mut st.input)
                     .password(true)
                     .hint_text(tr("Password"))
                     .desired_width(260.0),
@@ -174,7 +174,7 @@ impl App {
                         ui.add_space(6.0);
                         ui.label(tr("Enter the owner password to lift the restrictions."));
                         ui.add(
-                            egui::TextEdit::singleline(&mut st.owner_input)
+                            crate::ui_kit::singleline(&mut st.owner_input)
                                 .password(true)
                                 .hint_text(tr("Owner password"))
                                 .desired_width(260.0),
@@ -195,7 +195,8 @@ impl App {
             if owner && info.is_some() {
                 ui.add_space(6.0);
                 ui.horizontal(|ui| {
-                    if ui.button(tr("Remove password protection")).clicked() {
+                    if crate::ui_kit::danger_button(ui, tr("Remove password protection")).clicked()
+                    {
                         act = Some(Act::Remove);
                     }
                     if !st.show_form && ui.button(tr("Change password…")).clicked() {
@@ -213,7 +214,7 @@ impl App {
                 ui.separator();
                 let pw = |ui: &mut egui::Ui, s: &mut String, hint: String| {
                     ui.add(
-                        egui::TextEdit::singleline(s)
+                        crate::ui_kit::singleline(s)
                             .password(true)
                             .hint_text(hint)
                             .desired_width(260.0),
@@ -235,7 +236,7 @@ impl App {
                         .size(12.0)
                         .color(self.pal.text_dim),
                 );
-                if ui.button(tr("Protect the document")).clicked() {
+                if crate::ui_kit::primary_button(ui, tr("Protect the document")).clicked() {
                     act = Some(Act::Apply);
                 }
             }

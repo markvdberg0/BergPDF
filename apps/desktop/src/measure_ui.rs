@@ -439,14 +439,14 @@ impl App {
                     }
                     ui.horizontal(|ui| {
                         ui.label(tr("Their real length is"));
-                        ui.add(egui::TextEdit::singleline(&mut st.known_len).desired_width(80.0));
+                        ui.add(crate::ui_kit::singleline(&mut st.known_len).desired_width(80.0));
                         unit_combo(ui, "cal_unit", &mut st.known_unit);
                     });
                 }
                 ScaleMode::Ratio => {
                     ui.horizontal(|ui| {
                         ui.label("1 :");
-                        ui.add(egui::TextEdit::singleline(&mut st.ratio_n).desired_width(80.0));
+                        ui.add(crate::ui_kit::singleline(&mut st.ratio_n).desired_width(80.0));
                         ui.label(tr("show results in"));
                         unit_combo(ui, "ratio_unit", &mut st.ratio_unit);
                     });
@@ -460,10 +460,10 @@ impl App {
                 }
                 ScaleMode::Custom => {
                     ui.horizontal(|ui| {
-                        ui.add(egui::TextEdit::singleline(&mut st.paper_len).desired_width(60.0));
+                        ui.add(crate::ui_kit::singleline(&mut st.paper_len).desired_width(60.0));
                         unit_combo(ui, "paper_unit", &mut st.paper_unit);
                         ui.label(tr("on paper  ="));
-                        ui.add(egui::TextEdit::singleline(&mut st.real_len).desired_width(60.0));
+                        ui.add(crate::ui_kit::singleline(&mut st.real_len).desired_width(60.0));
                         unit_combo(ui, "real_unit", &mut st.real_unit);
                         ui.label("real");
                     });
@@ -514,7 +514,7 @@ impl App {
             }
             ui.add_space(8.0);
             ui.horizontal(|ui| {
-                if ui.button("OK").clicked() {
+                if crate::ui_kit::primary_button(ui, "OK").clicked() {
                     choice = Some(true);
                 }
                 if ui.button(tr("Cancel")).clicked()
@@ -700,7 +700,7 @@ impl App {
         ui.separator();
         ui.label(RichText::new(tr("Count category")).strong());
         ui.add(
-            egui::TextEdit::singleline(&mut self.tabs[ti].ui.count_category)
+            crate::ui_kit::singleline(&mut self.tabs[ti].ui.count_category)
                 .hint_text("Count 1")
                 .desired_width(180.0),
         );

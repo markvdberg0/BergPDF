@@ -107,7 +107,7 @@ impl App {
                             ui.set_height(height - 24.0);
                             ui.spacing_mut().item_spacing = Vec2::new(0.0, 4.0);
                             ui.add(
-                                egui::TextEdit::singleline(filter)
+                                crate::ui_kit::singleline(filter)
                                     .hint_text(tr("Search settings"))
                                     .desired_width(f32::INFINITY)
                                     .margin(Vec2::new(10.0, 7.0)),
@@ -123,19 +123,15 @@ impl App {
                                     ui.painter().rect_filled(
                                         rect,
                                         8.0,
-                                        if selected {
-                                            pal.hover
-                                        } else {
-                                            pal.accent_soft.gamma_multiply(0.4)
-                                        },
+                                        if selected { pal.accent_soft } else { pal.hover },
                                     );
                                 }
                                 ui.painter().text(
                                     egui::pos2(rect.min.x + 12.0, rect.center().y),
                                     egui::Align2::LEFT_CENTER,
                                     p.title(),
-                                    egui::FontId::proportional(14.0),
-                                    if selected { pal.text } else { pal.text_dim },
+                                    egui::FontId::proportional(14.5),
+                                    if selected { pal.accent } else { pal.text },
                                 );
                                 if resp.clicked() {
                                     page_ix = i;
@@ -314,7 +310,7 @@ impl App {
                     |ui| {
                         *changed |= ui
                             .add(
-                                egui::TextEdit::singleline(&mut self.prefs.author)
+                                crate::ui_kit::singleline(&mut self.prefs.author)
                                     .desired_width(200.0),
                             )
                             .changed();

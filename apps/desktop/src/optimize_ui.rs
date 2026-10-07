@@ -117,7 +117,7 @@ impl App {
             }
             ui.add_space(8.0);
             ui.horizontal(|ui| {
-                if ui.button(tr("Choose file and save…")).clicked() {
+                if crate::ui_kit::primary_button(ui, tr("Choose file and save…")).clicked() {
                     go = true;
                 }
                 if ui.button(tr("Cancel")).clicked()

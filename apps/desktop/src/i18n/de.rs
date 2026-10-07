@@ -2284,4 +2284,6 @@ pub static ENTRIES: &[(&str, &str)] = &[
         "Es gibt kein Dokument zum Drucken.",
     ),
     ("This page ({})", "Diese Seite ({})"),
+    ("No font matches", "Keine Schriftart passt"),
+    ("Search fonts", "Schriftarten suchen"),
 ];

@@ -34,7 +34,7 @@ impl App {
                     ui.label(tf!("“{}” has unsaved changes.", name));
                     ui.add_space(10.0);
                     ui.horizontal(|ui| {
-                        if ui.button(tr("Save")).clicked() {
+                        if crate::ui_kit::primary_button(ui, tr("Save")).clicked() {
                             choice = Some(0);
                         }
                         if ui.button(tr("Don't save")).clicked() {
@@ -73,7 +73,7 @@ impl App {
                     }
                     ui.add_space(10.0);
                     ui.horizontal(|ui| {
-                        if ui.button(tr("Save all and quit")).clicked() {
+                        if crate::ui_kit::primary_button(ui, tr("Save all and quit")).clicked() {
                             choice = Some(0);
                         }
                         if ui.button(tr("Quit without saving")).clicked() {
@@ -118,7 +118,7 @@ impl App {
                     ui.add_space(4.0);
                     ui.label(detail.as_str());
                     ui.add_space(10.0);
-                    if ui.button("OK").clicked() {
+                    if crate::ui_kit::primary_button(ui, "OK").clicked() {
                         act = Action::Close;
                     }
                 });
@@ -136,7 +136,7 @@ impl App {
                         ui.add_space(2.0);
                     }
                     ui.add_space(10.0);
-                    if ui.button("OK").clicked() {
+                    if crate::ui_kit::primary_button(ui, "OK").clicked() {
                         act = Action::Close;
                     }
                 });
@@ -154,7 +154,7 @@ impl App {
                     ));
                     ui.add_space(4.0);
                     ui.add(
-                        egui::TextEdit::multiline(&mut uri.clone())
+                        crate::ui_kit::multiline(&mut uri.clone())
                             .desired_rows(2)
                             .desired_width(380.0)
                             .interactive(false),
@@ -167,8 +167,7 @@ impl App {
                     }
                     ui.add_space(10.0);
                     ui.horizontal(|ui| {
-                        if ui
-                            .add_enabled(allowed, egui::Button::new(tr("Open in browser")))
+                        if crate::ui_kit::primary_enabled(ui, allowed, tr("Open in browser"))
                             .clicked()
                         {
                             choice = Some(true);
@@ -190,14 +189,14 @@ impl App {
                 modal(ctx, "goto_dialog", |ui| {
                     ui.heading(tr("Go to page"));
                     let r = ui.add(
-                        egui::TextEdit::singleline(text)
+                        crate::ui_kit::singleline(text)
                             .hint_text(tr("Page number"))
                             .desired_width(160.0),
                     );
                     r.request_focus();
                     ui.add_space(8.0);
                     ui.horizontal(|ui| {
-                        if ui.button(tr("Go")).clicked()
+                        if crate::ui_kit::primary_button(ui, tr("Go")).clicked()
                             || ui.input(|i| i.key_pressed(egui::Key::Enter))
                         {
                             go = Some(true);
@@ -290,7 +289,7 @@ impl App {
                             }
                         });
                     }
-                    let mut edit = egui::TextEdit::multiline(text)
+                    let mut edit = crate::ui_kit::multiline(text)
                         .desired_rows(if tool == Tool::Stamp { 1 } else { 5 })
                         .desired_width(380.0)
                         .hint_text(tr("Type here…"));
@@ -307,7 +306,7 @@ impl App {
                     ui.add_space(8.0);
                     ui.horizontal(|ui| {
                         let ok = !text.trim().is_empty() || tool == Tool::Note;
-                        if ui.add_enabled(ok, egui::Button::new(tr("Add"))).clicked() {
+                        if crate::ui_kit::primary_enabled(ui, ok, tr("Add")).clicked() {
                             choice = Some(true);
                         }
                         if ui.button(tr("Cancel")).clicked()
@@ -350,7 +349,7 @@ impl App {
                     });
                     // The box previews the chosen font (at most 22 px so it stays tidy).
                     let r = ui.add(
-                        egui::TextEdit::multiline(text)
+                        crate::ui_kit::multiline(text)
                             .desired_rows(4)
                             .desired_width(380.0)
                             .font(egui::FontId::new(
@@ -390,8 +389,7 @@ impl App {
                     });
                     ui.add_space(8.0);
                     ui.horizontal(|ui| {
-                        if ui
-                            .add_enabled(!text.trim().is_empty(), egui::Button::new(tr("Add")))
+                        if crate::ui_kit::primary_enabled(ui, !text.trim().is_empty(), tr("Add"))
                             .clicked()
                         {
                             choice = Some(true);
@@ -536,7 +534,7 @@ impl App {
                         ui.selectable_value(&mut self.prefs.theme, ThemeChoice::Dark, tr("Dark"));
                     });
                     ui.add_space(10.0);
-                    if ui.button(tr("Get started")).clicked() {
+                    if crate::ui_kit::primary_button(ui, tr("Get started")).clicked() {
                         done = true;
                     }
                 });
@@ -629,7 +627,7 @@ impl App {
                             .color(self.pal.text_dim),
                         );
                         ui.add(
-                            egui::TextEdit::singleline(filter)
+                            crate::ui_kit::singleline(filter)
                                 .hint_text(tr("Filter"))
                                 .desired_width(f32::INFINITY),
                         );
@@ -779,7 +777,7 @@ impl App {
                     .show(ui, |ui| {
                         ui.set_width(560.0);
                         let te = ui.add(
-                            egui::TextEdit::singleline(&mut self.palette_query)
+                            crate::ui_kit::singleline(&mut self.palette_query)
                                 .hint_text(tr("Type a command, tool or setting…"))
                                 .desired_width(f32::INFINITY)
                                 .font(egui::TextStyle::Heading),
@@ -963,11 +961,21 @@ impl App {
     }
 }
 
+/// The frame every dialog shares: generous padding, large rounded corners.
+fn dialog_frame(ctx: &egui::Context) -> egui::Frame {
+    egui::Frame::window(&ctx.global_style())
+        .inner_margin(egui::Margin::same(24))
+        .corner_radius(egui::CornerRadius::same(14))
+}
+
 pub(crate) fn modal(ctx: &egui::Context, id: &str, add: impl FnOnce(&mut egui::Ui)) {
-    egui::Modal::new(egui::Id::new(id)).show(ctx, |ui| {
-        ui.set_max_width(460.0);
-        add(ui);
-    });
+    egui::Modal::new(egui::Id::new(id))
+        .frame(dialog_frame(ctx))
+        .show(ctx, |ui| {
+            ui.set_max_width(480.0);
+            ui.spacing_mut().item_spacing.y = 8.0;
+            add(ui);
+        });
 }
 
 impl App {
@@ -1016,7 +1024,7 @@ impl App {
                             .color(self.pal.text_dim),
                     );
                     ui.horizontal(|ui| {
-                        if ui.button(tr("Restore as new tab")).clicked() {
+                        if crate::ui_kit::primary_button(ui, tr("Restore as new tab")).clicked() {
                             act = Some(Act::Restore(i));
                         }
                         if ui.button(tr("Discard")).clicked() {
