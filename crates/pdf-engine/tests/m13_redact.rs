@@ -122,8 +122,11 @@ fn mean_inside(b: &Bitmap, r: (u32, u32, u32, u32)) -> f64 {
     sum as f64 / n.max(1) as f64
 }
 
+/// Page text from poppler with every run of white space reduced to one space (the readers differ in how they
+/// space words that were placed one by one).
 fn poppler_text(bytes: &[u8], page: usize) -> Option<String> {
-    let t = poppler_text_page(bytes, page);
+    let t =
+        poppler_text_page(bytes, page).map(|t| t.split_whitespace().collect::<Vec<_>>().join(" "));
     if t.is_none() {
         assert!(
             !oracles_required(),

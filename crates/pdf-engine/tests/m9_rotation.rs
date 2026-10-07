@@ -62,7 +62,7 @@ fn word<'a>(words: &'a [BBoxWord], text: &str) -> &'a BBoxWord {
 
 #[test]
 fn text_reads_upright_on_a_page_shown_rotated() {
-    if !have_tool("pdftotext") {
+    if !pdftotext_is_poppler() {
         assert!(!oracles_required(), "poppler missing");
         return;
     }
@@ -87,7 +87,7 @@ fn text_reads_upright_on_a_page_shown_rotated() {
 
 #[test]
 fn without_a_rotation_text_follows_the_page_and_a_quarter_turn_makes_it_vertical() {
-    if !have_tool("pdftotext") {
+    if !pdftotext_is_poppler() {
         return;
     }
     // Page shown 90° clockwise, text not compensated: it is vertical on screen.
@@ -104,7 +104,7 @@ fn without_a_rotation_text_follows_the_page_and_a_quarter_turn_makes_it_vertical
 
 #[test]
 fn stamps_are_upright_on_rotated_pages_too() {
-    if !have_tool("pdftotext") {
+    if !pdftotext_is_poppler() {
         return;
     }
     for shown in [90, 270] {
@@ -158,7 +158,7 @@ fn growing_a_box_keeps_the_top_of_the_text_in_place() {
 
 #[test]
 fn added_page_text_can_be_upright_on_a_rotated_page() {
-    if !have_tool("pdftotext") {
+    if !pdftotext_is_poppler() {
         return;
     }
     for shown in [90, 180, 270] {

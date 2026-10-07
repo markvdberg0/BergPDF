@@ -35,16 +35,107 @@ pub fn have_tool(tool: &str) -> bool {
         .unwrap_or(false)
 }
 
+/// Whether `pdftotext` is installed *and* writes UTF-8 correctly. Some builds (Windows ports of poppler) write
+/// accented letters in the console code page, which makes every "the text contains café" check fail for reasons
+/// that have nothing to do with the code under test; those count as "no usable pdftotext". Where the oracles are
+/// required (`BERG_REQUIRE_ORACLES=1`) an unusable tool is an error, not a skip.
+pub fn pdftotext_usable() -> bool {
+    static USABLE: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *USABLE.get_or_init(|| {
+        if !have_tool("pdftotext") {
+            return false;
+        }
+        let ok = probe_pdftotext_utf8();
+        assert!(
+            ok || !oracles_required(),
+            "pdftotext is installed but does not write UTF-8 (BERG_REQUIRE_ORACLES=1)"
+        );
+        ok
+    })
+}
+
+/// Whether `pdftotext` is *poppler's* (xpdf ships a tool of the same name without `-bbox` and other options).
+/// Checks that need poppler specifically (word boxes) use this.
+pub fn pdftotext_is_poppler() -> bool {
+    static IS: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *IS.get_or_init(|| {
+        if !pdftotext_usable() {
+            return false;
+        }
+        let out = Command::new("pdftotext").arg("-v").output();
+        let is = out.is_ok_and(|o| {
+            let text = format!(
+                "{}{}",
+                String::from_utf8_lossy(&o.stdout),
+                String::from_utf8_lossy(&o.stderr)
+            );
+            text.to_lowercase().contains("poppler")
+        });
+        assert!(
+            is || !oracles_required(),
+            "the installed pdftotext is not poppler's (BERG_REQUIRE_ORACLES=1)"
+        );
+        is
+    })
+}
+
+/// A one-line PDF with an accented letter, read back through `pdftotext -enc UTF-8`.
+fn probe_pdftotext_utf8() -> bool {
+    use pdf_writer::{Content, Name, Pdf, Rect, Ref, Str};
+    let mut pdf = Pdf::new();
+    let (catalog, tree, page, font, content) = (
+        Ref::new(1),
+        Ref::new(2),
+        Ref::new(3),
+        Ref::new(4),
+        Ref::new(5),
+    );
+    pdf.catalog(catalog).pages(tree);
+    pdf.pages(tree).kids([page]).count(1);
+    {
+        let mut p = pdf.page(page);
+        p.media_box(Rect::new(0.0, 0.0, 200.0, 100.0))
+            .parent(tree)
+            .contents(content);
+        p.resources().fonts().pair(Name(b"F1"), font);
+    }
+    pdf.type1_font(font)
+        .base_font(Name(b"Helvetica"))
+        .encoding_predefined(Name(b"WinAnsiEncoding"));
+    let mut c = Content::new();
+    c.begin_text()
+        .set_font(Name(b"F1"), 12.0)
+        .next_line(10.0, 50.0)
+        .show(Str(b"caf\xe9"))
+        .end_text();
+    pdf.stream(content, &c.finish());
+    let bytes = pdf.finish();
+    let Ok(dir) = tempfile::tempdir() else {
+        return false;
+    };
+    let p = dir.path().join("probe.pdf");
+    if std::fs::write(&p, &bytes).is_err() {
+        return false;
+    }
+    Command::new("pdftotext")
+        .args(["-enc", "UTF-8"])
+        .arg(&p)
+        .arg("-")
+        .output()
+        .map(|o| String::from_utf8(o.stdout).is_ok_and(|s| s.contains("caf\u{e9}")))
+        .unwrap_or(false)
+}
+
 /// Extract text with `pdftotext` (poppler) from PDF bytes; `None` if unavailable.
 pub fn poppler_text(bytes: &[u8]) -> Option<String> {
-    if !have_tool("pdftotext") {
+    if !pdftotext_usable() {
         return None;
     }
     let dir = tempfile::tempdir().ok()?;
     let p = dir.path().join("in.pdf");
     std::fs::write(&p, bytes).ok()?;
     let out = Command::new("pdftotext")
-        .arg("-layout")
+        .args(["-enc", "UTF-8", "-layout"])
         .arg(&p)
         .arg("-")
         .output()
@@ -228,7 +319,8 @@ pub fn openssl_cms_verify(cms_der: &[u8], content: &[u8]) -> Option<bool> {
         .arg(&sig)
         .arg("-content")
         .arg(&data)
-        .args(["-out", "/dev/null"])
+        .arg("-out")
+        .arg(dir.path().join("verified.bin"))
         .output()
         .ok()?;
     Some(out.status.success())
@@ -236,7 +328,7 @@ pub fn openssl_cms_verify(cms_der: &[u8], content: &[u8]) -> Option<bool> {
 
 /// Plain text of one page (1-based) via `pdftotext`, if installed.
 pub fn poppler_text_page(bytes: &[u8], page: usize) -> Option<String> {
-    if !have_tool("pdftotext") {
+    if !pdftotext_usable() {
         return None;
     }
     let dir = tempfile::tempdir().ok()?;
@@ -275,14 +367,22 @@ pub struct BBoxWord {
 
 /// Words and boxes of a page (1-based) according to poppler.
 pub fn poppler_bbox(bytes: &[u8], page: usize) -> Option<Vec<BBoxWord>> {
-    if !have_tool("pdftotext") {
+    if !pdftotext_is_poppler() {
         return None;
     }
     let dir = tempfile::tempdir().ok()?;
     let p = dir.path().join("in.pdf");
     std::fs::write(&p, bytes).ok()?;
     let out = Command::new("pdftotext")
-        .args(["-bbox", "-f", &page.to_string(), "-l", &page.to_string()])
+        .args([
+            "-enc",
+            "UTF-8",
+            "-bbox",
+            "-f",
+            &page.to_string(),
+            "-l",
+            &page.to_string(),
+        ])
         .arg(&p)
         .arg("-")
         .output()
@@ -309,7 +409,7 @@ pub fn poppler_bbox(bytes: &[u8], page: usize) -> Option<Vec<BBoxWord>> {
 /// Everything poppler's `pdftotext` writes to stderr while reading `bytes` (empty = it found
 /// nothing to complain about). `None` when the tool is missing.
 pub fn poppler_diagnostics(bytes: &[u8]) -> Option<String> {
-    if !have_tool("pdftotext") {
+    if !pdftotext_usable() {
         return None;
     }
     let dir = tempfile::tempdir().ok()?;

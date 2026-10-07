@@ -46,9 +46,13 @@ fn chromium_and_cairo_reports_convert_to_validated_pdfa() {
         // Pages still read and look the same.
         if let (Some(a), Some(b)) = (poppler_text(&input), poppler_text(&out)) {
             assert_eq!(a, b, "{name}: text changed");
-            let ra = poppler_render(&input, 1, 80).unwrap();
-            let rb = poppler_render(&out, 1, 80).unwrap();
-            assert!(mean_abs_diff(&ra.2, &rb.2) < 1.0, "{name}: render changed");
+            if let (Some(ra), Some(rb)) =
+                (poppler_render(&input, 1, 80), poppler_render(&out, 1, 80))
+            {
+                assert!(mean_abs_diff(&ra.2, &rb.2) < 1.0, "{name}: render changed");
+            } else {
+                assert!(!oracles_required(), "pdftoppm required but missing");
+            }
         }
         if let Some(d) = poppler_diagnostics(&out) {
             assert!(d.trim().is_empty(), "{name}: poppler complains: {d}");

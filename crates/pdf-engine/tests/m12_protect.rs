@@ -103,7 +103,7 @@ fn contains(hay: &[u8], needle: &str) -> bool {
 
 /// Text of page 1 as an independent reader sees it: `pdftotext` with a password.
 fn pdftotext(bytes: &[u8], pw_flag: &str, password: &str) -> Option<String> {
-    if !have_tool("pdftotext") {
+    if !pdftotext_usable() {
         assert!(
             !oracles_required(),
             "poppler is required for this check (BERG_REQUIRE_ORACLES=1)"
@@ -320,7 +320,9 @@ fn protection_can_be_removed_and_added() {
         open_with(&sealed, ""),
         Err(EngineError::PasswordRequired)
     ));
-    if let Some(t) = pdftotext(&sealed, "-upw", "reader") {
+    // (Both passwords are "reader": poppler honours the permission flags for a reader that is not the owner, so
+    // it is asked as the owner. The flags themselves are tested through our own engine below.)
+    if let Some(t) = pdftotext(&sealed, "-opw", "reader") {
         assert!(t.contains(WORDS), "{t:?}");
     }
     // With a separate owner password the restrictions apply to the user password.

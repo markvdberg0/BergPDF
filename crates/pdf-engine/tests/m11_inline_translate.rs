@@ -29,7 +29,7 @@ fn blocks_and_background(bytes: &[u8]) -> Vec<Item> {
 
 #[test]
 fn paragraphs_are_found_and_replaced_in_place() {
-    if !have_tool("pdftotext") {
+    if !pdftotext_usable() {
         assert!(!oracles_required(), "poppler missing");
         return;
     }
@@ -78,14 +78,17 @@ fn paragraphs_are_found_and_replaced_in_place() {
             );
         }
         // It still opens and renders.
-        let r = poppler_render(&bytes, 1, 72).unwrap();
-        assert!(r.0 > 100 && r.1 > 100);
+        if let Some(r) = poppler_render(&bytes, 1, 72) {
+            assert!(r.0 > 100 && r.1 > 100);
+        } else {
+            assert!(!oracles_required(), "pdftoppm required but missing");
+        }
     }
 }
 
 #[test]
 fn bare_numbers_and_symbols_are_not_translated() {
-    if !have_tool("pdftotext") {
+    if !pdftotext_usable() {
         return;
     }
     let items = blocks_and_background(&fixture_bytes("report-chromium.pdf"));
