@@ -582,6 +582,7 @@ dependencies = [
  "pdf-engine",
  "pdf-ocr",
  "platform",
+ "png",
  "printing",
  "sys-locale",
  "test-support",

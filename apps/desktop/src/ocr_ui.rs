@@ -258,7 +258,9 @@ impl App {
                             RichText::new(tf!("One click installs them: BergPDF will connect to {}, download the two model files (about 12 MB) and check them against built-in checksums. Nothing else is sent. After that OCR works offline.", host))
                             .size(12.0),
                         );
-                        if ui.button(tr("Download the OCR models")).clicked() {
+                        if crate::ui_kit::primary_button(ui, tr("Download the OCR models"))
+                            .clicked()
+                        {
                             begin_download = true;
                         }
                     }
@@ -327,10 +329,7 @@ impl App {
             }
             ui.add_space(8.0);
             ui.horizontal(|ui| {
-                if ui
-                    .add_enabled(st.models_ok, egui::Button::new(tr("Start")))
-                    .clicked()
-                {
+                if crate::ui_kit::primary_enabled(ui, st.models_ok, tr("Start")).clicked() {
                     start = true;
                 }
                 if ui.button(tr("Close")).clicked()

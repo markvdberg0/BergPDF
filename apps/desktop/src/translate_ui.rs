@@ -275,7 +275,7 @@ impl App {
                                 }
                             });
                         ui.add(
-                            egui::TextEdit::singleline(&mut st.target)
+                            crate::ui_kit::singleline(&mut st.target)
                                 .desired_width(120.0)
                                 .hint_text(tr("or type one")),
                         );
@@ -313,12 +313,12 @@ impl App {
                     );
                     ui.add_space(8.0);
                     ui.horizontal(|ui| {
-                        if ui
-                            .add_enabled(
-                                with_text > 0 && !st.target.trim().is_empty(),
-                                egui::Button::new(tr("Translate")),
-                            )
-                            .clicked()
+                        if crate::ui_kit::primary_enabled(
+                            ui,
+                            with_text > 0 && !st.target.trim().is_empty(),
+                            tr("Translate"),
+                        )
+                        .clicked()
                         {
                             start = true;
                         }
@@ -384,14 +384,14 @@ impl App {
                         .max_height(260.0)
                         .show(ui, |ui| {
                             ui.add(
-                                egui::TextEdit::multiline(&mut preview)
+                                crate::ui_kit::multiline(&mut preview)
                                     .desired_width(f32::INFINITY)
                                     .interactive(false),
                             );
                         });
                     ui.add_space(6.0);
                     ui.horizontal(|ui| {
-                        if ui.button(tr("Open translated copy")).clicked() {
+                        if crate::ui_kit::primary_button(ui, tr("Open translated copy")).clicked() {
                             open_copy = true;
                         }
                         if ui.button(tr("Save translated PDF…")).clicked() {

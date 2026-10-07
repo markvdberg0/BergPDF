@@ -77,6 +77,19 @@ veraPDF for PDF/A). Without them those checks are skipped locally; CI requires t
 `BERG_VERAPDF=<folder with the veraPDF jars>` (see [`docs/EVIDENCE.md`](docs/EVIDENCE.md) for how they were fetched).
 On Debian/Ubuntu: `sudo apt install poppler-utils openssl`.
 
+## Looking at the interface without clicking
+
+A **debug** build can draw named screens to picture files, using egui's own frame capture (only this window's pixels,
+no screen capture, no input events); the window opens off-screen without taking focus:
+
+```
+$env:BERG_SHOTS = "C:	empshots;home,search,prefs,note,collapsed,print,redact,addtext,fontlist"
+cargo run -p bergpdf -- tests/fixtures/report-chromium.pdf
+```
+
+The scenarios are in `apps/desktop/src/debug_shots.rs`; the process writes `<scenario>.png` for each and exits.
+Put `theme = "Dark"` (or `"Light"`) in `preferences.toml` of a scratch profile (`APPDATA`) to see both themes.
+
 ## Trying the AI features without an account
 
 ```

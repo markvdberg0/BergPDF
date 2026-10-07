@@ -2,6 +2,7 @@
 
 use crate::chrome::command_icon;
 use crate::i18n::tr;
+use crate::icons::Icon;
 use crate::state::*;
 use crate::tf;
 use editor_core::command::CommandId as C;
@@ -27,13 +28,51 @@ impl App {
     pub fn side_frame(&self) -> egui::Frame {
         egui::Frame::new()
             .fill(self.pal.panel)
-            .inner_margin(egui::Margin::symmetric(10, 4))
+            .inner_margin(egui::Margin::symmetric(12, 8))
     }
 
-    fn collapse_button(ui: &mut egui::Ui, glyph: &str, tip: &str) -> bool {
-        ui.add(egui::Button::new(RichText::new(glyph).size(15.0)).frame(false))
-            .on_hover_text(tip)
-            .clicked()
+    /// The button that hides a side panel: a clearly visible square with a chevron.
+    fn collapse_button(ui: &mut egui::Ui, pointing_left: bool, tip: &str) -> bool {
+        crate::ui_kit::chevron_button(ui, pointing_left, tip).clicked()
+    }
+
+    /// The row of tabs at the top of a side panel. It scrolls sideways when the panel is narrow, so the
+    /// panel never grows to fit its tabs.
+    fn tab_strip<T: Copy + PartialEq>(
+        ui: &mut egui::Ui,
+        id: &str,
+        current: &mut T,
+        tabs: &[(T, crate::icons::Icon, &str)],
+    ) {
+        // The name of the selected tab is shown only when it fits next to the other icons.
+        let font = egui::FontId::proportional(13.5);
+        let label_w = tabs
+            .iter()
+            .find(|(t, _, _)| *current == *t)
+            .map_or(0.0, |(_, _, l)| {
+                ui.painter()
+                    .layout_no_wrap((*l).to_string(), font.clone(), egui::Color32::WHITE)
+                    .size()
+                    .x
+                    + 7.0
+            });
+        let icons_w = tabs.len() as f32 * (18.0 + 24.0 + 2.0);
+        let show_label = icons_w + label_w <= ui.available_width() - 4.0;
+        egui::ScrollArea::horizontal()
+            .id_salt(id)
+            .scroll_bar_visibility(egui::scroll_area::ScrollBarVisibility::AlwaysHidden)
+            .show(ui, |ui| {
+                ui.horizontal(|ui| {
+                    ui.spacing_mut().item_spacing.x = 2.0;
+                    for (t, icon, label) in tabs {
+                        if crate::ui_kit::icon_tab(ui, *icon, label, *current == *t, show_label)
+                            .clicked()
+                        {
+                            *current = *t;
+                        }
+                    }
+                });
+            });
     }
 
     /// Thin strip shown instead of a hidden side panel; one click brings the panel back.
@@ -45,19 +84,20 @@ impl App {
         };
         panel
             .resizable(false)
-            .exact_size(26.0)
-            .frame(egui::Frame::new().fill(self.pal.panel))
+            .exact_size(44.0)
+            .frame(
+                egui::Frame::new()
+                    .fill(self.pal.panel)
+                    .inner_margin(egui::Margin::symmetric(8, 12)),
+            )
             .show(ui, |ui| {
-                ui.add_space(6.0);
-                let (glyph, tip) = match left {
-                    true => ("»", tr("Show the page panel")),
-                    false => ("«", tr("Show the properties panel")),
+                let tip = if left {
+                    tr("Show the page panel")
+                } else {
+                    tr("Show the properties panel")
                 };
-                if ui
-                    .add(egui::Button::new(RichText::new(glyph).size(15.0)).frame(false))
-                    .on_hover_text(tip)
-                    .clicked()
-                {
+                // Pointing into the window: the panel opens that way.
+                if crate::ui_kit::chevron_button(ui, !left, tip).clicked() {
                     if left {
                         self.prefs.show_left_sidebar = true;
                     } else {
@@ -69,24 +109,26 @@ impl App {
     }
 
     pub fn left_sidebar(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
-        ui.add_space(4.0);
         let mut hide = false;
-        egui::Sides::new().show(
+        egui::Sides::new().shrink_left().show(
             ui,
             |ui| {
-                for (t, label) in [
-                    (LeftTab::Thumbnails, tr("Pages")),
-                    (LeftTab::Bookmarks, tr("Bookmarks")),
-                    (LeftTab::Search, tr("Search")),
-                ] {
-                    if ui.selectable_label(self.left_tab == t, label).clicked() {
-                        self.left_tab = t;
-                    }
-                }
+                let mut tab = self.left_tab;
+                Self::tab_strip(
+                    ui,
+                    "left_tabs",
+                    &mut tab,
+                    &[
+                        (LeftTab::Thumbnails, Icon::Page, tr("Pages")),
+                        (LeftTab::Bookmarks, Icon::Bookmark, tr("Bookmarks")),
+                        (LeftTab::Search, Icon::Find, tr("Search")),
+                    ],
+                );
+                self.left_tab = tab;
             },
             |ui| {
                 hide =
-                    Self::collapse_button(ui, "«", tr("Hide the page panel (View ▸ Left panel)"));
+                    Self::collapse_button(ui, true, tr("Hide the page panel (View ▸ Left panel)"));
             },
         );
         if hide {
@@ -413,23 +455,29 @@ impl App {
     fn search_panel(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
         let ti = self.active;
         let mut run = false;
-        ui.horizontal(|ui| {
-            let te = egui::TextEdit::singleline(&mut self.tabs[ti].session.search.query)
-                .hint_text(tr("Find in document"))
-                .desired_width(ui.available_width() - 34.0);
-            let resp = ui.add(te);
-            if self.search_focus {
-                resp.request_focus();
-                self.search_focus = false;
-            }
-            if resp.lost_focus() && ctx.input(|i| i.key_pressed(egui::Key::Enter)) {
-                run = true;
-                resp.request_focus();
-            }
-            if ui.button(tr("Go")).clicked() {
-                run = true;
-            }
-        });
+        // The button first, from the right; the field takes what is left, so the row never outgrows the panel.
+        let row = Vec2::new(ui.available_width(), crate::ui_kit::CONTROL_H);
+        ui.allocate_ui_with_layout(
+            row,
+            egui::Layout::right_to_left(egui::Align::Center),
+            |ui| {
+                if crate::ui_kit::primary_button(ui, tr("Go")).clicked() {
+                    run = true;
+                }
+                let te = crate::ui_kit::singleline(&mut self.tabs[ti].session.search.query)
+                    .hint_text(tr("Find in document"))
+                    .desired_width(f32::INFINITY);
+                let resp = ui.add_sized([ui.available_width(), crate::ui_kit::CONTROL_H], te);
+                if self.search_focus {
+                    resp.request_focus();
+                    self.search_focus = false;
+                }
+                if resp.lost_focus() && ctx.input(|i| i.key_pressed(egui::Key::Enter)) {
+                    run = true;
+                    resp.request_focus();
+                }
+            },
+        );
         if ui
             .checkbox(
                 &mut self.tabs[ti].session.search.case_sensitive,
@@ -459,15 +507,27 @@ impl App {
                 .color(self.pal.text_dim),
             );
         }
-        ui.horizontal(|ui| {
-            if ui
-                .add_enabled(!s.matches.is_empty(), egui::Button::new(tr("◀ Prev")))
+        // Two equal columns: the buttons share the panel width instead of asking for their own.
+        ui.columns(2, |cols| {
+            for c in cols.iter_mut() {
+                c.spacing_mut().button_padding.x = 6.0;
+            }
+            let w = cols[0].available_width();
+            let size = Vec2::new(w, crate::ui_kit::CONTROL_H);
+            if cols[0]
+                .add_enabled(
+                    !s.matches.is_empty(),
+                    egui::Button::new(tr("◀ Prev")).min_size(size),
+                )
                 .clicked()
             {
                 self.run_command(ctx, C::FindPrevious);
             }
-            if ui
-                .add_enabled(!s.matches.is_empty(), egui::Button::new(tr("Next ▶")))
+            if cols[1]
+                .add_enabled(
+                    !s.matches.is_empty(),
+                    egui::Button::new(tr("Next ▶")).min_size(size),
+                )
                 .clicked()
             {
                 self.run_command(ctx, C::FindNext);
@@ -501,28 +561,28 @@ impl App {
     // ---- right sidebar ---------------------------------------------------------------
 
     pub fn right_sidebar(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
-        ui.add_space(4.0);
         let mut hide = false;
-        egui::Sides::new().show(
+        egui::Sides::new().shrink_left().show(
             ui,
             |ui| {
-                ui.horizontal_wrapped(|ui| {
-                    for (t, label) in [
-                        (RightTab::Properties, tr("Properties")),
-                        (RightTab::Comments, tr("Comments")),
-                        (RightTab::Measure, tr("Measure")),
-                        (RightTab::Copilot, tr("Copilot")),
-                    ] {
-                        if ui.selectable_label(self.right_tab == t, label).clicked() {
-                            self.right_tab = t;
-                        }
-                    }
-                });
+                let mut tab = self.right_tab;
+                Self::tab_strip(
+                    ui,
+                    "right_tabs",
+                    &mut tab,
+                    &[
+                        (RightTab::Properties, Icon::Sliders, tr("Properties")),
+                        (RightTab::Comments, Icon::Note, tr("Comments")),
+                        (RightTab::Measure, Icon::Ruler, tr("Measure")),
+                        (RightTab::Copilot, Icon::Sparkle, tr("Copilot")),
+                    ],
+                );
+                self.right_tab = tab;
             },
             |ui| {
                 hide = Self::collapse_button(
                     ui,
-                    "»",
+                    false,
                     tr("Hide the properties panel (View ▸ Right panel)"),
                 );
             },
@@ -624,149 +684,121 @@ impl App {
             .first()
             .map_or(0, |(p, _)| self.upright_rotation(*p));
         ui.add_enabled_ui(can_edit, |ui| {
-            egui::Grid::new("props")
-                .num_columns(2)
-                .spacing([8.0, 6.0])
-                .show(ui, |ui| {
-                    let color_label = match spec.kind {
-                        AnnotationKind::Highlight { .. } => tr("Color"),
-                        AnnotationKind::FreeText { .. } => tr("Border"),
-                        _ => tr("Line color"),
-                    };
-                    ui.label(color_label);
+            crate::ui_kit::card(ui, |ui| {
+                use crate::ui_kit::{form_row, slider64};
+                let color_label = match spec.kind {
+                    AnnotationKind::Highlight { .. } => tr("Color"),
+                    AnnotationKind::FreeText { .. } => tr("Border"),
+                    _ => tr("Line color"),
+                };
+                form_row(ui, color_label, |ui| {
                     let mut c = [spec.color.0, spec.color.1, spec.color.2];
                     if ui.color_edit_button_rgb(&mut c).changed() {
                         spec.color = Rgb(c[0], c[1], c[2]);
                     }
-                    ui.end_row();
-                    if matches!(
-                        spec.kind,
-                        AnnotationKind::Rectangle { .. }
-                            | AnnotationKind::Ellipse { .. }
-                            | AnnotationKind::Polygon { .. }
-                            | AnnotationKind::FreeText { .. }
-                    ) {
-                        ui.label(tr("Fill"));
-                        ui.horizontal(|ui| {
-                            let mut has = spec.fill.is_some();
-                            if ui.checkbox(&mut has, "").changed() {
-                                spec.fill = if has { Some(Rgb(1.0, 1.0, 0.85)) } else { None };
+                });
+                if matches!(
+                    spec.kind,
+                    AnnotationKind::Rectangle { .. }
+                        | AnnotationKind::Ellipse { .. }
+                        | AnnotationKind::Polygon { .. }
+                        | AnnotationKind::FreeText { .. }
+                ) {
+                    form_row(ui, tr("Fill"), |ui| {
+                        let mut has = spec.fill.is_some();
+                        if ui.checkbox(&mut has, "").changed() {
+                            spec.fill = if has { Some(Rgb(1.0, 1.0, 0.85)) } else { None };
+                        }
+                        if let Some(f) = spec.fill {
+                            let mut fc = [f.0, f.1, f.2];
+                            if ui.color_edit_button_rgb(&mut fc).changed() {
+                                spec.fill = Some(Rgb(fc[0], fc[1], fc[2]));
                             }
-                            if let Some(f) = spec.fill {
-                                let mut fc = [f.0, f.1, f.2];
-                                if ui.color_edit_button_rgb(&mut fc).changed() {
-                                    spec.fill = Some(Rgb(fc[0], fc[1], fc[2]));
-                                }
-                            }
-                        });
-                        ui.end_row();
-                    }
-                    if matches!(
-                        spec.kind,
-                        AnnotationKind::FreeText { .. } | AnnotationKind::StampText { .. }
-                    ) {
-                        ui.label(tr("Rotation"));
-                        ui.horizontal(|ui| {
-                            if ui
-                                .button("⟲")
-                                .on_hover_text(tr("Rotate 90° counter-clockwise"))
-                                .clicked()
-                            {
-                                turn_text(&mut spec, 90);
-                            }
-                            if ui
-                                .button("⟳")
-                                .on_hover_text(tr("Rotate 90° clockwise"))
-                                .clicked()
-                            {
-                                turn_text(&mut spec, -90);
-                            }
-                            if ui
-                                .add_enabled(
-                                    spec.rotation != upright,
-                                    egui::Button::new(tr("Upright")),
-                                )
-                                .on_hover_text(tr("Make the text read horizontally on screen"))
-                                .clicked()
-                            {
-                                let delta = upright - spec.rotation;
-                                turn_text(&mut spec, delta);
-                            }
-                            let off = (spec.rotation - upright).rem_euclid(360);
-                            ui.label(if off == 0 {
-                                "upright".to_string()
-                            } else {
-                                tf!("{}° turned", off)
-                            });
-                        });
-                        ui.end_row();
-                    }
-                    ui.label(tr("Opacity"));
+                        }
+                    });
+                }
+                if matches!(
+                    spec.kind,
+                    AnnotationKind::FreeText { .. } | AnnotationKind::StampText { .. }
+                ) {
+                    form_row(ui, tr("Rotation"), |ui| {
+                        if ui
+                            .button("⟲")
+                            .on_hover_text(tr("Rotate 90° counter-clockwise"))
+                            .clicked()
+                        {
+                            turn_text(&mut spec, 90);
+                        }
+                        if ui
+                            .button("⟳")
+                            .on_hover_text(tr("Rotate 90° clockwise"))
+                            .clicked()
+                        {
+                            turn_text(&mut spec, -90);
+                        }
+                        if ui
+                            .add_enabled(spec.rotation != upright, egui::Button::new(tr("Upright")))
+                            .on_hover_text(tr("Make the text read horizontally on screen"))
+                            .clicked()
+                        {
+                            let delta = upright - spec.rotation;
+                            turn_text(&mut spec, delta);
+                        }
+                    });
+                }
+                form_row(ui, tr("Opacity"), |ui| {
                     let mut op = (spec.opacity * 100.0) as f32;
-                    if ui
-                        .add(egui::Slider::new(&mut op, 5.0..=100.0).suffix("%"))
-                        .changed()
-                    {
+                    if crate::ui_kit::slider(ui, &mut op, 5.0..=100.0, "%") {
                         spec.opacity = f64::from(op) / 100.0;
                     }
-                    ui.end_row();
-                    if !matches!(
-                        spec.kind,
-                        AnnotationKind::Highlight { .. }
-                            | AnnotationKind::Underline { .. }
-                            | AnnotationKind::StrikeOut { .. }
-                            | AnnotationKind::Note { .. }
-                            | AnnotationKind::Squiggly { .. }
-                            | AnnotationKind::StampText { .. }
-                    ) || matches!(spec.kind, AnnotationKind::StampText { .. })
-                    {
-                        ui.label(tr("Line width"));
-                        let mut w = spec.border_width as f32;
-                        if ui
-                            .add(egui::Slider::new(&mut w, 0.0..=20.0).suffix(" pt"))
-                            .changed()
-                        {
-                            spec.border_width = f64::from(w);
-                        }
-                        ui.end_row();
-                        ui.label(tr("Style"));
-                        ui.horizontal(|ui| {
-                            ui.selectable_value(
-                                &mut spec.border_style,
-                                BorderStyle::Solid,
-                                tr("Solid"),
-                            );
-                            ui.selectable_value(
-                                &mut spec.border_style,
-                                BorderStyle::Dashed,
-                                tr("Dashed"),
-                            );
-                        });
-                        ui.end_row();
-                    }
-                    if let AnnotationKind::FreeText {
-                        font_size,
-                        text_color,
-                        font,
-                        ..
-                    } = &mut spec.kind
-                    {
-                        ui.label(tr("Font size"));
-                        ui.add(egui::Slider::new(font_size, 6.0..=72.0).suffix(" pt"));
-                        ui.end_row();
-                        ui.label(tr("Text color"));
+                });
+                if !matches!(
+                    spec.kind,
+                    AnnotationKind::Highlight { .. }
+                        | AnnotationKind::Underline { .. }
+                        | AnnotationKind::StrikeOut { .. }
+                        | AnnotationKind::Note { .. }
+                        | AnnotationKind::Squiggly { .. }
+                        | AnnotationKind::StampText { .. }
+                ) || matches!(spec.kind, AnnotationKind::StampText { .. })
+                {
+                    form_row(ui, tr("Line width"), |ui| {
+                        slider64(ui, &mut spec.border_width, 0.0..=20.0, " pt");
+                    });
+                    form_row(ui, tr("Style"), |ui| {
+                        ui.selectable_value(
+                            &mut spec.border_style,
+                            BorderStyle::Solid,
+                            tr("Solid"),
+                        );
+                        ui.selectable_value(
+                            &mut spec.border_style,
+                            BorderStyle::Dashed,
+                            tr("Dashed"),
+                        );
+                    });
+                }
+                if let AnnotationKind::FreeText {
+                    font_size,
+                    text_color,
+                    font,
+                    ..
+                } = &mut spec.kind
+                {
+                    form_row(ui, tr("Font size"), |ui| {
+                        slider64(ui, font_size, 6.0..=72.0, " pt");
+                    });
+                    form_row(ui, tr("Text color"), |ui| {
                         let mut tc = [text_color.0, text_color.1, text_color.2];
                         if ui.color_edit_button_rgb(&mut tc).changed() {
                             *text_color = Rgb(tc[0], tc[1], tc[2]);
                         }
-                        ui.end_row();
-                        ui.label(tr("Font"));
-                        ui.horizontal(|ui| {
-                            crate::fontpick::font_picker(ui, "freetext_font", font);
-                        });
-                        ui.end_row();
-                    }
-                });
+                    });
+                    form_row(ui, tr("Font"), |ui| {
+                        crate::fontpick::font_picker(ui, "freetext_font", font);
+                    });
+                }
+            });
             ui.add_space(6.0);
             ui.label(
                 if matches!(
@@ -779,7 +811,7 @@ impl App {
                 },
             );
             ui.add(
-                egui::TextEdit::multiline(&mut spec.contents)
+                crate::ui_kit::multiline(&mut spec.contents)
                     .desired_rows(4)
                     .desired_width(f32::INFINITY)
                     .hint_text(tr("Add a comment…")),
@@ -870,48 +902,35 @@ impl App {
             );
             let d = &mut self.prefs.tool_defaults;
             let mut changed = false;
-            egui::Grid::new("tooldefaults")
-                .num_columns(2)
-                .spacing([8.0, 6.0])
-                .show(ui, |ui| {
-                    ui.label(tr("Highlight"));
+            crate::ui_kit::card(ui, |ui| {
+                use crate::ui_kit::{form_row, slider64};
+                form_row(ui, tr("Highlight"), |ui| {
                     changed |= ui.color_edit_button_rgb(&mut d.highlight).changed();
-                    ui.end_row();
-                    ui.label(tr("Line color"));
+                });
+                form_row(ui, tr("Line color"), |ui| {
                     changed |= ui.color_edit_button_rgb(&mut d.stroke).changed();
-                    ui.end_row();
-                    ui.label(tr("Line width"));
-                    changed |= ui
-                        .add(egui::Slider::new(&mut d.stroke_width, 0.5..=12.0).suffix(" pt"))
-                        .changed();
-                    ui.end_row();
-                    ui.label(tr("Opacity"));
+                });
+                form_row(ui, tr("Line width"), |ui| {
+                    changed |= slider64(ui, &mut d.stroke_width, 0.5..=12.0, " pt");
+                });
+                form_row(ui, tr("Opacity"), |ui| {
                     let mut op = (d.opacity * 100.0) as f32;
-                    if ui
-                        .add(egui::Slider::new(&mut op, 5.0..=100.0).suffix("%"))
-                        .changed()
-                    {
+                    if crate::ui_kit::slider(ui, &mut op, 5.0..=100.0, "%") {
                         d.opacity = f64::from(op) / 100.0;
                         changed = true;
                     }
-                    ui.end_row();
-                    ui.label(tr("Font size"));
-                    changed |= ui
-                        .add(egui::Slider::new(&mut d.font_size, 6.0..=48.0).suffix(" pt"))
-                        .changed();
-                    ui.end_row();
-                    ui.label(tr("Font"));
-                    ui.vertical(|ui| {
-                        let mut st = d.font_style();
-                        ui.horizontal_wrapped(|ui| {
-                            if crate::fontpick::font_picker(ui, "defaults_font", &mut st) {
-                                d.set_font_style(st);
-                                changed = true;
-                            }
-                        });
-                    });
-                    ui.end_row();
                 });
+                form_row(ui, tr("Font size"), |ui| {
+                    changed |= slider64(ui, &mut d.font_size, 6.0..=48.0, " pt");
+                });
+                form_row(ui, tr("Font"), |ui| {
+                    let mut st = d.font_style();
+                    if crate::fontpick::font_picker(ui, "defaults_font", &mut st) {
+                        d.set_font_style(st);
+                        changed = true;
+                    }
+                });
+            });
             if changed {
                 self.prefs_dirty = true;
             }
@@ -919,7 +938,7 @@ impl App {
             ui.label(tr("Author"));
             if ui
                 .add(
-                    egui::TextEdit::singleline(&mut self.prefs.author)
+                    crate::ui_kit::singleline(&mut self.prefs.author)
                         .hint_text(tr("Your name"))
                         .desired_width(f32::INFINITY),
                 )
@@ -1017,7 +1036,7 @@ impl App {
             return;
         };
         ui.add(
-            egui::TextEdit::singleline(&mut self.tabs[ti].ui.comments_filter)
+            crate::ui_kit::singleline(&mut self.tabs[ti].ui.comments_filter)
                 .hint_text(tr("Filter comments"))
                 .desired_width(f32::INFINITY),
         );

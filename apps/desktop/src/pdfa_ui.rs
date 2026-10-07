@@ -129,9 +129,7 @@ impl App {
             ui.add_space(8.0);
             let can = matches!(&st.result, Some(Ok(r)) if r.can_convert());
             ui.horizontal(|ui| {
-                if ui
-                    .add_enabled(can, egui::Button::new(tr("Choose file and convert…")))
-                    .clicked()
+                if crate::ui_kit::primary_enabled(ui, can, tr("Choose file and convert…")).clicked()
                 {
                     go = true;
                 }

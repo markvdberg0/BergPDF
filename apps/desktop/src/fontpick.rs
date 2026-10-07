@@ -7,7 +7,6 @@ use egui::{FontFamily, RichText, Ui};
 use pdf_engine::fontembed::{FontFamily as Family, FontStyle};
 
 use crate::i18n::tr;
-use crate::tf;
 use std::collections::HashSet;
 use std::sync::{Mutex, OnceLock};
 
@@ -24,6 +23,11 @@ fn pending() -> &'static Mutex<Vec<FontStyle>> {
 }
 
 static CTX: OnceLock<egui::Context> = OnceLock::new();
+
+/// Development aid (debug builds): open the next font menu that is drawn (see `debug_shots.rs`).
+#[cfg(debug_assertions)]
+pub static DEBUG_OPEN_FONT_MENU: std::sync::atomic::AtomicBool =
+    std::sync::atomic::AtomicBool::new(false);
 
 /// Remember the egui context so [`egui_family`] can ask for a repaint after queueing a font.
 pub fn init(ctx: &egui::Context) {
@@ -121,81 +125,146 @@ pub fn register(fonts: &mut egui::FontDefinitions) {
     }
 }
 
-/// The family list shared by the pickers: the bundled families (drawn in their own face), then
-/// a searchable list of installed fonts. Returns whether `fam` changed.
+/// The one list of fonts shared by the pickers: the built-in families and the installed ones together,
+/// alphabetical, with a search field on top. Choosing a font closes the menu; clicking the search field does
+/// not (the combo box that holds this list must not close on a click inside it). Returns whether `fam` changed.
 pub fn family_menu(ui: &mut Ui, fam: &mut Family, search_id: egui::Id) -> bool {
     let before = *fam;
-    for f in Family::ALL {
-        ui.selectable_value(
-            fam,
-            f,
-            RichText::new(f.title()).family(egui_family(FontStyle::new(f, false, false))),
-        );
-    }
-    ui.separator();
-    let installed = pdf_engine::sysfonts::list();
-    if installed.is_empty() {
-        ui.label(
-            RichText::new(tr("Installed fonts: none found (or still scanning)"))
-                .size(11.0)
-                .weak(),
-        );
-        return *fam != before;
-    }
-    ui.label(
-        RichText::new(tf!("Installed fonts ({})", installed.len()))
-            .size(11.0)
-            .weak(),
-    );
+    ui.set_min_width(250.0);
     let mut filter: String = ui.data_mut(|d| d.get_temp(search_id).unwrap_or_default());
-    ui.add(
-        egui::TextEdit::singleline(&mut filter)
-            .hint_text(tr("Search installed fonts"))
-            .desired_width(200.0),
+    let field = ui.add(
+        crate::ui_kit::singleline(&mut filter)
+            .hint_text(tr("Search fonts"))
+            .desired_width(f32::INFINITY),
     );
+    // The search field is ready to type in as soon as the list opens.
+    if ui.memory(|m| m.focused().is_none()) {
+        field.request_focus();
+    }
     ui.data_mut(|d| d.insert_temp(search_id, filter.clone()));
-    let f = filter.to_lowercase();
-    let rows: Vec<(u32, &str)> = installed
+    let needle = filter.to_lowercase();
+
+    let mut rows: Vec<(Family, String)> = Family::ALL
         .into_iter()
-        .filter(|(_, n)| f.is_empty() || n.to_lowercase().contains(&f))
+        .map(|f| (f, f.title().to_string()))
         .collect();
-    let row_h = ui.text_style_height(&egui::TextStyle::Button) + 4.0;
+    let built_in: HashSet<String> = rows.iter().map(|(_, n)| n.to_lowercase()).collect();
+    for (id, name) in pdf_engine::sysfonts::list() {
+        if !built_in.contains(&name.to_lowercase()) {
+            rows.push((Family::System(id), name.to_string()));
+        }
+    }
+    rows.retain(|(_, n)| needle.is_empty() || n.to_lowercase().contains(&needle));
+    rows.sort_by_key(|(_, n)| n.to_lowercase());
+    ui.add_space(4.0);
+    if rows.is_empty() {
+        ui.label(RichText::new(tr("No font matches")).weak());
+        return false;
+    }
+    let row_h = ui.text_style_height(&egui::TextStyle::Button) + 10.0;
+    let mut chosen = None;
     egui::ScrollArea::vertical()
-        .max_height(240.0)
+        .max_height(300.0)
         .auto_shrink([false, true])
         .show_rows(ui, row_h, rows.len(), |ui, range| {
-            for (id, name) in &rows[range] {
-                ui.selectable_value(fam, Family::System(*id), *name);
+            for (f, name) in &rows[range] {
+                // Drawn by hand so the name is left-aligned and shown in its own font.
+                let (rect, r) = ui.allocate_exact_size(
+                    egui::vec2(ui.available_width(), row_h),
+                    egui::Sense::click(),
+                );
+                let selected = *fam == *f;
+                if selected {
+                    ui.painter()
+                        .rect_filled(rect, 6.0, ui.visuals().selection.bg_fill);
+                } else if r.hovered() {
+                    ui.painter()
+                        .rect_filled(rect, 6.0, ui.visuals().widgets.hovered.bg_fill);
+                }
+                let ink = if selected {
+                    ui.visuals().selection.stroke.color
+                } else {
+                    ui.visuals().text_color()
+                };
+                let galley = ui.painter().layout_no_wrap(
+                    name.clone(),
+                    egui::FontId::new(15.0, egui_family(FontStyle::new(*f, false, false))),
+                    ink,
+                );
+                let pos = egui::pos2(rect.left() + 10.0, rect.center().y - galley.size().y / 2.0);
+                ui.painter().galley(pos, galley, ink);
+                if r.clicked() {
+                    chosen = Some(*f);
+                }
             }
         });
+    if let Some(f) = chosen {
+        *fam = f;
+        ui.close();
+    }
     *fam != before
 }
 
-/// Family menu plus Bold and Italic toggles. Returns whether anything changed.
+/// The font chooser: one searchable list of fonts, then Bold and Italic as toggle buttons. In a narrow
+/// column the toggles go under the list instead of beside it.
 pub fn font_picker(ui: &mut Ui, id: &str, style: &mut FontStyle) -> bool {
     let mut fam = style.family;
     let (mut bold, mut italic) = (style.bold, style.italic);
     let search_id = ui.id().with(id).with("search");
-    egui::ComboBox::from_id_salt(id)
-        .selected_text(
-            RichText::new(fam.title()).family(egui_family(FontStyle::new(fam, false, false))),
-        )
-        .width(210.0)
-        .height(470.0)
-        .show_ui(ui, |ui| {
-            family_menu(ui, &mut fam, search_id);
+    let narrow = ui.available_width() < 210.0;
+    let (has_bold, has_italic) = (fam.has_bold(), fam.has_italic());
+    let mut toggles = |ui: &mut Ui| {
+        let b = ui
+            .add_enabled(
+                has_bold,
+                egui::Button::selectable(bold, RichText::new("B").strong())
+                    .frame_when_inactive(true)
+                    .min_size(egui::vec2(32.0, 32.0)),
+            )
+            .on_hover_text(tr("Bold"))
+            .on_disabled_hover_text(tr("This font has no bold style"));
+        if b.clicked() {
+            bold = !bold;
+        }
+        let i = ui
+            .add_enabled(
+                has_italic,
+                egui::Button::selectable(italic, RichText::new("I").italics())
+                    .frame_when_inactive(true)
+                    .min_size(egui::vec2(32.0, 32.0)),
+            )
+            .on_hover_text(tr("Italic"))
+            .on_disabled_hover_text(tr("This font has no italic style"));
+        if i.clicked() {
+            italic = !italic;
+        }
+    };
+    let combo = |ui: &mut Ui, fam: &mut Family, width: f32| {
+        #[cfg(debug_assertions)]
+        if DEBUG_OPEN_FONT_MENU.load(std::sync::atomic::Ordering::Relaxed) {
+            egui::Popup::open_id(ui.ctx(), ui.make_persistent_id(id).with("popup"));
+        }
+        egui::ComboBox::from_id_salt(id)
+            .selected_text(
+                RichText::new(fam.title()).family(egui_family(FontStyle::new(*fam, false, false))),
+            )
+            .width(width)
+            .close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside)
+            .show_ui(ui, |ui| {
+                family_menu(ui, fam, search_id);
+            });
+    };
+    if narrow {
+        ui.vertical(|ui| {
+            combo(ui, &mut fam, ui.available_width());
+            ui.horizontal(|ui| toggles(ui));
         });
-    ui.add_enabled(
-        fam.has_bold(),
-        egui::Checkbox::new(&mut bold, RichText::new(tr("Bold")).strong()),
-    )
-    .on_disabled_hover_text(tr("This font has no bold style"));
-    ui.add_enabled(
-        fam.has_italic(),
-        egui::Checkbox::new(&mut italic, RichText::new(tr("Italic")).italics()),
-    )
-    .on_disabled_hover_text(tr("This font has no italic style"));
-    let new = FontStyle::new(fam, bold && fam.has_bold(), italic);
+    } else {
+        let w = (ui.available_width() - 2.0 * 36.0 - 8.0).clamp(110.0, 240.0);
+        combo(ui, &mut fam, w);
+        toggles(ui);
+    }
+    let new = FontStyle::new(fam, bold && fam.has_bold(), italic && fam.has_italic());
     let changed = new != *style;
     *style = new;
     changed

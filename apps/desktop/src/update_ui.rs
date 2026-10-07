@@ -130,7 +130,7 @@ impl App {
             ui.label(tr("BergPDF can look once a day whether a newer version has been published. For that it contacts github.com and sends only its name and version number. Nothing is downloaded or installed: you get a link to the release page. You can change this in Preferences ▸ Updates."));
             ui.add_space(10.0);
             ui.horizontal(|ui| {
-                if ui.button(tr("Check for updates")).clicked() {
+                if crate::ui_kit::primary_button(ui, tr("Check for updates")).clicked() {
                     choice = Some(UpdateCheck::On);
                 }
                 if ui.button(tr("Never")).clicked() {
@@ -178,7 +178,7 @@ impl App {
                     ui.add_space(4.0);
                     ui.label(tr("Download the installer from the release page and run it over the current installation; your settings are kept."));
                     ui.add_space(8.0);
-                    if ui.button(tr("Open release page")).clicked() {
+                    if crate::ui_kit::primary_button(ui, tr("Open release page")).clicked() {
                         open_url = Some(r.url.clone());
                     }
                 }

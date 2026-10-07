@@ -6,6 +6,7 @@ use crate::docops_ui::ExportJob;
 use crate::i18n::tr;
 use crate::state::*;
 use crate::tf;
+use egui::RichText;
 use printing::{PrintRequest, Printer, Scale, parse_page_ranges, printers};
 
 /// Which pages the dialog prints.
@@ -75,24 +76,26 @@ impl App {
         let danger = self.pal.danger;
         modal(ctx, "print_dialog", |ui| {
             ui.heading(tr("Print"));
-            ui.add_space(4.0);
-            egui::ComboBox::from_label(tr("Printer"))
+            ui.add_space(6.0);
+            ui.label(RichText::new(tr("Printer")).color(crate::ui_kit::dim(ui)));
+            egui::ComboBox::from_id_salt("printer")
                 .selected_text(
                     st.printers
                         .get(st.selected)
                         .map_or(String::new(), |p| p.name.clone()),
                 )
-                .width(300.0)
+                .width(ui.available_width())
                 .show_ui(ui, |ui| {
                     for (i, p) in st.printers.iter().enumerate() {
                         ui.selectable_value(&mut st.selected, i, &p.name);
                     }
                 });
+            ui.add_space(6.0);
             ui.horizontal(|ui| {
-                ui.label(tr("Copies"));
+                ui.label(RichText::new(tr("Copies")).color(crate::ui_kit::dim(ui)));
                 ui.add(egui::DragValue::new(&mut st.copies).range(1..=99));
             });
-            ui.add_space(4.0);
+            ui.add_space(8.0);
             ui.radio_value(&mut st.pages, Pages::All, tf!("All pages ({})", st.total));
             ui.radio_value(
                 &mut st.pages,
@@ -102,7 +105,7 @@ impl App {
             ui.horizontal(|ui| {
                 ui.radio_value(&mut st.pages, Pages::Range, tr("Pages"));
                 let r = ui.add(
-                    egui::TextEdit::singleline(&mut st.range)
+                    crate::ui_kit::singleline(&mut st.range)
                         .hint_text("1-3, 5")
                         .desired_width(140.0),
                 );
@@ -120,9 +123,9 @@ impl App {
             if let Some(e) = &st.error {
                 ui.colored_label(danger, e);
             }
-            ui.add_space(8.0);
+            ui.add_space(12.0);
             ui.horizontal(|ui| {
-                if ui.button(tr("Print")).clicked() {
+                if crate::ui_kit::primary_button(ui, tr("Print")).clicked() {
                     go = true;
                 }
                 if ui.button(tr("Cancel")).clicked()

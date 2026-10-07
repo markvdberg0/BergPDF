@@ -70,6 +70,8 @@ impl App {
             notices: Vec::new(),
             prefs_dirty: false,
             frame_counter: 0,
+            #[cfg(debug_assertions)]
+            debug_shots: crate::debug_shots::from_env(),
             search_focus: false,
             system_dark,
             quit_confirmed: false,
@@ -372,6 +374,11 @@ impl eframe::App for App {
     fn logic(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         frame_log::begin();
         self.frame_counter += 1;
+        #[cfg(debug_assertions)]
+        if let Some(mut d) = self.debug_shots.take() {
+            d.step(self, ctx);
+            self.debug_shots = Some(d);
+        }
         crate::fontpick::flush_pending(ctx);
         // Follow OS theme changes when the preference is System.
         let sys_dark = ctx.global_style().visuals.dark_mode;

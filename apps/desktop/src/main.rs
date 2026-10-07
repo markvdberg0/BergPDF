@@ -9,6 +9,8 @@ mod chrome;
 mod contentedit;
 mod copilot_ui;
 mod ctxmenu;
+#[cfg(debug_assertions)]
+mod debug_shots;
 mod dialogs;
 mod docops_ui;
 mod exec;
@@ -33,6 +35,7 @@ mod snap_ui;
 mod state;
 mod theme;
 mod translate_ui;
+mod ui_kit;
 mod update_ui;
 
 use std::path::PathBuf;
@@ -89,16 +92,19 @@ fn main() -> eframe::Result {
         .unwrap_or_default();
     let options = |prefer_dx12: bool| eframe::NativeOptions {
         wgpu_options: gpu::configuration(&prefs.graphics, prefer_dx12),
-        viewport: egui::ViewportBuilder::default()
-            .with_title("BergPDF")
-            .with_icon(egui::IconData {
-                rgba: brand::render_rgba(256),
-                width: 256,
-                height: 256,
-            })
-            .with_inner_size([1360.0, 880.0])
-            .with_min_inner_size([760.0, 520.0])
-            .with_drag_and_drop(true),
+        viewport: place(
+            egui::ViewportBuilder::default()
+                .with_title("BergPDF")
+                .with_icon(egui::IconData {
+                    rgba: brand::render_rgba(256),
+                    width: 256,
+                    height: 256,
+                })
+                .with_inner_size([1360.0, 880.0])
+                .with_active(!debug_shots_on())
+                .with_min_inner_size([760.0, 520.0])
+                .with_drag_and_drop(true),
+        ),
         ..Default::default()
     };
     let first_files = files.clone();
@@ -130,4 +136,18 @@ fn main() -> eframe::Result {
         );
     }
     result
+}
+
+/// Debug builds started with `BERG_SHOTS` draw named screens to files (see `debug_shots.rs`).
+fn debug_shots_on() -> bool {
+    cfg!(debug_assertions) && std::env::var_os("BERG_SHOTS").is_some()
+}
+
+/// In that mode the window opens far off-screen so it does not get in anyone's way.
+fn place(vb: egui::ViewportBuilder) -> egui::ViewportBuilder {
+    if debug_shots_on() {
+        vb.with_position([-12000.0, 0.0])
+    } else {
+        vb
+    }
 }

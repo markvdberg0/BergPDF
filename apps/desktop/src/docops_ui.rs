@@ -60,7 +60,7 @@ impl App {
                         ui.label(label);
                         ui.add_enabled(
                             st.can_edit,
-                            egui::TextEdit::singleline(value).desired_width(320.0),
+                            crate::ui_kit::singleline(value).desired_width(320.0),
                         );
                         ui.end_row();
                     }
@@ -179,7 +179,7 @@ impl App {
             );
             ui.add_space(8.0);
             ui.horizontal(|ui| {
-                if ui.button(tr("Flatten")).clicked() {
+                if crate::ui_kit::primary_button(ui, tr("Flatten")).clicked() {
                     choice = Some(true);
                 }
                 if ui.button(tr("Cancel")).clicked()

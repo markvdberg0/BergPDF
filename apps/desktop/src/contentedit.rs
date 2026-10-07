@@ -809,7 +809,7 @@ impl App {
                 let mut del = false;
                 if let Some(d) = self.tabs[ti].ui.edit_draft.as_mut() {
                     ui.add_enabled_ui(editable, |ui| {
-                        ui.add(egui::TextEdit::multiline(&mut d.text).desired_rows(3).desired_width(f32::INFINITY));
+                        ui.add(crate::ui_kit::multiline(&mut d.text).desired_rows(3).desired_width(f32::INFINITY));
                         ui.horizontal(|ui| {
                             ui.label(tr("Size"));
                             ui.add(egui::DragValue::new(&mut d.size).range(4.0..=300.0).speed(0.2).suffix(" pt"));
@@ -821,7 +821,7 @@ impl App {
                                 None => tf!("Keep ({})", short_font_name(&d.original_font)),
                                 Some(s) => s.family.title().to_string(),
                             };
-                            egui::ComboBox::from_id_salt("edit_font").selected_text(label).width(190.0).height(470.0).show_ui(ui, |ui| {
+                            egui::ComboBox::from_id_salt("edit_font").selected_text(label).width(190.0).close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside).show_ui(ui, |ui| {
                                 if ui.selectable_label(d.font.is_none(), tr("Keep the original font")).clicked() {
                                     d.font = None;
                                 }
@@ -844,7 +844,7 @@ impl App {
                         }
                         ui.checkbox(&mut d.fit_width, tr("Keep original width (adjust spacing)")).on_hover_text(tr("Tightens or loosens character spacing so surrounding text keeps its place and nothing overlaps."));
                         ui.horizontal(|ui| {
-                            if ui.button(tr("Apply")).clicked() {
+                            if crate::ui_kit::primary_button(ui, tr("Apply")).clicked() {
                                 apply = true;
                             }
                             if ui.button(tr("Revert")).clicked() {
