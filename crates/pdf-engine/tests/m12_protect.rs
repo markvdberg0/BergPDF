@@ -303,7 +303,8 @@ fn protection_can_be_removed_and_added() {
         fill: false,
         assemble: false,
     };
-    doc.set_protection("reader", "", only_view).unwrap();
+    // Protection with no restrictions first (the same password opens as user and as owner).
+    doc.set_protection("reader", "", Rights::ALL).unwrap();
     assert_eq!(doc.protection().unwrap().cipher, Cipher::Aes256);
     let plain = doc.snapshot_bytes().unwrap();
     let sealed = doc.seal(&plain).unwrap().into_owned();
@@ -320,9 +321,7 @@ fn protection_can_be_removed_and_added() {
         open_with(&sealed, ""),
         Err(EngineError::PasswordRequired)
     ));
-    // (Both passwords are "reader": poppler honours the permission flags for a reader that is not the owner, so
-    // it is asked as the owner. The flags themselves are tested through our own engine below.)
-    if let Some(t) = pdftotext(&sealed, "-opw", "reader") {
+    if let Some(t) = pdftotext(&sealed, "-upw", "reader") {
         assert!(t.contains(WORDS), "{t:?}");
     }
     // With a separate owner password the restrictions apply to the user password.
@@ -335,6 +334,10 @@ fn protection_can_be_removed_and_added() {
     assert!(!as_reader.protection().unwrap().rights.copy);
     assert!(!as_reader.capabilities().can_edit);
     assert!(open_with(&sealed, "chief").unwrap().capabilities().can_edit);
+    // Another reader opens the restricted file with the owner password.
+    if let Some(t) = pdftotext(&sealed, "-opw", "chief") {
+        assert!(t.contains(WORDS), "restricted, as owner: {t:?}");
+    }
 }
 
 #[test]
