@@ -176,6 +176,39 @@ fn apply(app: &mut App, ctx: &egui::Context, name: &str) {
                 });
             }
         }
+        "annots" | "inline" => {
+            if let Some(page) = page {
+                use pdf_engine::annot::AnnotationKind;
+                use pdf_engine::geom::Rect;
+                app.set_tool(editor_core::tools::Tool::Select);
+                // Only the first time: later scenarios start from the same document.
+                if app.tabs.first().is_some_and(|t| t.session.revision() == 0) {
+                    let cloud = app.new_spec(AnnotationKind::Cloud {
+                        rect: Rect::new(60.0, 420.0, 300.0, 520.0),
+                    });
+                    app.add_annotation(page, cloud, "demo");
+                    let rect = app.new_spec(AnnotationKind::Rectangle {
+                        rect: Rect::new(330.0, 420.0, 450.0, 520.0),
+                    });
+                    app.add_annotation(page, rect, "demo");
+                    app.commit_text_entry(
+                        page,
+                        editor_core::tools::Tool::FreeText,
+                        Rect::new(60.0, 560.0, 300.0, 600.0),
+                        "Edit this text".into(),
+                        None,
+                    );
+                }
+                if name == "inline" {
+                    let list = app.annots_for(page);
+                    if let Some(a) = list.iter().find(|a| a.subtype == "FreeText")
+                        && let Some(t) = app.tabs.first_mut()
+                    {
+                        t.ui.inline_edit = crate::inline_edit::InlineEdit::start(page, a);
+                    }
+                }
+            }
+        }
         "redact" => {
             if let Some(page) = page {
                 app.mark_redaction(

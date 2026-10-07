@@ -22,6 +22,7 @@ pub enum Tool {
     Callout,
     Rectangle,
     Ellipse,
+    Cloud,
     Line,
     Arrow,
     Polygon,
@@ -112,6 +113,7 @@ impl Tool {
             CommandId::ToolCallout => Tool::Callout,
             CommandId::ToolRectangle => Tool::Rectangle,
             CommandId::ToolEllipse => Tool::Ellipse,
+            CommandId::ToolCloud => Tool::Cloud,
             CommandId::ToolLine => Tool::Line,
             CommandId::ToolArrow => Tool::Arrow,
             CommandId::ToolPolygon => Tool::Polygon,
@@ -151,6 +153,7 @@ impl Tool {
             Tool::Callout => CommandId::ToolCallout,
             Tool::Rectangle => CommandId::ToolRectangle,
             Tool::Ellipse => CommandId::ToolEllipse,
+            Tool::Cloud => CommandId::ToolCloud,
             Tool::Line => CommandId::ToolLine,
             Tool::Arrow => CommandId::ToolArrow,
             Tool::Polygon => CommandId::ToolPolygon,
@@ -188,6 +191,7 @@ impl Tool {
                 "Click the point to mark, then click where the text box should go (it follows the pointer)."
             }
             Tool::Rectangle | Tool::Ellipse => "Drag to draw. Hold Shift for a square/circle.",
+            Tool::Cloud => "Drag to draw a cloud around the area.",
             Tool::Line | Tool::Arrow => "Drag to draw. Hold Shift to snap to 15° angles.",
             Tool::Polygon | Tool::Polyline => {
                 "Click to add points; double-click or Enter to finish; Esc cancels."

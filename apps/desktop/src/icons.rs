@@ -39,6 +39,7 @@ pub enum Icon {
     Callout,
     Rect,
     Ellipse,
+    Cloud,
     Line,
     Arrow,
     Polygon,
@@ -449,6 +450,27 @@ pub fn paint(p: &Painter, rect: Rect, icon: Icon, color: Color32) {
                 Vec2::new(8.5 * u, 6.5 * u),
                 st,
             ));
+        }
+        Icon::Cloud => {
+            // A rectangle whose sides bulge outwards in scallops.
+            let mut pts: Vec<(f32, f32)> = Vec::new();
+            let (x0, y0, x1, y1) = (5.0_f32, 7.0_f32, 19.0_f32, 17.0_f32);
+            let corners = [(x0, y1), (x1, y1), (x1, y0), (x0, y0)];
+            for s in 0..4 {
+                let (a, b) = (corners[s], corners[(s + 1) % 4]);
+                let n = if s % 2 == 0 { 3 } else { 2 };
+                let (dx, dy) = (b.0 - a.0, b.1 - a.1);
+                let len = dx.hypot(dy);
+                let (nx, ny) = (-dy / len, dx / len);
+                for i in 0..n {
+                    for k in 0..6 {
+                        let t = (i as f32 + k as f32 / 6.0) / n as f32;
+                        let bulge = (std::f32::consts::PI * (k as f32 / 6.0)).sin() * 2.2;
+                        pts.push((a.0 + dx * t + nx * bulge, a.1 + dy * t + ny * bulge));
+                    }
+                }
+            }
+            poly(&pts, true);
         }
         Icon::Line => line((4.0, 20.0), (20.0, 4.0)),
         Icon::Arrow => {

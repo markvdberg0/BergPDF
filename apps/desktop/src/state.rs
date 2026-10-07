@@ -198,6 +198,8 @@ pub struct TabState {
     /// Page index requested by an explicit "go to page" (applied next frame).
     pub goto: Option<usize>,
     pub last_zoom_change: Option<Instant>,
+    /// The text of a text box, note or stamp being edited in place on the page.
+    pub inline_edit: Option<crate::inline_edit::InlineEdit>,
     /// Properties-panel edit in progress (selected annotations, spec); applied on release.
     pub props_draft: Option<(Vec<AnnotId>, AnnotationSpec)>,
     pub thumb_scroll_to_current: bool,

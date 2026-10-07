@@ -63,6 +63,7 @@ pub enum CommandId {
     ToolCallout,
     ToolRectangle,
     ToolEllipse,
+    ToolCloud,
     ToolLine,
     ToolArrow,
     ToolPolygon,
@@ -768,6 +769,14 @@ pub static REGISTRY: &[CommandInfo] = &[
         C::Comment,
         "shape circle oval",
         [(None, Shortcut::alt(Char('E')))]
+    ),
+    cmd!(
+        Id::ToolCloud,
+        "Cloud",
+        "Draw a cloud around an area (a revision cloud)",
+        C::Comment,
+        "shape revision cloud wolk",
+        []
     ),
     cmd!(
         Id::ToolLine,

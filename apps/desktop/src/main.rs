@@ -19,6 +19,7 @@ mod forms_ui;
 mod gpu;
 mod i18n;
 mod icons;
+mod inline_edit;
 mod interaction;
 mod measure_ui;
 mod ocr_ui;
