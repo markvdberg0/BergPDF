@@ -88,6 +88,7 @@ pub enum CommandId {
     ToggleSnap,
     FileSaveOptimized,
     FileConvertPdfA,
+    FileProtection,
     ToggleCopilot,
     CopilotSummarize,
     CopilotSummarizeAnnotations,
@@ -930,6 +931,14 @@ pub static REGISTRY: &[CommandInfo] = &[
         "Save an archival PDF/A-2b copy (checks and reports what cannot be converted)",
         C::File,
         "pdfa pdf/a archive archival long term iso 19005",
+        []
+    ),
+    cmd!(
+        Id::FileProtection,
+        "Password Protection…",
+        "Protect the document with a password, or remove or change its protection",
+        C::File,
+        "password protect encrypt decrypt lock unlock secure owner permissions",
         []
     ),
     cmd!(

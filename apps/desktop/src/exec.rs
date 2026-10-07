@@ -20,6 +20,14 @@ impl App {
         true
     }
 
+    /// Whether the text of the active document may be copied or sent to an AI provider: a password-protected
+    /// document can forbid it (the author's permission flags; the owner password lifts it).
+    pub fn text_use_allowed(&self) -> bool {
+        self.active_tab()
+            .and_then(|t| t.session.protection())
+            .is_none_or(|p| p.rights.copy)
+    }
+
     /// Whether a command can run right now (drives enabled state and the palette).
     pub fn command_enabled(&self, id: CommandId) -> bool {
         use CommandId as C;
@@ -50,7 +58,9 @@ impl App {
             | C::GoToPage => has,
             C::EditUndo => tab.is_some_and(|t| t.session.can_undo()),
             C::EditRedo => tab.is_some_and(|t| t.session.can_redo()),
-            C::EditCopy => tab.is_some_and(|t| t.session.selection.text.is_some()),
+            C::EditCopy => {
+                tab.is_some_and(|t| t.session.selection.text.is_some()) && self.text_use_allowed()
+            }
             C::EditSelectAll => has,
             C::EditDelete => {
                 tab.is_some_and(|t| {
@@ -79,10 +89,13 @@ impl App {
             | C::FileExportImage
             | C::ShowSignatures
             | C::FileSaveOptimized
-            | C::FileConvertPdfA => has,
+            | C::FileConvertPdfA
+            | C::FileProtection => has,
             C::ToggleCopilot => true,
-            C::CopilotSummarize | C::CopilotSummarizeAnnotations => has && !self.ai_busy(),
-            C::TranslateDocument => has,
+            C::CopilotSummarize | C::CopilotSummarizeAnnotations => {
+                has && !self.ai_busy() && self.text_use_allowed()
+            }
+            C::TranslateDocument => has && self.text_use_allowed(),
             C::SignDocument => has && can_edit,
             C::OcrDocument => has && can_edit && self.ocr_job.is_none(),
             C::DrawSignature => true,
@@ -155,6 +168,7 @@ impl App {
             C::SignDocument => self.open_sign_dialog(),
             C::OcrDocument => self.open_ocr_dialog(),
             C::FileSaveOptimized => self.open_optimize_dialog(),
+            C::FileProtection => self.open_protection_dialog(),
             C::FileConvertPdfA => self.open_pdfa_dialog(),
             C::ShowSignatures => self.open_signatures(),
             C::DrawSignature => self.open_draw_signature(),
@@ -342,40 +356,47 @@ impl App {
             return;
         }
         match DocumentSession::open_path(path) {
-            Ok(session) => {
-                let caps = session.doc().capabilities().clone();
-                self.prefs.push_recent(&path.to_string_lossy());
-                self.prefs_dirty = true;
-                self.add_tab(session);
-                let mut lines: Vec<String> = Vec::new();
-                for b in &caps.edit_blockers {
-                    lines.push(b.0.clone());
-                }
-                for w in &caps.warnings {
-                    lines.push(w.0.clone());
-                }
-                if caps.has_javascript {
-                    lines.push(
-                        tr("This document contains JavaScript. BergPDF never runs document scripts.")
-                            .into(),
-                    );
-                }
-                if !lines.is_empty() {
-                    let name = path
-                        .file_name()
-                        .map(|n| n.to_string_lossy().into_owned())
-                        .unwrap_or_default();
-                    self.dialog = Some(Dialog::OpenWarnings { title: name, lines });
-                }
-                ctx.request_repaint();
-            }
+            Ok(session) => self.finish_open(ctx, path, session),
+            // A password-protected document: ask for the password (the dialog opens it).
+            Err(pdf_engine::EngineError::PasswordRequired) => self.ask_password(path),
             Err(e) => {
                 self.dialog = Some(Dialog::Error {
                     title: tr("Cannot open document").into(),
-                    detail: format!("{}\n\n{e}", path.display()),
+                    detail: format!("{}
+
+{e}", path.display()),
                 });
             }
         }
+    }
+
+    /// Show an opened document: add its tab and tell what the person should know about it.
+    pub fn finish_open(&mut self, ctx: &egui::Context, path: &Path, session: DocumentSession) {
+        let caps = session.doc().capabilities().clone();
+        self.prefs.push_recent(&path.to_string_lossy());
+        self.prefs_dirty = true;
+        self.add_tab(session);
+        let mut lines: Vec<String> = Vec::new();
+        for b in &caps.edit_blockers {
+            lines.push(b.0.clone());
+        }
+        for w in &caps.warnings {
+            lines.push(w.0.clone());
+        }
+        if caps.has_javascript {
+            lines.push(
+                tr("This document contains JavaScript. BergPDF never runs document scripts.")
+                    .into(),
+            );
+        }
+        if !lines.is_empty() {
+            let name = path
+                .file_name()
+                .map(|n| n.to_string_lossy().into_owned())
+                .unwrap_or_default();
+            self.dialog = Some(Dialog::OpenWarnings { title: name, lines });
+        }
+        ctx.request_repaint();
     }
 
     pub fn add_tab(&mut self, session: DocumentSession) {

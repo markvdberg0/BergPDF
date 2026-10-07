@@ -135,6 +135,10 @@ pub enum Dialog {
     FormPolicy(FormPolicyState),
     /// Set or calibrate a drawing scale.
     Scale(Box<ScaleDialog>),
+    /// A password-protected document asks for its password.
+    Password(Box<crate::protect_ui::PasswordPrompt>),
+    /// Password protection of the active document.
+    Protection(Box<crate::protect_ui::ProtectionDialog>),
 }
 
 /// Pointer interaction in progress on the canvas.

@@ -52,7 +52,7 @@ impl App {
         let doc = tab.session.doc();
         if doc.capabilities().encrypted {
             self.notify_error(tr(
-                "Encrypted documents cannot be optimized in this version.",
+                "A password-protected document cannot be optimized. Remove its protection first (use Protect in the Document group).",
             ));
             return;
         }

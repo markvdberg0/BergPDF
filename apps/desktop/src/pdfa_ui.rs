@@ -27,7 +27,7 @@ impl App {
             return;
         };
         if tab.session.doc().capabilities().encrypted {
-            self.notify_error(tr("Encrypted documents cannot be converted to PDF/A."));
+            self.notify_error(tr("A password-protected document cannot be converted to PDF/A. Remove its protection first (use Protect in the Document group)."));
             return;
         }
         let signed = tab.session.doc().capabilities().has_signatures;

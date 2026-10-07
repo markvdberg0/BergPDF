@@ -130,7 +130,7 @@ impl App {
                 .get(&(doc, sel.page))
                 .map(|(_, tp)| tp.text_of(sel.glyphs.clone()))
                 .unwrap_or_default();
-            if Self::menu_item(ui, tr("Copy"), "Ctrl+C") {
+            if self.text_use_allowed() && Self::menu_item(ui, tr("Copy"), "Ctrl+C") {
                 self.run_command(ctx, C::EditCopy);
             }
             ui.separator();
@@ -276,6 +276,9 @@ impl App {
             .and_then(|t| self.tabs[ti].session.doc().page_index(t.page))
             .unwrap_or(self.tabs[ti].session.view.current_page);
         ui.separator();
+        if !self.text_use_allowed() {
+            return;
+        }
         let busy = self.ai_busy();
         ui.add_enabled_ui(!busy, |ui| {
             if Self::menu_item(ui, tr("Explain"), "") {

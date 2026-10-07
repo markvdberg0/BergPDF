@@ -691,12 +691,12 @@ pub static ENTRIES: &[(&str, &str)] = &[
     ("Editing unavailable: {}", "Bearbeiten nicht verfügbar: {}"),
     ("Ellipse", "Ellipse"),
     (
-        "Encrypted documents cannot be converted to PDF/A.",
-        "Verschlüsselte Dokumente können nicht in PDF/A konvertiert werden.",
+        "A password-protected document cannot be converted to PDF/A. Remove its protection first (use Protect in the Document group).",
+        "Ein passwortgeschütztes Dokument kann nicht in PDF/A konvertiert werden. Entfernen Sie zuerst den Schutz (verwenden Sie Schützen in der Gruppe Dokument).",
     ),
     (
-        "Encrypted documents cannot be optimized in this version.",
-        "Verschlüsselte Dokumente können in dieser Version nicht optimiert werden.",
+        "A password-protected document cannot be optimized. Remove its protection first (use Protect in the Document group).",
+        "Ein passwortgeschütztes Dokument kann nicht optimiert werden. Entfernen Sie zuerst den Schutz (verwenden Sie Schützen in der Gruppe Dokument).",
     ),
     ("Essential", "Einfach"),
     (
@@ -2063,5 +2063,153 @@ pub static ENTRIES: &[(&str, &str)] = &[
     (
         "⚠ Scale not set — measuring in PDF points",
         "⚠ Maßstab nicht festgelegt — Messung in PDF-Punkten",
+    ),
+    (
+        "Password Protection…",
+        "Passwortschutz…",
+    ),
+    (
+        "Protect the document with a password, or remove or change its protection",
+        "Das Dokument mit einem Passwort schützen oder den Schutz entfernen bzw. ändern",
+    ),
+    (
+        "Protect",
+        "Schützen",
+    ),
+    (
+        "Password required",
+        "Passwort erforderlich",
+    ),
+    (
+        "“{}” is protected with a password. Enter it to open the document.",
+        "„{}“ ist mit einem Passwort geschützt. Geben Sie es ein, um das Dokument zu öffnen.",
+    ),
+    (
+        "That password is not correct.",
+        "Dieses Passwort ist falsch.",
+    ),
+    (
+        "Password protection",
+        "Passwortschutz",
+    ),
+    (
+        "This document is not protected. Choose a password; it is needed to open the document after you save it.",
+        "Dieses Dokument ist nicht geschützt. Wählen Sie ein Passwort; es wird zum Öffnen des Dokuments benötigt, nachdem Sie es gespeichert haben.",
+    ),
+    (
+        "This document is protected ({}).",
+        "Dieses Dokument ist geschützt ({}).",
+    ),
+    (
+        "You have the owner password: nothing is restricted.",
+        "Sie haben das Besitzerpasswort: nichts ist eingeschränkt.",
+    ),
+    (
+        "You opened it with the document's password. What the author allows:",
+        "Sie haben es mit dem Passwort des Dokuments geöffnet. Das erlaubt der Autor:",
+    ),
+    (
+        "Printing",
+        "Drucken",
+    ),
+    (
+        "Copying text",
+        "Text kopieren",
+    ),
+    (
+        "Editing",
+        "Bearbeiten",
+    ),
+    (
+        "Enter the owner password to lift the restrictions.",
+        "Geben Sie das Besitzerpasswort ein, um die Einschränkungen aufzuheben.",
+    ),
+    (
+        "Owner password",
+        "Besitzerpasswort",
+    ),
+    (
+        "Unlock",
+        "Entsperren",
+    ),
+    (
+        "Remove password protection",
+        "Passwortschutz entfernen",
+    ),
+    (
+        "Change password…",
+        "Passwort ändern…",
+    ),
+    (
+        "The change is written when you save the document.",
+        "Die Änderung wird beim Speichern des Dokuments übernommen.",
+    ),
+    (
+        "Password to open the document",
+        "Passwort zum Öffnen des Dokuments",
+    ),
+    (
+        "Repeat the password",
+        "Passwort wiederholen",
+    ),
+    (
+        "Owner password (optional)",
+        "Besitzerpasswort (optional)",
+    ),
+    (
+        "With an owner password you can restrict what people who only know the password may do. Without one, the password above also unlocks everything.",
+        "Mit einem Besitzerpasswort können Sie einschränken, was Personen tun dürfen, die nur das Passwort kennen. Ohne Besitzerpasswort entsperrt das Passwort oben ebenfalls alles.",
+    ),
+    (
+        "Allow printing",
+        "Drucken erlauben",
+    ),
+    (
+        "Allow copying text",
+        "Kopieren von Text erlauben",
+    ),
+    (
+        "Allow editing",
+        "Bearbeiten erlauben",
+    ),
+    (
+        "AES 256-bit encryption. If you forget the password the document cannot be opened.",
+        "AES-256-Bit-Verschlüsselung. Wenn Sie das Passwort vergessen, lässt sich das Dokument nicht mehr öffnen.",
+    ),
+    (
+        "Protect the document",
+        "Dokument schützen",
+    ),
+    (
+        "That is not the owner password.",
+        "Das ist nicht das Besitzerpasswort.",
+    ),
+    (
+        "Unlocked: you can edit this document now.",
+        "Entsperrt: Sie können dieses Dokument jetzt bearbeiten.",
+    ),
+    (
+        "Protection removed. Save the document to write it without a password.",
+        "Schutz entfernt. Speichern Sie das Dokument, um es ohne Passwort zu schreiben.",
+    ),
+    (
+        "Enter a password.",
+        "Geben Sie ein Passwort ein.",
+    ),
+    (
+        "The two passwords are not the same.",
+        "Die beiden Passwörter stimmen nicht überein.",
+    ),
+    (
+        "Enter an owner password to restrict what others may do.",
+        "Geben Sie ein Besitzerpasswort ein, um einzuschränken, was andere tun dürfen.",
+    ),
+    (
+        "Protected. Save the document to write the password.",
+        "Geschützt. Speichern Sie das Dokument, um das Passwort zu schreiben.",
+    ),
+    (
+        "The author of this document did not allow copying its text, so PDF Copilot and Translate are not available for it.",
+        "Der Autor dieses Dokuments hat das Kopieren des Textes nicht erlaubt, daher sind PDF Copilot und Übersetzen dafür nicht verfügbar.",
     ),
 ];

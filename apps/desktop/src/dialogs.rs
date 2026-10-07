@@ -490,6 +490,12 @@ impl App {
                     keep = false;
                 }
             }
+            Dialog::Password(st) => {
+                keep = self.dialog_password(ctx, st);
+            }
+            Dialog::Protection(st) => {
+                keep = self.dialog_protection(ctx, st);
+            }
             Dialog::UpdateAsk => {
                 keep = self.dialog_update_ask(ctx);
             }

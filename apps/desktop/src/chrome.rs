@@ -64,6 +64,7 @@ pub fn command_icon(c: C) -> Icon {
         C::ToggleSnap => Icon::Snap,
         C::FileSaveOptimized => Icon::Optimize,
         C::FileConvertPdfA => Icon::Archive,
+        C::FileProtection => Icon::Lock,
         C::ToggleCopilot | C::CopilotSummarize | C::CopilotSummarizeAnnotations => Icon::Sparkle,
         C::TranslateDocument => Icon::Translate,
         C::ShowSignatures => Icon::Shield,
@@ -346,7 +347,7 @@ impl App {
             ui.set_min_height(height);
             ui.horizontal(|ui| match self.ribbon_tab {
                 RibbonTab::File => {
-                    self.group(ui, tr("Document"), |s, ui| s.cmds(ui, ctx, &[C::FileOpen, C::FileSave, C::FileSaveAs, C::FileSaveOptimized, C::FileConvertPdfA, C::FileClose]));
+                    self.group(ui, tr("Document"), |s, ui| s.cmds(ui, ctx, &[C::FileOpen, C::FileSave, C::FileSaveAs, C::FileSaveOptimized, C::FileConvertPdfA, C::FileProtection, C::FileClose]));
                     self.group(ui, tr("Recent"), |s, ui| {
                         let recents = s.prefs.recent_files.clone();
                         if recents.is_empty() {
@@ -839,6 +840,7 @@ fn ribbon_label(id: C, title: &'static str) -> &'static str {
         C::ToggleSnap => tr("Snap"),
         C::FileSaveOptimized => tr("Optimize"),
         C::FileConvertPdfA => "PDF/A",
+        C::FileProtection => tr("Protect"),
         C::ToggleCopilot => tr("Copilot"),
         C::CopilotSummarize => tr("Summarize"),
         C::CopilotSummarizeAnnotations => tr("Summarize notes"),

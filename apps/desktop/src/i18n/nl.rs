@@ -658,12 +658,12 @@ pub static ENTRIES: &[(&str, &str)] = &[
     ("Editing unavailable: {}", "Bewerken niet beschikbaar: {}"),
     ("Ellipse", "Ellips"),
     (
-        "Encrypted documents cannot be converted to PDF/A.",
-        "Versleutelde documenten kunnen niet naar PDF/A worden geconverteerd.",
+        "A password-protected document cannot be converted to PDF/A. Remove its protection first (use Protect in the Document group).",
+        "Een met een wachtwoord beveiligd document kan niet naar PDF/A worden geconverteerd. Verwijder eerst de beveiliging (gebruik Beveiligen in de groep Document).",
     ),
     (
-        "Encrypted documents cannot be optimized in this version.",
-        "Versleutelde documenten kunnen in deze versie niet worden geoptimaliseerd.",
+        "A password-protected document cannot be optimized. Remove its protection first (use Protect in the Document group).",
+        "Een met een wachtwoord beveiligd document kan niet worden geoptimaliseerd. Verwijder eerst de beveiliging (gebruik Beveiligen in de groep Document).",
     ),
     ("Essential", "Essentieel"),
     (
@@ -2015,5 +2015,153 @@ pub static ENTRIES: &[(&str, &str)] = &[
     (
         "⚠ Scale not set — measuring in PDF points",
         "⚠ Schaal niet ingesteld — meting in PDF-punten",
+    ),
+    (
+        "Password Protection…",
+        "Wachtwoordbeveiliging…",
+    ),
+    (
+        "Protect the document with a password, or remove or change its protection",
+        "Beveilig het document met een wachtwoord, of verwijder of wijzig de beveiliging",
+    ),
+    (
+        "Protect",
+        "Beveiligen",
+    ),
+    (
+        "Password required",
+        "Wachtwoord vereist",
+    ),
+    (
+        "“{}” is protected with a password. Enter it to open the document.",
+        "“{}” is met een wachtwoord beveiligd. Voer het in om het document te openen.",
+    ),
+    (
+        "That password is not correct.",
+        "Dat wachtwoord is onjuist.",
+    ),
+    (
+        "Password protection",
+        "Wachtwoordbeveiliging",
+    ),
+    (
+        "This document is not protected. Choose a password; it is needed to open the document after you save it.",
+        "Dit document is niet beveiligd. Kies een wachtwoord; dat is nodig om het document te openen nadat u het hebt opgeslagen.",
+    ),
+    (
+        "This document is protected ({}).",
+        "Dit document is beveiligd ({}).",
+    ),
+    (
+        "You have the owner password: nothing is restricted.",
+        "U hebt het eigenaarswachtwoord: er is niets beperkt.",
+    ),
+    (
+        "You opened it with the document's password. What the author allows:",
+        "U hebt het geopend met het wachtwoord van het document. Wat de auteur toestaat:",
+    ),
+    (
+        "Printing",
+        "Afdrukken",
+    ),
+    (
+        "Copying text",
+        "Tekst kopiëren",
+    ),
+    (
+        "Editing",
+        "Bewerken",
+    ),
+    (
+        "Enter the owner password to lift the restrictions.",
+        "Voer het eigenaarswachtwoord in om de beperkingen op te heffen.",
+    ),
+    (
+        "Owner password",
+        "Eigenaarswachtwoord",
+    ),
+    (
+        "Unlock",
+        "Ontgrendelen",
+    ),
+    (
+        "Remove password protection",
+        "Wachtwoordbeveiliging verwijderen",
+    ),
+    (
+        "Change password…",
+        "Wachtwoord wijzigen…",
+    ),
+    (
+        "The change is written when you save the document.",
+        "De wijziging wordt vastgelegd als u het document opslaat.",
+    ),
+    (
+        "Password to open the document",
+        "Wachtwoord om het document te openen",
+    ),
+    (
+        "Repeat the password",
+        "Herhaal het wachtwoord",
+    ),
+    (
+        "Owner password (optional)",
+        "Eigenaarswachtwoord (optioneel)",
+    ),
+    (
+        "With an owner password you can restrict what people who only know the password may do. Without one, the password above also unlocks everything.",
+        "Met een eigenaarswachtwoord kunt u beperken wat mensen die alleen het wachtwoord kennen mogen doen. Zonder eigenaarswachtwoord ontgrendelt het wachtwoord hierboven ook alles.",
+    ),
+    (
+        "Allow printing",
+        "Afdrukken toestaan",
+    ),
+    (
+        "Allow copying text",
+        "Tekst kopiëren toestaan",
+    ),
+    (
+        "Allow editing",
+        "Bewerken toestaan",
+    ),
+    (
+        "AES 256-bit encryption. If you forget the password the document cannot be opened.",
+        "AES 256-bits versleuteling. Als u het wachtwoord vergeet, kan het document niet meer worden geopend.",
+    ),
+    (
+        "Protect the document",
+        "Document beveiligen",
+    ),
+    (
+        "That is not the owner password.",
+        "Dat is niet het eigenaarswachtwoord.",
+    ),
+    (
+        "Unlocked: you can edit this document now.",
+        "Ontgrendeld: u kunt dit document nu bewerken.",
+    ),
+    (
+        "Protection removed. Save the document to write it without a password.",
+        "Beveiliging verwijderd. Sla het document op om het zonder wachtwoord vast te leggen.",
+    ),
+    (
+        "Enter a password.",
+        "Voer een wachtwoord in.",
+    ),
+    (
+        "The two passwords are not the same.",
+        "De twee wachtwoorden zijn niet gelijk.",
+    ),
+    (
+        "Enter an owner password to restrict what others may do.",
+        "Voer een eigenaarswachtwoord in om te beperken wat anderen mogen doen.",
+    ),
+    (
+        "Protected. Save the document to write the password.",
+        "Beveiligd. Sla het document op om het wachtwoord vast te leggen.",
+    ),
+    (
+        "The author of this document did not allow copying its text, so PDF Copilot and Translate are not available for it.",
+        "De auteur van dit document heeft het kopiëren van de tekst niet toegestaan, daarom zijn PDF Copilot en Vertalen er niet voor beschikbaar.",
     ),
 ];

@@ -8,6 +8,7 @@ pub enum Icon {
     Sparkle,
     Translate,
     Optimize,
+    Lock,
     Archive,
     Open,
     Save,
@@ -150,6 +151,21 @@ pub fn paint(p: &Painter, rect: Rect, icon: Icon, color: Color32) {
             line((12.0, 7.0), (12.0, 13.0));
             poly(&[(8.0, 11.0), (12.0, 15.0), (16.0, 11.0)], false);
             line((8.0, 18.0), (16.0, 18.0));
+        }
+        Icon::Lock => {
+            rrect(5.0, 11.0, 19.0, 21.0);
+            poly(
+                &[
+                    (8.0, 11.0),
+                    (8.0, 7.0),
+                    (10.0, 4.0),
+                    (14.0, 4.0),
+                    (16.0, 7.0),
+                    (16.0, 11.0),
+                ],
+                false,
+            );
+            line((12.0, 14.0), (12.0, 18.0));
         }
         Icon::Archive => {
             rrect(3.0, 4.0, 21.0, 9.0);

@@ -977,6 +977,10 @@ impl App {
             });
         });
         ui.add_space(2.0);
+        if !self.text_use_allowed() {
+            ui.label(tr("The author of this document did not allow copying its text, so PDF Copilot and Translate are not available for it."));
+            return;
+        }
         if !has_key {
             ui.label(tr("Add your own API key to turn on Copilot. It can summarize this document, answer questions with page references and highlights, explain selected text, summarize comments and translate."));
             ui.add_space(6.0);
