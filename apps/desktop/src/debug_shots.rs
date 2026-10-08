@@ -40,6 +40,10 @@ pub struct DebugShots {
     index: usize,
     phase: Phase,
     started: bool,
+    /// Frames spent waiting for background work (OCR, translation) of the current scenario.
+    holds: u32,
+    /// The search after OCR was started.
+    searched: bool,
 }
 
 /// `Some` when `BERG_SHOTS` is set.
@@ -58,6 +62,8 @@ pub fn from_env() -> Option<DebugShots> {
         index: 0,
         phase: Phase::Settle(40),
         started: false,
+        holds: 0,
+        searched: false,
         script: Default::default(),
     })
 }
@@ -81,6 +87,35 @@ fn double_click(pos: egui::Pos2) -> Vec<Vec<egui::Event>> {
 }
 
 impl DebugShots {
+    /// True while a scenario still waits for background work (text recognition, translation);
+    /// gives up after a while so a failing job cannot hang the run.
+    fn waiting_for_work(&mut self, app: &mut App, name: &str) -> bool {
+        self.holds += 1;
+        if self.holds > 6000 {
+            return false;
+        }
+        match name {
+            "ocr_search" => {
+                if app.ocr_job.is_some() {
+                    return true;
+                }
+                if !self.searched {
+                    // Recognition is done: search the page that was a picture a moment ago.
+                    self.searched = true;
+                    app.left_tab = LeftTab::Search;
+                    if let Some(t) = app.tabs.first_mut() {
+                        t.session.search.query = "quick brown".into();
+                    }
+                    app.start_search();
+                    self.phase = Phase::Settle(40);
+                }
+                false
+            }
+            "translate_inline" => matches!(app.dialog, Some(Dialog::Translate(_))),
+            _ => false,
+        }
+    }
+
     /// Hand the scripted pointer events of this frame to egui.
     pub fn inject(&mut self, raw: &mut egui::RawInput) {
         if let Some(events) = self.script.pop_front() {
@@ -102,6 +137,12 @@ impl DebugShots {
                     let mut fam = pdf_engine::fontembed::FontFamily::DejaVuSans;
                     crate::fontpick::family_menu(ui, &mut fam, egui::Id::new("dbg_font_search"));
                 });
+        }
+        if self.started
+            && matches!(self.phase, Phase::Settle(_))
+            && self.waiting_for_work(app, &name)
+        {
+            return;
         }
         match &mut self.phase {
             Phase::Settle(n) => {
@@ -130,8 +171,16 @@ impl DebugShots {
                 if !self.started {
                     // The document is open and the fonts are loaded: set the scenario up and let it settle.
                     self.started = true;
+                    self.holds = 0;
+                    self.searched = false;
                     apply(app, ctx, &name);
-                    self.phase = Phase::Settle(25);
+                    // Screens that first read the document text on a worker thread need a little longer.
+                    self.phase = Phase::Settle(match name.as_str() {
+                        n if n.starts_with("translate") => 90,
+                        "copilot_answer" => 220,
+                        "forms_policy" => 200,
+                        _ => 25,
+                    });
                     return;
                 }
                 ctx.send_viewport_cmd(egui::ViewportCommand::Screenshot(egui::UserData::default()));
@@ -197,6 +246,9 @@ fn apply(app: &mut App, ctx: &egui::Context, name: &str) {
     app.prefs.show_left_sidebar = true;
     app.prefs.show_right_sidebar = true;
     app.left_tab = LeftTab::Thumbnails;
+    app.right_tab = RightTab::Properties;
+    app.ribbon_tab = RibbonTab::Home;
+    app.tool = editor_core::tools::Tool::Select;
     let page = app
         .tabs
         .first_mut()
@@ -227,8 +279,14 @@ fn apply(app: &mut App, ctx: &egui::Context, name: &str) {
         }
         "print" => app.run_command(ctx, C::FilePrint),
         "protect" => app.run_command(ctx, C::FileProtection),
-        "optimize" => app.run_command(ctx, C::FileSaveOptimized),
-        "pdfa" => app.run_command(ctx, C::FileConvertPdfA),
+        "optimize" => {
+            app.ribbon_tab = RibbonTab::File;
+            app.run_command(ctx, C::FileSaveOptimized)
+        }
+        "pdfa" => {
+            app.ribbon_tab = RibbonTab::File;
+            app.run_command(ctx, C::FileConvertPdfA)
+        }
         "about" => app.dialog = Some(Dialog::About),
         "shortcuts" => {
             app.dialog = Some(Dialog::Shortcuts {
@@ -387,6 +445,219 @@ fn apply(app: &mut App, ctx: &egui::Context, name: &str) {
                 app.open_redact_dialog();
             }
         }
+        // ---- screens of the website's feature pages -------------------------------------------
+        "copilot_answer" => {
+            show_copilot(app);
+            app.ribbon_tab = RibbonTab::Home;
+            copilot_conversation(app);
+        }
+        "copilot_consent" => {
+            show_copilot(app);
+            app.prefs.ai_consent_provider = None;
+            app.dialog = Some(Dialog::AiConsent);
+        }
+        "prefs_ai" => {
+            show_copilot(app);
+            app.dialog = Some(Dialog::Preferences {
+                filter: "ai".into(),
+            });
+        }
+        "translate_dialog" => {
+            show_copilot(app);
+            app.prefs.ai_consent_provider = Some(app.prefs.ai.provider);
+            app.open_translate_dialog(ctx);
+        }
+        "translate_inline" => {
+            app.ribbon_tab = RibbonTab::Copilot;
+            app.prefs.ai_consent_provider = Some(app.prefs.ai.provider);
+            crate::translate_ui::DEBUG_AUTO.store(true, std::sync::atomic::Ordering::Relaxed);
+            app.open_translate_dialog(ctx);
+        }
+        "ocr_models" => {
+            app.ribbon_tab = RibbonTab::Edit;
+            app.open_ocr_dialog();
+        }
+        "ocr_search" => {
+            app.ribbon_tab = RibbonTab::Edit;
+            app.open_ocr_dialog();
+            if let Some(Dialog::Ocr(st)) = app.dialog.take() {
+                if let Err(e) = app.start_ocr(&st) {
+                    eprintln!("OCR could not start: {e}");
+                }
+            }
+        }
+        "measure_plan" | "measure_panel" => {
+            if let Some(page) = page {
+                measure_demo(app, page);
+                if name == "measure_plan" {
+                    app.ribbon_tab = RibbonTab::Measure;
+                    app.set_tool(editor_core::tools::Tool::MeasureDistance);
+                    app.prefs.show_left_sidebar = false;
+                    app.prefs.show_right_sidebar = false;
+                } else {
+                    app.right_tab = RightTab::Measure;
+                }
+            }
+        }
+        "forms_policy" => {
+            app.ribbon_tab = RibbonTab::Home;
+            // A form that has been filled in, as it would be when someone copies its pages.
+            let form = app.form_for();
+            if let Some(t) = app.tabs.first_mut() {
+                for f in &form.fields {
+                    let (id, name) = (f.id, f.name.as_str());
+                    let _ = t.session.execute("Fill field", |tx| match name {
+                        "name" => pdf_engine::forms::set_text_value(tx, id, "Anna de Vries"),
+                        "address.city" => pdf_engine::forms::set_text_value(tx, id, "Utrecht"),
+                        "agree" => pdf_engine::forms::set_checkbox(tx, id, true),
+                        _ => Ok(()),
+                    });
+                }
+            }
+
+            app.dialog = Some(Dialog::FormPolicy(FormPolicyState {
+                op: FormOp::Duplicate,
+                policy: pdf_engine::pageops::FormPolicy::Independent,
+            }));
+        }
+        "recovery" => {
+            let ago =
+                |secs: u64| std::time::SystemTime::now() - std::time::Duration::from_secs(secs);
+            app.dialog = Some(Dialog::Recovery(vec![
+                platform::recovery::RecoveryEntry {
+                    pdf: PathBuf::new(),
+                    original: Some(r"C:\Users\Anna\Documents\Offer Van Dijk BV.pdf".into()),
+                    modified: ago(25 * 60),
+                    len: 412 * 1024,
+                },
+                platform::recovery::RecoveryEntry {
+                    pdf: PathBuf::new(),
+                    original: None,
+                    modified: ago(3 * 3600),
+                    len: 86 * 1024,
+                },
+            ]));
+        }
         _ => {}
+    }
+}
+
+/// Open the Copilot panel on the right.
+fn show_copilot(app: &mut App) {
+    app.prefs.show_right_sidebar = true;
+    app.right_tab = RightTab::Copilot;
+    app.prefs.show_copilot = true;
+}
+
+/// A question about the report and the answer with two supporting passages, highlighted on the page.
+fn copilot_conversation(app: &mut App) {
+    use crate::copilot_ui::{ChatKind, ChatMsg, ChatPoint};
+    let nl = crate::i18n::current() == crate::i18n::Lang::Nl;
+    let point = |quote: &str, note: &str| ChatPoint {
+        page: 2,
+        quote: quote.into(),
+        note: note.into(),
+        verified: true,
+        applied: false,
+    };
+    let (question, answer, n1, n2) = if nl {
+        (
+            "Wat is er met de omzet gebeurd?",
+            "De omzet is met twaalf procent gegroeid ten opzichte van het vorige kwartaal. In de tabel staat Noord voor op Zuid, met 1200 tegen 900 eenheden.",
+            "groei van de omzet",
+            "omzet per regio",
+        )
+    } else {
+        (
+            "What happened to revenue?",
+            "Revenue grew by twelve percent compared with the previous quarter. The table shows the North region ahead of the South, with 1200 against 900 units.",
+            "revenue growth",
+            "revenue by region",
+        )
+    };
+    if let Some(t) = app.tabs.first_mut() {
+        t.ui.copilot.msgs = vec![
+            ChatMsg {
+                kind: ChatKind::User,
+                text: question.into(),
+                points: Vec::new(),
+            },
+            ChatMsg {
+                kind: ChatKind::Assistant,
+                text: answer.into(),
+                points: vec![
+                    point(
+                        "Revenue grew by twelve percent over the previous quarter",
+                        n1,
+                    ),
+                    point("North 1200 48000", n2),
+                ],
+            },
+        ];
+        t.ui.copilot.stick_bottom = true;
+    }
+    app.go_to(1);
+    for pi in 0..2 {
+        if !app.highlight_point(1, pi) {
+            eprintln!("copilot passage {pi} could not be highlighted");
+        }
+    }
+    if let Some(t) = app.tabs.first_mut() {
+        t.session.selection.annotations.clear();
+    }
+}
+
+/// A floor plan with its scale set and a few measurements on it.
+fn measure_demo(app: &mut App, page: pdf_engine::doc::PageId) {
+    use pdf_engine::geom::Point;
+    use pdf_engine::measure::{self, MeasureKind, Scale, Unit};
+    if app.tabs.first().is_none_or(|t| t.session.revision() != 0) {
+        return;
+    }
+    let scale = Scale::from_one_to(50.0, Unit::M).unwrap_or_else(|_| Scale::uncalibrated());
+    let mut set = (*app.scales_for()).clone();
+    set.document = Some(scale.clone());
+    if let Some(t) = app.tabs.first_mut() {
+        let _ = t
+            .session
+            .execute("Set scale", |tx| measure::write_scales(tx, &set));
+    }
+    let p = |x: f64, y: f64| Point::new(x, y);
+    let shapes: Vec<(MeasureKind, Vec<Point>, &str)> = vec![
+        (
+            MeasureKind::Distance,
+            vec![p(100.0, 70.0), p(700.0, 70.0)],
+            "",
+        ),
+        (
+            MeasureKind::Distance,
+            vec![p(740.0, 100.0), p(740.0, 500.0)],
+            "",
+        ),
+        (
+            MeasureKind::Area,
+            vec![
+                p(100.0, 100.0),
+                p(400.0, 100.0),
+                p(400.0, 300.0),
+                p(100.0, 300.0),
+            ],
+            "",
+        ),
+        (MeasureKind::Count, vec![p(180.0, 380.0)], "Sockets"),
+        (MeasureKind::Count, vec![p(300.0, 440.0)], "Sockets"),
+        (MeasureKind::Count, vec![p(560.0, 420.0)], "Sockets"),
+    ];
+    for (kind, pts, cat) in shapes {
+        let cat = if cat.is_empty() { "Count 1" } else { cat };
+        match measure::spec_for(kind, &pts, &scale, cat) {
+            Ok(spec) => {
+                app.add_annotation(page, spec, "demo");
+            }
+            Err(e) => eprintln!("measurement: {e}"),
+        }
+    }
+    if let Some(t) = app.tabs.first_mut() {
+        t.session.selection.annotations.clear();
     }
 }

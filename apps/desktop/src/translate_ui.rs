@@ -45,6 +45,9 @@ const LANGUAGES: &[&str] = &[
     "Hindi",
 ];
 
+/// Debug screenshots (`BERG_SHOTS`): press Translate by itself and open the translated copy when done.
+pub static DEBUG_AUTO: AtomicBool = AtomicBool::new(false);
+
 /// Page texts, the revision they belong to, and the detected language.
 type Prepared = (Arc<Vec<PageText>>, u64, Option<Detected>);
 
@@ -211,6 +214,16 @@ impl App {
                     st.error = Some(tr("The translation stopped unexpectedly.").into());
                     st.stage = Stage::Failed;
                 }
+            }
+        }
+        if cfg!(debug_assertions) && DEBUG_AUTO.load(Ordering::Relaxed) {
+            match st.stage {
+                Stage::Setup => self.start_translation(st),
+                Stage::Done => {
+                    self.open_translated_copy(st);
+                    return false;
+                }
+                _ => {}
             }
         }
         let dim = self.pal.text_dim;

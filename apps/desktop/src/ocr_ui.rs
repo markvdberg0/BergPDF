@@ -361,7 +361,7 @@ impl App {
         true
     }
 
-    fn start_ocr(&mut self, st: &OcrDialogState) -> Result<(), String> {
+    pub(crate) fn start_ocr(&mut self, st: &OcrDialogState) -> Result<(), String> {
         let ti = self.active;
         let selected = self.selected_pages();
         let tab = self.tabs.get_mut(ti).ok_or(tr("No document is open."))?;
