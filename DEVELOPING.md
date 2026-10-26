@@ -158,9 +158,10 @@ write release notes in the draft and publish it. Installed copies that allowed t
 ## Adding or fixing a translation
 
 Texts are written in English in the code as `tr("…")` or `tf!("… {} …", value)`. The translations are the lists in
-`apps/desktop/src/i18n/nl.rs` and `de.rs` (`("English text", "translation")`, same number of `{}` in both). To fix a
+`apps/desktop/src/i18n/nl.rs`, `de.rs` and `zh.rs` (`("English text", "translation")`, same number of `{}` in both). To fix a
 translation edit its line; to add a language add a catalog file, a `Lang` variant and a `Language` choice in
-`crates/editor-core/src/prefs.rs`. `cargo test -p bergpdf i18n` lists texts that are missing
+`crates/editor-core/src/prefs.rs` (a script other than Latin also needs an installed font with its characters, see
+`theme::install_cjk_fallback`). `cargo test -p bergpdf i18n` lists texts that are missing
 (`BERG_DUMP_MISSING=nl cargo test -p bergpdf every_text -- --nocapture`). Keep ribbon labels short; long words wrap
 badly in the toolbar.
 

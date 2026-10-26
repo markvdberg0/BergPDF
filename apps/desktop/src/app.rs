@@ -29,6 +29,7 @@ impl App {
         std::thread::spawn(move || {
             let n = pdf_engine::sysfonts::scan_and_register();
             tracing::info!("{n} installed font families found");
+            theme::install_cjk_fallback(&repaint);
             repaint.request_repaint();
         });
         let mut prefs = platform::dirs::read_text(&platform::dirs::prefs_file())

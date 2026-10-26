@@ -110,6 +110,8 @@ pub enum Language {
     English,
     Dutch,
     German,
+    /// Chinese, simplified characters.
+    Chinese,
 }
 
 /// Whether BergPDF may look for a newer published version on its own.
@@ -470,8 +472,8 @@ pub static SETTINGS: &[SettingInfo] = &[
     SettingInfo {
         key: "language",
         title: "Language",
-        description: "Interface language: English, Nederlands or Deutsch (or follow the system).",
-        keywords: "language taal sprache dutch nederlands german deutsch english translate interface",
+        description: "Interface language: English, Nederlands, Deutsch or 简体中文 (or follow the system).",
+        keywords: "language taal sprache dutch nederlands german deutsch chinese 中文 zhongwen english translate interface",
     },
     SettingInfo {
         key: "updates",
