@@ -12,7 +12,7 @@ Why it is built this way: [`DECISIONS.md`](DECISIONS.md) D-034.
   check off** (no start-up question, no "Update available", no *Check for Updates…*, no *Updates* preference): the
   Store updates it, and Store policy forbids pointing people to another download. Nothing else differs.
 * The manifest registers BergPDF as a handler for `.pdf` ("Open with", Default apps) and declares one capability,
-  `runFullTrust` (see below). Languages listed: English, Dutch, German. Minimum Windows: 10 version 1809; x64 only.
+  `runFullTrust` (see below). Languages listed: English, Dutch, German, Simplified Chinese. Minimum Windows: 10 version 1809; x64 only.
 * `.github/workflows/release.yml` builds the package on every release run and keeps it as the workflow artefact
   `store-package` (not on the GitHub release: it is unsigned and cannot be installed outside the Store).
 * [`PRIVACY.md`](../PRIVACY.md) is the privacy policy the Store listing needs.
@@ -85,7 +85,7 @@ the automated tests the Store runs too.
 * **Age ratings:** answer the questionnaire (no user-generated content shared between users, no purchases, no
   location; the AI features send text to a provider chosen by the user).
 * **Packages:** upload the `.msix`. Partner Center reads the manifest and shows the languages.
-* **Store listing** (per language; Dutch and German match the interface languages): name, description, 1-3 screenshots
+* **Store listing** (per language; Dutch and German match the interface languages; there is no Chinese listing text yet): name, description, 1-3 screenshots
   (at least 1366×768; `docs/screenshots/` has candidates), the logo is taken from the package. Suggested description
   (English):
 

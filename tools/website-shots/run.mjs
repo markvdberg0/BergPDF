@@ -1,9 +1,9 @@
 // Draws the screens of the website's feature pages with the app's debug screenshot mode (see README.md),
-// in English and Dutch, light and dark.
+// in English and Dutch, light and dark (Chinese only when asked for).
 //
 //   node tools/website-shots/run.mjs [variant ...] [-- job ...]
 //
-// variants: en-Light en-Dark nl-Light nl-Dark (none = all); jobs: names in JOBS below (none = all).
+// variants: en-Light en-Dark nl-Light nl-Dark zh-Light zh-Dark (none = the English and Dutch ones); jobs: names in JOBS below (none = all).
 // Settings come from the environment, see README.md.
 import { spawn, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
@@ -39,13 +39,13 @@ const JOBS = [
   { out: 'forms-policy', scenario: 'forms_policy', doc: 'form_rich.pdf' },
   { out: 'crash-recovery', scenario: 'recovery', doc: 'report-chromium.pdf' },
 ];
-const LANG = { en: 'English', nl: 'Dutch' };
+const LANG = { en: 'English', nl: 'Dutch', zh: 'Chinese' };
 
 const argv = process.argv.slice(2);
 const cut = argv.indexOf('--');
 const [vArgs, jArgs] = cut < 0 ? [argv, []] : [argv.slice(0, cut), argv.slice(cut + 1)];
 const variants = [];
-for (const l of ['en', 'nl']) for (const t of ['Light', 'Dark']) if (!vArgs.length || vArgs.includes(`${l}-${t}`)) variants.push([l, t]);
+for (const l of ['en', 'nl', 'zh']) for (const t of ['Light', 'Dark']) if (vArgs.length ? vArgs.includes(`${l}-${t}`) : l !== 'zh') variants.push([l, t]);
 const jobs = JOBS.filter((j) => !jArgs.length || jArgs.includes(j.out));
 
 const prefs = (lang, theme, mock) => `theme = "${theme}"
