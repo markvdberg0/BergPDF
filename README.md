@@ -7,6 +7,8 @@
 Edit, annotate, sign, measure, fill in forms and make scans searchable. Offline, no account, no tracking.</p>
 
 <p align="center">
+  <a href="https://bergpdf.com">Website</a> ·
+  <a href="https://apps.microsoft.com/detail/9NQMJG46Q8Q3">Microsoft Store</a> ·
   <a href="../../releases">Download</a> ·
   <a href="#features">Features</a> ·
   <a href="#install">Install</a> ·
@@ -84,16 +86,22 @@ your file, and warnings instead of silent changes.
 
 ## Install
 
-Download the installer for your system from the **[Releases](../../releases)** page and check its SHA-256 sum
+More about BergPDF, with screenshots of every feature, is on **[bergpdf.com](https://bergpdf.com)**.
+
+**Windows:** get BergPDF from the **[Microsoft Store](https://apps.microsoft.com/detail/9NQMJG46Q8Q3)**. The Store
+copy is signed by Microsoft, installs without a warning and is kept up to date by the Store.
+
+Or download the installer for your system from the **[Releases](../../releases)** page and check its SHA-256 sum
 against `SHA256SUMS.txt`.
 
 | System | Download | Notes |
 |---|---|---|
-| **Windows 11** (x86-64) | `BergPDF_…-setup.exe` | Installs for your user, no administrator rights needed. The installer asks whether to download the OCR models. |
+| **Windows 11** (x86-64) | [Microsoft Store](https://apps.microsoft.com/detail/9NQMJG46Q8Q3) or `BergPDF_…-setup.exe` | The setup file installs for your user, no administrator rights needed, and asks whether to download the OCR models. |
 | **macOS** (Apple Silicon) | `BergPDF_….dmg` | Drag BergPDF to Applications. |
 | **Linux** (x86-64) | `bergpdf_…_amd64.deb` | `sudo apt install ./bergpdf_…_amd64.deb`. Needs an X11 or Wayland desktop with Vulkan or OpenGL. |
 
-**About the first start.** BergPDF is a young project and the installers are **not code-signed** yet. Windows
+**About the first start.** BergPDF is a young project and the installers on the Releases page are **not code-signed**
+yet (the Microsoft Store copy is). Windows
 SmartScreen ("Windows protected your PC": choose *More info → Run anyway*) and macOS Gatekeeper
 (right-click the app, choose *Open*) will therefore warn you the first time. Verify the checksum and, if you
 prefer, [build it yourself](DEVELOPING.md).
