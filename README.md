@@ -106,10 +106,10 @@ SmartScreen ("Windows protected your PC": choose *More info → Run anyway*) and
 (right-click the app, choose *Open*) will therefore warn you the first time. Verify the checksum and, if you
 prefer, [build it yourself](DEVELOPING.md).
 
-**OCR models.** Text recognition needs two small model files (about 12 MB). Say yes in the Windows installer, or
+**OCR models.** Text recognition needs two small model files (about 10 MB). Say yes in the Windows installer, or
 use *Download the OCR models* the first time you run OCR; they are fetched once, checked against a fixed
-checksum and stored in your user folder. OCR currently recognises the basic Latin alphabet (accented letters are
-lost) and works best on straight, printed text.
+checksum and stored in your user folder. OCR reads the Latin script, including the accented letters of Dutch, German,
+French and most other European languages (é, ë, ü, ß, ç, …), and works best on straight, printed text.
 
 **If resizing or zooming feels slow on Windows**, open *Preferences ▸ Graphics* to see which graphics adapter is
 used and to try another drawing API.

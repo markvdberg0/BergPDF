@@ -75,7 +75,7 @@ fn download_models(
     cancel: &AtomicBool,
 ) -> Result<(), String> {
     let mut done_before = 0u64;
-    for (name, sha) in pdf_ocr::MODEL_SOURCES {
+    for (name, url, sha) in pdf_ocr::MODEL_SOURCES {
         let dest = dir.join(name);
         if ai_client::download::file_matches(&dest, sha) {
             continue;
@@ -83,7 +83,7 @@ fn download_models(
         let base = done_before;
         let last = std::sync::atomic::AtomicU64::new(0);
         ai_client::download::fetch_verified(
-            &format!("{}{name}", pdf_ocr::MODEL_BASE_URL),
+            url,
             sha,
             &dest,
             &|got, tot| {
@@ -220,12 +220,7 @@ impl App {
             }
         }
         let dir = model_dir();
-        let host = pdf_ocr::MODEL_BASE_URL
-            .split("://")
-            .nth(1)
-            .unwrap_or("")
-            .trim_end_matches('/')
-            .to_string();
+        let host = pdf_ocr::model_hosts().join(" + ");
         modal(ctx, "ocr_dialog", |ui| {
             ui.heading(tr("Recognize text (OCR)"));
             ui.label(
@@ -255,7 +250,7 @@ impl App {
                     }
                     None => {
                         ui.label(
-                            RichText::new(tf!("One click installs them: BergPDF will connect to {}, download the two model files (about 12 MB) and check them against built-in checksums. Nothing else is sent. After that OCR works offline.", host))
+                            RichText::new(tf!("One click installs them: BergPDF will connect to {}, download the two model files (about 10 MB) and check them against built-in checksums. Nothing else is sent. After that OCR works offline.", host))
                             .size(12.0),
                         );
                         if crate::ui_kit::primary_button(ui, tr("Download the OCR models"))

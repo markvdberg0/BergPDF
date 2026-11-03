@@ -1,6 +1,6 @@
 # BergPDF privacy policy
 
-*Last changed: 2026-10-07 (version 0.2.2). The Microsoft Store listing links to this page.*
+*Last changed: 2026-11-02 (after version 0.3.0). The Microsoft Store listing links to this page.*
 
 BergPDF is a PDF editor that works on your own computer. The short version: **your documents stay on your computer,
 there is no account and there is no telemetry.** The details:
@@ -29,7 +29,7 @@ Only in these cases, and only when you ask for it:
 | Feature | When | Where it connects | What is sent |
 |---|---|---|---|
 | **PDF Copilot** and **Translate** (optional) | Only when you press a button, and only after a one-time consent for the provider you chose | OpenAI, Anthropic, or a server address you typed yourself (for example a model running on your own machine) | The question and the text of the pages needed to answer it, with your own API key. The consent dialog states what is sent. What the provider does with it is governed by *their* privacy policy and your agreement with them. |
-| **OCR models** (optional) | When you press *Download* in the OCR dialog | `ocrs-models.s3-accelerate.amazonaws.com` (the model author's public host) | A normal download request. Nothing about you or your documents. The files are checked against a fixed checksum and thrown away if it does not match. |
+| **OCR models** (optional) | When you press *Download* in the OCR dialog | `ocrs-models.s3-accelerate.amazonaws.com` (the text-detection model author's public host) and `huggingface.co` (the text-recognition model) | A normal download request. Nothing about you or your documents. The files are checked against a fixed checksum and thrown away if it does not match. |
 | **Update check** (not in the Microsoft Store version) | Only if you allowed it, or when you press *Check for Updates* | `api.github.com` | The program name and version number, plus what any web request contains (such as your IP address). |
 | **Links** | When you click a link in a document and confirm | The page you opened, in your web browser | Nothing from BergPDF. |
 

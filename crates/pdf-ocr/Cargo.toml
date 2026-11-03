@@ -9,7 +9,10 @@ publish.workspace = true
 
 [dependencies]
 ocrs = "0.13"
-rten = "0.26"
+# `onnx_format`: the Latin recognition model is an ONNX file (read by rten's own pure-Rust parser).
+rten = { version = "0.26", features = ["onnx_format"] }
+rten-imageproc = "0.26"
+rten-tensor = "0.26"
 thiserror.workspace = true
 
 [lints]

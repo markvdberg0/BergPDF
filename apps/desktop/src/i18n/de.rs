@@ -1087,8 +1087,8 @@ pub static ENTRIES: &[(&str, &str)] = &[
         "Offline zuerst. Kein Konto, keine Telemetrie, kein Netzwerkzugriff für die eigentliche Bearbeitung.",
     ),
     (
-        "One click installs them: BergPDF will connect to {}, download the two model files (about 12 MB) and check them against built-in checksums. Nothing else is sent. After that OCR works offline.",
-        "Mit einem Klick installiert: BergPDF verbindet sich mit {}, lädt die beiden Modelldateien (etwa 12 MB) herunter und prüft sie anhand eingebauter Prüfsummen. Es wird sonst nichts gesendet. Danach funktioniert OCR offline.",
+        "One click installs them: BergPDF will connect to {}, download the two model files (about 10 MB) and check them against built-in checksums. Nothing else is sent. After that OCR works offline.",
+        "Mit einem Klick installiert: BergPDF verbindet sich mit {}, lädt die beiden Modelldateien (etwa 10 MB) herunter und prüft sie anhand eingebauter Prüfsummen. Es wird sonst nichts gesendet. Danach funktioniert OCR offline.",
     ),
     (
         "Only this text run is edited — there is no paragraph reflow.",
