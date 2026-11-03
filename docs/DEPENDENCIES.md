@@ -95,7 +95,7 @@ a legal notice bundle. This file covers what a human has to look at.
   external review; correctness is checked against poppler `pdfsig` and OpenSSL on generated files.
   Key material is held only in memory while signing; the password field is cleared when the dialog
   closes. Certificates are not trusted or validated by BergPDF.
-* **OCR models** (`text-detection.rten` 2.4 MB, `latin-recognition.onnx` 7.5 MB; SHA-256 pinned in
+* **OCR models** (`text-detection.onnx` 2.4 MB, `latin-recognition.onnx` 7.5 MB; SHA-256 pinned in
   `crates/pdf-ocr/src/lib.rs`). The recognition model is PaddleOCR's `latin_PP-OCRv5_mobile_rec`
   (**Apache-2.0**, redistribution allowed with the notice), as converted to ONNX by
   https://huggingface.co/monkt/paddleocr-onnx; its character list is compiled in
@@ -105,6 +105,11 @@ a legal notice bundle. This file covers what a human has to look at.
   sandbox). They are not committed. The app can download them (verified) and `cargo xtask dist --with-ocr-models`
   can bundle them; whether redistributing them is allowed is the owner's decision (D-023). The attribution
   text shipped with them is `pdf_ocr::MODEL_NOTICE` (written to `NOTICE-OCR.txt`).
+  **Change of source, 2026-11-03 (D-040).** The author's host stopped serving the `.rten`
+  detection file (HTTP 403). The app now downloads the same author's `text-detection.onnx` from
+  the same host, with a new pinned SHA-256 (`a917b23d…`); the OCR tests give the same results.
+  The author warns that these addresses may change (possibly to Hugging Face), so a future
+  download failure may again need a new pin or our own copy of the files.
 * Test certificates in `crates/pdf-sign/tests/fixtures` are throw-away keys published on purpose.
 
 ## Policy
