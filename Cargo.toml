@@ -3,6 +3,7 @@ resolver = "3"
 members = [
     "crates/ai-client",
     "crates/pdf-ocr",
+    "crates/pdf-js",
     "crates/pdf-sign",
     "apps/desktop",
     "crates/brand",
@@ -16,6 +17,7 @@ members = [
 default-members = [
     "crates/ai-client",
     "crates/pdf-ocr",
+    "crates/pdf-js",
     "crates/pdf-sign",
     "apps/desktop",
     "crates/brand",
@@ -55,6 +57,7 @@ test-support = { path = "crates/test-support" }
 brand = { path = "crates/brand" }
 pdf-sign = { path = "crates/pdf-sign" }
 pdf-ocr = { path = "crates/pdf-ocr" }
+pdf-js = { path = "crates/pdf-js" }
 printing = { path = "crates/printing" }
 ai-client = { path = "crates/ai-client" }
 

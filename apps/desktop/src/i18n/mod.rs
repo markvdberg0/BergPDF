@@ -313,6 +313,9 @@ mod tests {
         ] {
             v.push(p.title());
         }
+        for st in pdf_engine::pagelabels::LabelStyle::ALL {
+            v.push(st.title());
+        }
         for p in [
             AiProvider::OpenAi,
             AiProvider::Anthropic,

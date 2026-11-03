@@ -30,7 +30,8 @@ own output.
 | Continuous / single / facing layout, zoom, fit width/page, view rotation | Implemented | `editor_core::view` unit tests; manual GUI |
 | Tiled, cached, cancellable rendering (hayro) with placeholders | Implemented | `editor_core::jobs`, `tiles` tests; manual GUI |
 | Thumbnails (sidebar) with drag-to-reorder | Implemented | manual GUI |
-| Bookmarks / outline panel (named destinations resolved) | Implemented (read-only) | `pdf_engine::nav`; no outline *editing* |
+| Bookmarks / outline panel (named destinations resolved) | Implemented | `pdf_engine::nav` |
+| **Bookmark editing**: add (Ctrl+B, the selected text becomes the title), add sub-bookmark, rename (double-click), delete, move up/down, indent/outdent, point at the current page; one undoable step each | Implemented | `outline` unit test, `m17_outline` (written tree read back by the viewer's reader, `Count`s, untouched destinations kept byte-for-byte, removal); GUI panel not driven headless |
 | Internal and external links (external always asks first) | Implemented | `nav` tests; manual GUI |
 | Text selection, copy | Implemented | `pdf_engine::text` tests; manual GUI |
 | Search (ligature-aware, all pages, cancellable) | Implemented | `text` tests; 1000-page timing in `PERFORMANCE.md` |
@@ -47,7 +48,8 @@ own output.
 | Highlight, underline, strikeout, squiggly | Implemented | `m0_roundtrip`, annot unit tests; oracle render |
 | Sticky note, text box, callout | Implemented | `m0_roundtrip`; GUI |
 | Rectangle, ellipse, line, arrow, polygon, polyline, pencil | Implemented | annot tests; GUI |
-| Text stamp | Implemented | stamp text limited to the bundled font’s glyphs; no image/dynamic stamps |
+| Text stamp | Implemented | stamp text limited to the bundled font’s glyphs |
+| **Dynamic stamps**: a second line with `{author}`, `{date}`, `{time}` filled in when placed; standard Approved / Reviewed / Received stamps with name and time, Draft, Final, Confidential | Implemented | `stamps` unit tests, `m18_dynamic_stamp` (two-line appearance read by poppler, label survives saving); local time from the OS (UTC fallback); GUI not driven headless |
 | Select, move, resize, duplicate, delete, edit properties | Implemented | GUI; undo tests in `editor_core::session` |
 | Comments panel | Implemented | no reply threads, status or filtering by author |
 | Existing foreign annotations preserved | Implemented | `existing_annotations` fixture, `m0_roundtrip` |
@@ -60,10 +62,12 @@ own output.
 | Rotate, delete, insert blank, reorder, duplicate pages | Implemented | `pdf_engine::pageops` tests, `m0_roundtrip`; GUI |
 | Extract pages to a new file / merge documents | Implemented | `m4_forms` (import), GUI duplicate flow; merge file dialog not GUI-verified |
 | Dead bookmarks/links removed when pages are deleted | Implemented | `pageops` tests |
-| Crop box editing | Partial | engine `set_crop_box` exists and is tested; **no UI** |
+| Crop box editing: Crop Pages dialog (margins in mm on the page as shown, live preview), Crop tool (drag the area to keep), Remove crop | Implemented | `m16_pagemarks::page_labels_round_trip_and_crop_boxes…`; dialog/tool not driven headless |
 | Document properties: title, author, subject, keywords (XMP is *not* updated; the dialog says so) | Implemented | `m4_meta_export` (poppler `pdfinfo` reads the values); GUI |
 | Export current page as PNG (150 dpi, reduced for huge pages, rendered off the UI thread) | Implemented | engine: `m4_meta_export`; the native save dialog was not exercised headless |
-| Page labels / numbering, headers, footers, watermarks | Planned | |
+| **Headers & footers** (six slots, `{page}` `{pages}` `{label}` `{date}` `{file}` `{bates}`), **Bates numbering** (prefix, start, digits, suffix), **watermarks** (text or picture, opacity, angle, behind or on top), on all / this / a range of pages; removable again | Implemented | `pagemarks` unit tests, `m16_pagemarks` (5 tests: text where expected on a page turned 90°, centred, extractable by the engine and poppler; removal restores the original content streams; picture watermark; refusals). Only marks made by BergPDF can be removed (D-041) |
+| **Page labels** (i, ii, iii / A-1 …; ranges, prefix, start) shown in the thumbnails | Implemented | `pagelabels` unit tests, `m16_pagemarks` round trip |
+| **Compare documents**: text of two versions diffed word by word; a copy of the newer version opens with inserted (green), replaced (orange, "Was: …") and deleted (red notes) text marked, listed in the comments panel | Implemented | `compare` unit test, `m20_compare` (real PDFs: replacement, insertion and deletion found and marked; identical versions give nothing). Text only: pictures, layout and styles are not compared; scans need OCR first |
 | Split by size/bookmarks, batch operations | Planned | |
 
 ## Content editing (changes the page’s real content stream)
@@ -87,8 +91,9 @@ own output.
 | Field highlighting; Forms ribbon tab only when a form exists | Implemented | GUI screenshot |
 | Flatten all form fields in the document (confirmation first; values without a stored appearance are drawn before baking) | Implemented | `m4_forms::flatten_document…` (poppler render); GUI + `pdfinfo` reports `Form: none` |
 | Page duplicate/extract/merge policy: **Independent / Linked / Flatten** with dialog | Implemented | `m4_forms` (6 tests incl. name collisions, shared radio group, flatten render); GUI dialog |
-| XFA, JavaScript, calculations | Detected, **never executed** | `m4_forms::xfa_and_javascript_are_detected_never_executed` |
-| Form creation / field design | Planned | |
+| XFA | Detected, **never executed** | `m4_forms::xfa_and_javascript_are_detected_never_executed` |
+| **Form JavaScript**: keystroke, validate, calculate (in `/CO` order) and format scripts, button actions, document-level scripts; Acrobat API subset (`getField`, `event`, `app.alert`, `util.printf/printd/scand`, `AFNumber/Percent/Date/Time/Special_*`, `AFSimple_Calculate`, `AFRange_Validate`); runs only when allowed (Ask / Always / Never) | Implemented, **sandboxed** (D-040) | `pdf-js` 5 tests (invoice totals with decimal commas and € formats, refused values with Acrobat's messages, buttons changing values/flags, `submitForm`/`launchURL` blocked, dates, reset, no `require`/`fetch`/`process`, endless loop and runaway recursion stopped without changes). Not run: open/page/annotation actions, XFA. Never run against real-world Acrobat forms in this sandbox; GUI flows not driven headless |
+| **Form creation**: text field, check box, radio group, drop-down, list box, button (reset or script), signature field; Edit Fields tool (select, move, resize, delete, properties); properties with name, tooltip, required/read-only/hidden, options, export value, font size, colours, alignment; calculation/format/validation builders writing standard `AF…` scripts; Document JavaScript editor | Implemented | `m19_form_create` (3 tests: every kind read back as itself after saving, appearances read by poppler, filling works, rename/flags/scripts/`/CO`, move, delete, document scripts round trip); GUI not driven headless |
 | Existing signature fields | Displayed; signed documents warn on open | see the Signing section for what can be checked |
 
 ## Measurement and quantity take-off

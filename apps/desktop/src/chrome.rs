@@ -8,7 +8,7 @@ use crate::tf;
 use crate::theme;
 use editor_core::command::CommandId as C;
 use editor_core::prefs::{Density, Workspace};
-use editor_core::tools::Tool;
+use editor_core::tools::{Tool, ToolFamily};
 use editor_core::view::{ViewMode, ZoomMode};
 use egui::{Color32, Rect, RichText, Sense, Vec2};
 
@@ -47,6 +47,15 @@ fn tool_icon(t: Tool) -> Icon {
         Tool::PlaceSignature => Icon::Signature,
         Tool::SignArea => Icon::Rect,
         Tool::Redact => Icon::Redact,
+        Tool::Crop => Icon::Crop,
+        Tool::FieldText => Icon::FieldText,
+        Tool::FieldCheckbox => Icon::FieldCheck,
+        Tool::FieldRadio => Icon::FieldRadio,
+        Tool::FieldCombo => Icon::FieldCombo,
+        Tool::FieldList => Icon::FieldList,
+        Tool::FieldButton => Icon::FieldButton,
+        Tool::FieldSignature => Icon::FieldSign,
+        Tool::FormDesign => Icon::FormDesign,
     }
 }
 
@@ -109,6 +118,15 @@ pub fn command_icon(c: C) -> Icon {
         C::PageMoveUp => Icon::ArrowUp,
         C::PageMoveDown => Icon::ArrowDown,
         C::DocumentMerge => Icon::Merge,
+        C::PageHeaderFooter | C::PageBates => Icon::HeaderFooter,
+        C::PageWatermark => Icon::Watermark,
+        C::PageRemoveMarks => Icon::Trash,
+        C::PageLabels => Icon::PageLabel,
+        C::PageCrop => Icon::Crop,
+        C::BookmarkAdd => Icon::BookmarkAdd,
+        C::DocumentCompare => Icon::Compare,
+        C::FormScripts | C::DocumentJavaScript => Icon::Script,
+        C::FormCalculateNow => Icon::Calibrate,
         _ => Icon::Page,
     }
 }
@@ -300,7 +318,8 @@ impl App {
             let mut v = vec![(RibbonTab::File, tr("File")), (RibbonTab::Home, tr("Home"))];
             v.push((RibbonTab::Edit, tr("Edit")));
             v.push((RibbonTab::Comment, tr("Comment")));
-            if has_form {
+            // Filling is for documents with a form; making one is always possible in Professional.
+            if has_form || !essential || self.tool.family() == ToolFamily::Form {
                 v.push((RibbonTab::Forms, tr("Forms")));
             }
             v.push((RibbonTab::Sign, tr("Sign")));
@@ -406,11 +425,20 @@ impl App {
                 }
                 RibbonTab::Forms => {
                     self.group(ui, tr("Fill"), |s, ui| s.cmds(ui, ctx, &[C::ToolFillForm]));
+                    self.group(ui, tr("Prepare"), |s, ui| {
+                        s.cmds(ui, ctx, &[C::ToolFormDesign, C::ToolFieldText, C::ToolFieldCheckbox, C::ToolFieldRadio, C::ToolFieldCombo, C::ToolFieldList, C::ToolFieldButton, C::ToolFieldSignature])
+                    });
+                    self.group(ui, tr("Scripts"), |s, ui| s.cmds(ui, ctx, &[C::FormScripts, C::FormCalculateNow, C::DocumentJavaScript]));
                     self.group(ui, tr("Finish"), |s, ui| s.cmds(ui, ctx, &[C::FormFlatten]));
                     let n = self.form_for().fields.len();
+                    let note = if self.scripts_allowed() {
+                        tf!("{} form field(s). Scripts of this form run (Form Scripts to change).", n)
+                    } else {
+                        tf!("{} form field(s). Scripts of this form do not run (Form Scripts to allow).", n)
+                    };
                     ui.vertical(|ui| {
                         ui.add_space(6.0);
-                        ui.label(RichText::new(tf!("{} form field(s). Click a field to fill it.\nScripts and calculations are never run.", n)).size(11.0).color(s_dim(&self.pal)));
+                        ui.label(RichText::new(note).size(11.0).color(s_dim(&self.pal)));
                     });
                 }
                 RibbonTab::Sign => {
@@ -448,7 +476,9 @@ Applying cannot be undone: the page becomes a picture with black boxes.")).size(
                 RibbonTab::Organize => {
                     self.group(ui, tr("Pages"), |s, ui| s.cmds(ui, ctx, &[C::PageRotateCounterClockwise, C::PageRotateClockwise, C::PageInsertBlank, C::PageInsertImage, C::PageDuplicate, C::PageDelete]));
                     self.group(ui, tr("Order"), |s, ui| s.cmds(ui, ctx, &[C::PageMoveUp, C::PageMoveDown]));
-                    self.group(ui, tr("Documents"), |s, ui| s.cmds(ui, ctx, &[C::PageExtract, C::DocumentMerge]));
+                    self.group(ui, tr("Documents"), |s, ui| s.cmds(ui, ctx, &[C::PageExtract, C::DocumentMerge, C::DocumentCompare]));
+                    self.group(ui, tr("Page marks"), |s, ui| s.cmds(ui, ctx, &[C::PageHeaderFooter, C::PageBates, C::PageWatermark, C::PageRemoveMarks]));
+                    self.group(ui, tr("Page setup"), |s, ui| s.cmds(ui, ctx, &[C::PageLabels, C::PageCrop, C::ToolCrop]));
                 }
                 RibbonTab::View => {
                     self.group(ui, tr("Zoom"), |s, ui| s.cmds(ui, ctx, &[C::ViewZoomIn, C::ViewZoomOut, C::ViewZoomActual, C::ViewFitPage, C::ViewFitWidth]));
@@ -567,6 +597,10 @@ Applying cannot be undone: the page becomes a picture with black boxes.")).size(
         ui.horizontal(|ui| {
             let hint = if self.tabs.is_empty() {
                 tr("Open a PDF or image to begin").to_string()
+            } else if self.tool == Tool::FormDesign
+                && let Some(h) = self.selected_field_hint()
+            {
+                h
             } else {
                 tr(self.tool.hint()).to_string()
             };
@@ -849,6 +883,19 @@ fn ribbon_label(id: C, title: &'static str) -> &'static str {
         C::PageMoveDown => tr("Move Down"),
         C::PageExtract => tr("Extract"),
         C::DocumentMerge => tr("Merge"),
+        C::DocumentCompare => tr("Compare"),
+        C::PageHeaderFooter => tr("Header & Footer"),
+        C::PageBates => tr("Bates"),
+        C::PageWatermark => tr("Watermark"),
+        C::PageRemoveMarks => tr("Remove Marks"),
+        C::PageLabels => tr("Page Labels"),
+        C::PageCrop => tr("Crop Pages"),
+        C::ToolCrop => tr("Crop Tool"),
+        C::BookmarkAdd => tr("Add Bookmark"),
+        C::ToolFormDesign => tr("Edit Fields"),
+        C::FormScripts => tr("Scripts"),
+        C::FormCalculateNow => tr("Calculate"),
+        C::DocumentJavaScript => tr("Document JS"),
         C::ToolMeasurePerimeter => tr("Path Length"),
         C::ToolMeasureDistance => tr("Distance"),
         C::ToolMeasureRect => tr("Rectangle"),

@@ -395,6 +395,7 @@ fn apply(app: &mut App, ctx: &egui::Context, name: &str) {
                         kind: StampKind::Text {
                             label: "BETAALD".into(),
                             color: [0.1, 0.5, 0.2],
+                            detail: String::new(),
                         },
                     });
                     let _ = app.stamps.add(StampDef {

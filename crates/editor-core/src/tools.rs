@@ -59,6 +59,24 @@ pub enum Tool {
     Calibrate,
     /// Drag an area to mark it for redaction.
     Redact,
+    /// Drag the area of a page to keep (crop box).
+    Crop,
+    /// Draw a new text field.
+    FieldText,
+    /// Draw a new check box.
+    FieldCheckbox,
+    /// Draw a new radio button.
+    FieldRadio,
+    /// Draw a new drop-down list.
+    FieldCombo,
+    /// Draw a new list box.
+    FieldList,
+    /// Draw a new push button.
+    FieldButton,
+    /// Draw a new signature field.
+    FieldSignature,
+    /// Select, move and edit form fields.
+    FormDesign,
 }
 
 /// Family a tool belongs to.
@@ -84,7 +102,16 @@ impl Tool {
         match self {
             Tool::Select | Tool::Hand | Tool::TextSelect => ToolFamily::Navigate,
             Tool::EditText | Tool::AddText | Tool::AddImage => ToolFamily::PageContent,
-            Tool::FillForm => ToolFamily::Form,
+            Tool::FillForm
+            | Tool::FieldText
+            | Tool::FieldCheckbox
+            | Tool::FieldRadio
+            | Tool::FieldCombo
+            | Tool::FieldList
+            | Tool::FieldButton
+            | Tool::FieldSignature
+            | Tool::FormDesign => ToolFamily::Form,
+            Tool::Crop => ToolFamily::PageContent,
             Tool::MeasureDistance
             | Tool::MeasurePerimeter
             | Tool::MeasureArea
@@ -135,6 +162,15 @@ impl Tool {
             CommandId::ToolPlaceSignature => Tool::PlaceSignature,
             CommandId::ToolSignArea => Tool::SignArea,
             CommandId::ToolRedact => Tool::Redact,
+            CommandId::ToolCrop => Tool::Crop,
+            CommandId::ToolFieldText => Tool::FieldText,
+            CommandId::ToolFieldCheckbox => Tool::FieldCheckbox,
+            CommandId::ToolFieldRadio => Tool::FieldRadio,
+            CommandId::ToolFieldCombo => Tool::FieldCombo,
+            CommandId::ToolFieldList => Tool::FieldList,
+            CommandId::ToolFieldButton => Tool::FieldButton,
+            CommandId::ToolFieldSignature => Tool::FieldSignature,
+            CommandId::ToolFormDesign => Tool::FormDesign,
             _ => return None,
         })
     }
@@ -175,6 +211,15 @@ impl Tool {
             Tool::PlaceSignature => CommandId::ToolPlaceSignature,
             Tool::SignArea => CommandId::ToolSignArea,
             Tool::Redact => CommandId::ToolRedact,
+            Tool::Crop => CommandId::ToolCrop,
+            Tool::FieldText => CommandId::ToolFieldText,
+            Tool::FieldCheckbox => CommandId::ToolFieldCheckbox,
+            Tool::FieldRadio => CommandId::ToolFieldRadio,
+            Tool::FieldCombo => CommandId::ToolFieldCombo,
+            Tool::FieldList => CommandId::ToolFieldList,
+            Tool::FieldButton => CommandId::ToolFieldButton,
+            Tool::FieldSignature => CommandId::ToolFieldSignature,
+            Tool::FormDesign => CommandId::ToolFormDesign,
         }
     }
 
@@ -222,6 +267,19 @@ impl Tool {
             Tool::SignArea => "Drag the rectangle where the digital signature will be shown.",
             Tool::Redact => {
                 "Drag over what must be removed. Nothing is deleted until you apply the redactions."
+            }
+            Tool::Crop => "Drag the part of the page you want to keep.",
+            Tool::FieldText
+            | Tool::FieldCheckbox
+            | Tool::FieldRadio
+            | Tool::FieldCombo
+            | Tool::FieldList
+            | Tool::FieldButton
+            | Tool::FieldSignature => {
+                "Drag a box where the field goes; a click gives it a standard size."
+            }
+            Tool::FormDesign => {
+                "Click a field to select it, drag to move it, double-click for its properties, Delete removes it."
             }
         }
     }

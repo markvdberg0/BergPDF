@@ -17,6 +17,7 @@ editor-core.workspace = true
 platform.workspace = true
 brand.workspace = true
 pdf-ocr.workspace = true
+pdf-js.workspace = true
 ai-client.workspace = true
 printing.workspace = true
 png = "0.18"
@@ -24,6 +25,8 @@ eframe = "0.36"
 egui = "0.36"
 tracing.workspace = true
 sys-locale = "0.3"
+# The local date and time for dynamic stamps.
+time = { version = "0.3", default-features = false, features = ["std", "local-offset"] }
 tracing-subscriber = { version = "0.3", default-features = false, features = ["fmt", "env-filter"] }
 
 [target.'cfg(windows)'.build-dependencies]

@@ -113,6 +113,26 @@ pub enum CommandId {
     PageMoveUp,
     PageMoveDown,
     DocumentMerge,
+    PageHeaderFooter,
+    PageBates,
+    PageWatermark,
+    PageRemoveMarks,
+    PageLabels,
+    PageCrop,
+    ToolCrop,
+    BookmarkAdd,
+    DocumentCompare,
+    ToolFieldText,
+    ToolFieldCheckbox,
+    ToolFieldRadio,
+    ToolFieldCombo,
+    ToolFieldList,
+    ToolFieldButton,
+    ToolFieldSignature,
+    ToolFormDesign,
+    FormScripts,
+    FormCalculateNow,
+    DocumentJavaScript,
     NextTab,
     PreviousTab,
     Escape,
@@ -1170,6 +1190,166 @@ pub static REGISTRY: &[CommandInfo] = &[
         "Append pages from other PDF files",
         C::Organize,
         "combine join",
+        []
+    ),
+    cmd!(
+        Id::PageHeaderFooter,
+        "Header & Footer…",
+        "Add page numbers, dates or other text at the top and bottom of pages",
+        C::Organize,
+        "header footer page number numbering date running head",
+        []
+    ),
+    cmd!(
+        Id::PageBates,
+        "Bates Numbering…",
+        "Number every page with a prefix and a running number, for legal and archive files",
+        C::Organize,
+        "bates legal number stamp exhibit",
+        []
+    ),
+    cmd!(
+        Id::PageWatermark,
+        "Watermark…",
+        "Put a text or a picture across pages, behind or on top of the content",
+        C::Organize,
+        "watermark confidential draft background logo",
+        []
+    ),
+    cmd!(
+        Id::PageRemoveMarks,
+        "Remove Headers, Footers and Watermarks…",
+        "Take the headers, footers, Bates numbers and watermarks added with BergPDF off the pages again",
+        C::Organize,
+        "delete header footer watermark bates remove",
+        []
+    ),
+    cmd!(
+        Id::PageLabels,
+        "Page Labels…",
+        "Number pages i, ii, iii or A-1, A-2 as readers show them, without changing the pages",
+        C::Organize,
+        "page labels numbering roman prefix",
+        []
+    ),
+    cmd!(
+        Id::PageCrop,
+        "Crop Pages…",
+        "Cut away the margins of pages; nothing is deleted and it can be undone",
+        C::Organize,
+        "crop trim margins cropbox",
+        []
+    ),
+    cmd!(
+        Id::ToolCrop,
+        "Crop Tool",
+        "Drag the area of the page to keep",
+        C::Organize,
+        "crop trim drag area",
+        []
+    ),
+    cmd!(
+        Id::BookmarkAdd,
+        "Add Bookmark",
+        "Add a bookmark to the current page",
+        C::Navigate,
+        "bookmark outline add new chapter",
+        [(None, Shortcut::cmd(Key::Char('B')))]
+    ),
+    cmd!(
+        Id::DocumentCompare,
+        "Compare Documents…",
+        "Find what changed between two versions of a document: inserted, deleted and replaced text",
+        C::File,
+        "compare diff difference versions changes revision",
+        []
+    ),
+    cmd!(
+        Id::ToolFieldText,
+        "Text Field",
+        "Draw a text field that people can type in",
+        C::Forms,
+        "form field create text input",
+        []
+    ),
+    cmd!(
+        Id::ToolFieldCheckbox,
+        "Check Box",
+        "Draw a check box",
+        C::Forms,
+        "form field create checkbox tick",
+        []
+    ),
+    cmd!(
+        Id::ToolFieldRadio,
+        "Radio Button",
+        "Draw a radio button; buttons with the same name form one group",
+        C::Forms,
+        "form field create radio option group",
+        []
+    ),
+    cmd!(
+        Id::ToolFieldCombo,
+        "Drop-down List",
+        "Draw a drop-down list of choices",
+        C::Forms,
+        "form field create combo dropdown select choice",
+        []
+    ),
+    cmd!(
+        Id::ToolFieldList,
+        "List Box",
+        "Draw a list of choices",
+        C::Forms,
+        "form field create list choice",
+        []
+    ),
+    cmd!(
+        Id::ToolFieldButton,
+        "Button",
+        "Draw a button, for example one that resets the form",
+        C::Forms,
+        "form field create push button reset",
+        []
+    ),
+    cmd!(
+        Id::ToolFieldSignature,
+        "Signature Field",
+        "Draw an empty field where a digital signature can go",
+        C::Forms,
+        "form field create signature sign here",
+        []
+    ),
+    cmd!(
+        Id::ToolFormDesign,
+        "Edit Fields",
+        "Select form fields to move them, change their properties or delete them",
+        C::Forms,
+        "form field edit design prepare move properties",
+        []
+    ),
+    cmd!(
+        Id::FormScripts,
+        "Form Scripts…",
+        "Choose whether this document's calculations and checks may run, and see its scripts",
+        C::Forms,
+        "javascript script calculate validate format acrobat js",
+        []
+    ),
+    cmd!(
+        Id::FormCalculateNow,
+        "Calculate Now",
+        "Run the form's calculations and formatting again",
+        C::Forms,
+        "javascript calculate recalculate totals",
+        []
+    ),
+    cmd!(
+        Id::DocumentJavaScript,
+        "Document JavaScript…",
+        "Write or change the scripts that belong to the whole document",
+        C::Forms,
+        "javascript document level script functions",
         []
     ),
     cmd!(

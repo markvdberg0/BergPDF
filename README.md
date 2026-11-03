@@ -41,17 +41,23 @@ language, or you pick one in Preferences.
 
 **Annotate**
 Highlight, underline, strikeout, squiggly, sticky notes, text boxes, callouts (click the point, then place
-the box), stamps, rectangles, ellipses, lines, arrows, polygons and freehand drawing, with colour, opacity,
-line width and dash style. Text stays upright on rotated and landscape pages and can be turned in 90° steps.
+the box), stamps (also **dynamic stamps** with your name, the date and the time), rectangles, ellipses, lines,
+arrows, polygons and freehand drawing, with colour, opacity, line width and dash style. Text stays upright on rotated and landscape pages and can be turned in 90° steps.
 A comments panel lists everything.
 
 **Edit the document**
 Edit existing text and images in place (for the font types BergPDF can safely rewrite; it tells you when it
 cannot), add new text and images, and rotate, delete, insert, duplicate, reorder, extract and merge pages.
+Add **headers, footers, Bates numbers and watermarks** (and take them off again), set **page labels**
+(i, ii, iii …), **crop** pages, **edit bookmarks**, and **compare two versions** of a document: the changes are
+marked on a copy.
 Choose from five bundled font families or **any TrueType font installed on your computer**.
 
 **Forms and signatures**
-Fill in form fields, flatten them, and decide whether copied pages keep their fields linked. Place a
+Fill in form fields, flatten them, and decide whether copied pages keep their fields linked. **Make forms**:
+text fields, check boxes, radio buttons, drop-downs, lists, buttons and signature fields, with totals, number and
+date formats and checks. **Form JavaScript** (calculations, formats, checks, buttons) runs when you allow it, in a
+closed sandbox that can only fill in the form. Place a
 handwritten signature, or sign digitally with a PKCS#12 certificate (`.p12` / `.pfx`).
 
 **Measure**

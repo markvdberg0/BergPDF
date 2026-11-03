@@ -126,6 +126,18 @@ pub enum UpdateCheck {
     Off,
 }
 
+/// Whether the JavaScript of forms (calculations, formats, checks, buttons) may run.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum ScriptPolicy {
+    /// Ask once per document that has scripts.
+    #[default]
+    Ask,
+    /// Run them in every document (still in the sandbox).
+    Always,
+    /// Never run them.
+    Never,
+}
+
 /// Defaults applied to newly created annotations.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
@@ -340,6 +352,8 @@ pub struct Preferences {
     pub ai: AiSettings,
     /// The provider the user has agreed to send document text to; asked again when it changes.
     pub ai_consent_provider: Option<AiProvider>,
+    /// Running form scripts.
+    pub form_scripts: ScriptPolicy,
 }
 
 impl Default for Preferences {
@@ -375,6 +389,7 @@ impl Default for Preferences {
             show_copilot: false,
             ai: AiSettings::default(),
             ai_consent_provider: None,
+            form_scripts: ScriptPolicy::default(),
         }
     }
 }

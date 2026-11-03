@@ -59,17 +59,28 @@ pub struct Notice {
 /// Modal dialogs.
 pub enum Dialog {
     /// Close-with-unsaved-changes confirmation for tab index.
-    ConfirmClose { tab: usize },
+    ConfirmClose {
+        tab: usize,
+    },
     /// Quit with unsaved documents.
     ConfirmQuit,
     /// An error that needs acknowledgement (e.g. save failed).
-    Error { title: String, detail: String },
+    Error {
+        title: String,
+        detail: String,
+    },
     /// Confirm opening an external link.
-    ConfirmLink { uri: String },
+    ConfirmLink {
+        uri: String,
+    },
     /// Go to page.
-    GoToPage { text: String },
+    GoToPage {
+        text: String,
+    },
     /// Preferences (search box text).
-    Preferences { filter: String },
+    Preferences {
+        filter: String,
+    },
     /// Shortcut reference.
     Shortcuts {
         filter: String,
@@ -84,9 +95,14 @@ pub enum Dialog {
     /// First-run workspace choice.
     FirstRun,
     /// Delete-pages confirmation.
-    ConfirmDeletePages { count: usize },
+    ConfirmDeletePages {
+        count: usize,
+    },
     /// Document warnings shown after opening (signatures, XFA…).
-    OpenWarnings { title: String, lines: Vec<String> },
+    OpenWarnings {
+        title: String,
+        lines: Vec<String>,
+    },
     /// Free-text entry for a new text box / note.
     TextEntry {
         page: PageId,
@@ -109,7 +125,9 @@ pub enum Dialog {
     /// Document properties.
     Properties(Box<PropsState>),
     /// Confirm flattening all form fields.
-    ConfirmFlatten { fields: usize },
+    ConfirmFlatten {
+        fields: usize,
+    },
     /// Consent to send text to the AI provider.
     AiConsent,
     /// Translate the document.
@@ -148,6 +166,16 @@ pub enum Dialog {
     Redact(Box<crate::redact_ui::RedactDialog>),
     /// Password protection of the active document.
     Protection(Box<crate::protect_ui::ProtectionDialog>),
+    HeaderFooter(Box<crate::pagemarks_ui::HeaderFooterState>),
+    Watermark(Box<crate::pagemarks_ui::WatermarkState>),
+    RemoveMarks(crate::pagemarks_ui::RemoveMarksState),
+    PageLabels(Box<crate::pagemarks_ui::LabelsState>),
+    Crop(Box<crate::pagemarks_ui::CropState>),
+    FieldProps(Box<crate::formdesign_ui::FieldPropsState>),
+    ScriptsAsk(crate::scripts_ui::ScriptsPending),
+    Scripts(Box<crate::scripts_ui::ScriptsDialog>),
+    DocJs(Box<crate::scripts_ui::DocJsDialog>),
+    Compare(Box<crate::compare_ui::CompareState>),
 }
 
 /// Pointer interaction in progress on the canvas.
@@ -214,7 +242,18 @@ pub struct TabState {
     pub thumb_drag: Option<Vec<PageId>>,
     /// Last clicked thumbnail index (for shift-range selection).
     pub thumb_anchor: Option<usize>,
-    pub bookmarks: Option<(u64, Arc<Vec<pdf_engine::nav::Bookmark>>)>,
+    /// The editable bookmark tree at a revision.
+    pub outline: Option<(u64, Arc<Vec<pdf_engine::outline::OutlineItem>>)>,
+    /// Path of the selected bookmark.
+    pub bookmark_sel: Option<Vec<usize>>,
+    /// Bookmark being renamed and its draft title.
+    pub bookmark_rename: Option<(Vec<usize>, String)>,
+    /// Field selected in the Edit Fields tool: field, widget, page.
+    pub field_sel: Option<(pdf_engine::ObjectId, pdf_engine::ObjectId, PageId)>,
+    /// A field being moved or resized.
+    pub field_drag: Option<crate::formdesign_ui::FieldDrag>,
+    /// Whether this document's form scripts may run.
+    pub scripts: crate::scripts_ui::ScriptPermission,
     pub comments: Option<(u64, Arc<Vec<CommentRow>>)>,
     pub comments_filter: String,
     /// Page-content objects (text runs, images) per page for the current revision.
@@ -223,6 +262,8 @@ pub struct TabState {
     pub edit_draft: Option<EditDraft>,
     /// Parsed form fields for the current revision.
     pub form: Option<(u64, Arc<pdf_engine::forms::FormInfo>)>,
+    /// Page label ranges at a revision.
+    pub labels: Option<(u64, Arc<Vec<pdf_engine::pagelabels::LabelRange>>)>,
     /// Scale registry for the current revision.
     pub scales: Option<(u64, Arc<pdf_engine::measure::ScaleSet>)>,
     /// Measurement report rows for the current revision.
@@ -337,6 +378,10 @@ pub struct App {
         std::collections::HashMap<String, std::sync::Arc<pdf_engine::stampimage::StampImage>>,
     /// The stamp the Stamp tool places (`None`: ask for a text each time).
     pub current_stamp: Option<String>,
+    /// The radio group drawn last: the next radio button joins it.
+    pub last_radio_group: Option<String>,
+    /// A running comparison.
+    pub compare_job: Option<crate::compare_ui::CompareJob>,
     /// What the right-click menu was opened on.
     pub ctx_target: Option<crate::ctxmenu::CtxTarget>,
     /// Snap-to-geometry indexes.

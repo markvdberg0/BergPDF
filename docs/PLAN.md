@@ -100,6 +100,14 @@ about 0.5–0.8 ms, so the likely cause is the graphics path (a software rendere
 the build now reports the adapter and offers other APIs/pacing instead of guessing; installed fonts and inline
 translation have only been run on Linux and against a mock AI server.
 
+## Additions after the PDF-XChange gap analysis (2026-11-03)
+
+Requested by the owner to close the gap with PDF-XChange PRO: form JavaScript, headers/footers/watermarks/Bates,
+page labels and cropping, making forms, bookmark editing, comparing documents and dynamic stamps. All implemented
+(FEATURE_MATRIX, DECISIONS D-040…D-042). Honest gaps: none of the new dialogs and tools was driven in a GUI test
+here; the JavaScript sandbox was tested with written scripts, not yet with a collection of real Acrobat forms;
+Compare looks at text only.
+
 ## Quality gate (what “green” means here)
 
 `cargo xtask check` = `cargo fmt --check`, `cargo clippy --workspace --all-targets -D warnings`,
@@ -116,7 +124,7 @@ translation have only been run on Linux and against a mock AI server.
    overflow in a dependency still takes the whole app down.
 4. Password-protected PDFs (needs decryption support in the PDF library; read-only first).
 5. Printing (per-platform), then installer + signing (needs the owner’s certificates).
-6. Page labels, headers/footers/watermarks, crop-box UI, XMP metadata editing.
+6. XMP metadata editing (page labels, headers/footers/watermarks/Bates and the crop UI are done: D-041).
 7. Replace direct `ttf-parser` use (unmaintained advisory) with `skrifa`/`read-fonts`.
 8. Fuzz `lopdf`/`hayro` entry points and the content-stream scanner; add corpus tests.
 9. Secure redaction behind its own gate (true removal from content streams, images, metadata,

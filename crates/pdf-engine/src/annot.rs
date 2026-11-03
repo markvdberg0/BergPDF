@@ -875,7 +875,7 @@ q {} 0 0 {} {} {} cm /Im0 Do Q
             dict.set("Subj", text_obj(label));
             let r = r.abs();
             let mut fb = FontBuilder::new(BundledFace::SansBold)?;
-            let missing = fb.missing_chars(label);
+            let missing = fb.missing_chars(label.split('\n').next().unwrap_or("").trim());
             if !missing.is_empty() {
                 return Err(EngineError::Unsupported(format!(
                     "stamp text contains characters not in the bundled font: {missing:?}"
@@ -888,30 +888,80 @@ q {} 0 0 {} {} {} cm /Im0 Do Q
             let (bw_, bh_) = local_size(r, rot);
             let lr = Rect::new(0.0, 0.0, bw_, bh_);
             let pad = 4.0;
-            let wem = (fb.text_width(label, 1.0)).max(0.1);
-            let fs = ((lr.width() - 2.0 * pad) / wem)
-                .min((lr.height() - 2.0 * pad) * 0.8)
+            let bw = lw.max(1.0);
+            // The first line is the stamp's word in bold; further lines (a dynamic stamp's name and
+            // date) are smaller and regular.
+            let mut lines = label.split('\n').map(str::trim).filter(|l| !l.is_empty());
+            let title = lines.next().unwrap_or("");
+            let details: Vec<&str> = lines.collect();
+            let mut small = FontBuilder::new(BundledFace::Sans)?;
+            for d in &details {
+                let missing = small.missing_chars(d);
+                if !missing.is_empty() {
+                    return Err(EngineError::Unsupported(format!(
+                        "stamp text contains characters not in the bundled font: {missing:?}"
+                    )));
+                }
+            }
+            const SUB: f64 = 0.42;
+            let wem = (fb.text_width(title, 1.0)).max(0.1);
+            let sub_wem = details
+                .iter()
+                .map(|d| small.text_width(d, SUB))
+                .fold(0.0_f64, f64::max);
+            // A detail line takes its own height plus a gap, so readers never merge it with the title.
+            let pitch = SUB * (small.ascent_em() + small.descent_em() + 0.35);
+            let rows = 1.0 + details.len() as f64 * pitch;
+            let fs = ((lr.width() - 2.0 * pad) / wem.max(sub_wem))
+                .min((lr.height() - 2.0 * pad) * 0.8 / rows)
                 .max(1.0);
             let tw = wem * fs;
-            let bw = lw.max(1.0);
             let x = lr.x0 + (lr.width() - tw) / 2.0;
-            let y = lr.y0 + (lr.height() - fs * (fb.ascent_em() + fb.descent_em())) / 2.0;
-            let codes = fb.encode_str(label)?;
+            let block = fs * (fb.ascent_em() + fb.descent_em()) + details.len() as f64 * fs * pitch;
+            let top = lr.y0 + (lr.height() + block) / 2.0;
+            let y = top - fs * fb.ascent_em();
+            let codes = fb.encode_str(title)?;
+            let mut body = format!(
+                "BT /F1 {} Tf {} {} Td {} Tj ET\n",
+                fmt_num(fs),
+                fmt_num(x),
+                fmt_num(y),
+                hex_string(&codes)
+            );
+            let sfs = fs * SUB;
+            for (i, d) in details.iter().enumerate() {
+                let dw = small.text_width(d, sfs);
+                let dy = y
+                    - fs * fb.descent_em()
+                    - sfs * (small.ascent_em() + 0.35)
+                    - fs * pitch * i as f64;
+                let dc = small.encode_str(d)?;
+                body.push_str(&format!(
+                    "BT /F2 {} Tf {} {} Td {} Tj ET\n",
+                    fmt_num(sfs),
+                    fmt_num(lr.x0 + (lr.width() - dw) / 2.0),
+                    fmt_num(dy),
+                    hex_string(&dc)
+                ));
+            }
             let font_id = fb.finish(tx)?;
             ap.resources = gs_resources(opacity, false);
-            ap.resources.set("Font", dictionary! { "F1" => font_id });
+            if details.is_empty() {
+                ap.resources.set("Font", dictionary! { "F1" => font_id });
+            } else {
+                let small_id = small.finish(tx)?;
+                ap.resources
+                    .set("Font", dictionary! { "F1" => font_id, "F2" => small_id });
+            }
             ap.content.push_str(&format!(
-                "/GS gs\nq\n{}{c} RG {c} rg\n{} w\n{} {} {} {} re S\nBT /F1 {} Tf {} {} Td {} Tj ET\nQ\n",
+                "/GS gs\nq\n{}{c} RG {c} rg\n{} w\n{} {} {} {} re S\n{}Q\n",
                 cm_op(rotated_frame(r, rot)),
                 fmt_num(bw),
                 fmt_num(lr.x0 + bw / 2.0),
                 fmt_num(lr.y0 + bw / 2.0),
                 fmt_num(lr.width() - bw),
                 fmt_num(lr.height() - bw),
-                fmt_num(fs),
-                fmt_num(x),
-                fmt_num(y),
-                hex_string(&codes)
+                body
             ));
         }
     }

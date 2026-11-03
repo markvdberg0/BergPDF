@@ -90,6 +90,8 @@ impl App {
             stamps: App::load_stamp_library(),
             stamp_images: Default::default(),
             current_stamp: None,
+            last_radio_group: None,
+            compare_job: None,
             ctx_target: None,
             snaps: crate::snap_ui::SnapService::new(),
             ai: crate::copilot_ui::AiRuntime::default(),
@@ -399,6 +401,7 @@ impl eframe::App for App {
         self.handle_drops_and_pending(ctx);
         self.handle_worker_results(ctx);
         self.poll_exports(ctx);
+        self.poll_compare(ctx);
         self.poll_ocr(ctx);
         self.poll_ai(ctx);
         self.poll_update(ctx);

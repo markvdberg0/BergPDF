@@ -26,6 +26,11 @@ fn pages_root(doc: &Document) -> Result<ObjectId> {
         .map_err(|_| EngineError::Malformed("catalog has no /Pages".into()))
 }
 
+/// Leaf pages in document order, read from a bare `Document` (inside a transaction).
+pub fn page_order(doc: &Document) -> Result<Vec<PageId>> {
+    Ok(ordered_pages(doc)?.into_iter().map(PageId).collect())
+}
+
 fn ordered_pages(doc: &Document) -> Result<Vec<ObjectId>> {
     let mut out = Vec::new();
     let mut seen = BTreeSet::new();

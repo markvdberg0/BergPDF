@@ -1,0 +1,18 @@
+[package]
+name = "pdf-js"
+description = "Runs the JavaScript of PDF forms (calculations, formats, checks, buttons) in a sandbox"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+# Pure-Rust JavaScript engine. No `intl` (ICU data) and no `js` (browser bindings); Annex B for the
+# old string functions (`substr`, …) that Acrobat-era scripts use.
+boa_engine = { version = "0.22", default-features = false, features = ["annex-b"] }
+serde = { workspace = true }
+serde_json = "1"
+
+[lints]
+workspace = true

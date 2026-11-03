@@ -4,8 +4,10 @@
 #![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used, clippy::panic))]
 
 mod app;
+mod bookmarks_ui;
 mod canvas;
 mod chrome;
+mod compare_ui;
 mod contentedit;
 mod copilot_ui;
 mod ctxmenu;
@@ -15,6 +17,7 @@ mod dialogs;
 mod docops_ui;
 mod exec;
 mod fontpick;
+mod formdesign_ui;
 mod forms_ui;
 mod gpu;
 mod i18n;
@@ -25,11 +28,13 @@ mod measure_ui;
 mod ocr_ui;
 mod optimize_ui;
 mod pagefilter;
+mod pagemarks_ui;
 mod pdfa_ui;
 mod prefs_ui;
 mod print_ui;
 mod protect_ui;
 mod redact_ui;
+mod scripts_ui;
 mod sidebar;
 mod sign_ui;
 mod snap_ui;

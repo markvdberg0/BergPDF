@@ -81,6 +81,21 @@ pub enum Icon {
     Signature,
     Certificate,
     Shield,
+    HeaderFooter,
+    Watermark,
+    Crop,
+    PageLabel,
+    Compare,
+    Script,
+    FieldText,
+    FieldCheck,
+    FieldRadio,
+    FieldCombo,
+    FieldList,
+    FieldButton,
+    FieldSign,
+    FormDesign,
+    BookmarkAdd,
 }
 
 /// `pts` with every corner rounded by radius `r` (a quadratic curve through the corner, never longer
@@ -752,6 +767,123 @@ pub fn paint(p: &Painter, rect: Rect, icon: Icon, color: Color32) {
                 true,
             );
             poly(&[(8.5, 12.0), (11.0, 14.5), (16.0, 9.0)], false);
+        }
+        Icon::HeaderFooter => {
+            rrect(5.0, 2.0, 19.0, 22.0);
+            line((8.0, 5.5), (16.0, 5.5));
+            line((8.0, 18.5), (16.0, 18.5));
+            p.line_segment([pt(8.0, 12.0), pt(16.0, 12.0)], Stroke::new(st.width, dim));
+        }
+        Icon::Watermark => {
+            rrect(5.0, 2.0, 19.0, 22.0);
+            line((8.0, 17.0), (16.0, 7.0));
+            p.line_segment([pt(8.0, 13.0), pt(12.0, 8.0)], Stroke::new(st.width, dim));
+            p.line_segment([pt(12.0, 16.0), pt(16.0, 11.0)], Stroke::new(st.width, dim));
+        }
+        Icon::Crop => {
+            poly(&[(6.0, 2.0), (6.0, 18.0), (22.0, 18.0)], false);
+            poly(&[(2.0, 6.0), (18.0, 6.0), (18.0, 22.0)], false);
+        }
+        Icon::PageLabel => {
+            poly(
+                &[
+                    (3.0, 9.0),
+                    (10.0, 3.0),
+                    (21.0, 3.0),
+                    (21.0, 15.0),
+                    (10.0, 15.0),
+                ],
+                true,
+            );
+            circle((8.5, 9.0), 1.4);
+            line((5.0, 20.0), (19.0, 20.0));
+        }
+        Icon::Compare => {
+            rrect(2.0, 4.0, 11.0, 20.0);
+            rrect(13.0, 4.0, 22.0, 20.0);
+            line((4.5, 9.0), (8.5, 9.0));
+            line((15.5, 9.0), (19.5, 9.0));
+            p.line_segment([pt(4.5, 13.0), pt(8.5, 13.0)], Stroke::new(st.width, dim));
+            line((15.5, 13.0), (19.5, 13.0));
+            line((17.5, 11.0), (17.5, 15.0));
+        }
+        Icon::Script => {
+            poly(&[(8.0, 6.0), (3.0, 12.0), (8.0, 18.0)], false);
+            poly(&[(16.0, 6.0), (21.0, 12.0), (16.0, 18.0)], false);
+            line((13.5, 5.0), (10.5, 19.0));
+        }
+        Icon::FieldText => {
+            rrect(2.0, 7.0, 22.0, 17.0);
+            line((6.0, 9.5), (6.0, 14.5));
+            line((4.5, 9.5), (7.5, 9.5));
+            line((4.5, 14.5), (7.5, 14.5));
+        }
+        Icon::FieldCheck => {
+            rrect(4.0, 4.0, 20.0, 20.0);
+            poly(&[(8.0, 12.0), (11.0, 15.0), (16.5, 9.0)], false);
+        }
+        Icon::FieldRadio => {
+            circle((12.0, 12.0), 8.0);
+            p.circle_filled(pt(12.0, 12.0), 3.5 * u, color);
+        }
+        Icon::FieldCombo => {
+            rrect(2.0, 7.0, 22.0, 17.0);
+            line((15.0, 7.0), (15.0, 17.0));
+            poly(&[(16.8, 11.0), (18.5, 13.0), (20.2, 11.0)], false);
+        }
+        Icon::FieldList => {
+            rrect(3.0, 3.0, 21.0, 21.0);
+            line((6.0, 8.0), (18.0, 8.0));
+            fill_poly(&[(5.0, 10.5), (19.0, 10.5), (19.0, 14.5), (5.0, 14.5)], dim);
+            line((6.0, 17.0), (18.0, 17.0));
+        }
+        Icon::FieldButton => {
+            rrect(2.0, 7.0, 22.0, 17.0);
+            fill_poly(&[(3.0, 8.0), (21.0, 8.0), (21.0, 16.0), (3.0, 16.0)], dim);
+            line((8.0, 12.0), (16.0, 12.0));
+        }
+        Icon::FieldSign => {
+            rrect(2.0, 6.0, 22.0, 18.0);
+            poly(
+                &[
+                    (5.0, 14.0),
+                    (8.0, 10.0),
+                    (10.0, 14.0),
+                    (13.0, 10.0),
+                    (15.0, 13.0),
+                ],
+                false,
+            );
+            line((5.0, 15.5), (19.0, 15.5));
+        }
+        Icon::FormDesign => {
+            rrect(3.0, 6.0, 21.0, 18.0);
+            line((7.0, 10.0), (12.0, 10.0));
+            poly(
+                &[
+                    (14.0, 21.0),
+                    (15.0, 17.0),
+                    (21.0, 11.0),
+                    (23.0, 13.0),
+                    (17.0, 19.0),
+                    (14.0, 21.0),
+                ],
+                true,
+            );
+        }
+        Icon::BookmarkAdd => {
+            poly(
+                &[
+                    (4.0, 3.0),
+                    (13.0, 3.0),
+                    (13.0, 21.0),
+                    (8.5, 16.5),
+                    (4.0, 21.0),
+                ],
+                true,
+            );
+            line((18.0, 6.0), (18.0, 14.0));
+            line((14.0, 10.0), (22.0, 10.0));
         }
         Icon::Export => {
             rrect(4.0, 4.0, 16.0, 20.0);

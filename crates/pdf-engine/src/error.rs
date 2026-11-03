@@ -59,6 +59,9 @@ pub enum EngineError {
     /// The rendering backend failed.
     #[error("render failed: {0}")]
     Render(String),
+    /// The person stopped the operation.
+    #[error("cancelled")]
+    Cancelled,
 }
 
 impl From<lopdf::Error> for EngineError {

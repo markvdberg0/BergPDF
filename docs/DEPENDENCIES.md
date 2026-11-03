@@ -13,6 +13,9 @@ a legal notice bundle. This file covers what a human has to look at.
 | md-5, getrandom | 0.11, 0.4 | owner-password recovery (MD5), random file key for new AES-256 protection | MIT/Apache-2.0; already in the tree through lopdf |
 | windows | 0.62 (Windows only) | GDI printing API in `crates/printing` | MIT/Apache-2.0; the only crate that uses `unsafe` |
 | pdf-writer | 0.15 | build test fixtures only | dev-dependency |
+| boa_engine | 0.22 (default features off, `annex-b`) | runs form JavaScript in `crates/pdf-js` (D-040) | Unlicense/MIT, pure Rust; no `intl`, no browser bindings; pulls a few ICU normaliser crates (Unicode-3.0) |
+| similar | 2.7 (default features off) | word diff for Compare Documents (D-042) | Apache-2.0 |
+| time | 0.3 (`local-offset`) | local date and time on dynamic stamps (D-042) | MIT/Apache-2.0; already in the tree |
 | pdf-base14-metrics | 0.0.2 | widths of the 14 standard fonts | **very young crate**; licence `MIT AND APAFML` (Adobe font metrics notice) |
 | pdfboss-encoding | 2.13 | PDF simple-font encodings | young/small crate; verified by tests against poppler output |
 | subsetter | 0.2 | subset TrueType for embedding | |

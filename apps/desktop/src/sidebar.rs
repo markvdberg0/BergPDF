@@ -288,7 +288,11 @@ impl App {
                 painter.text(
                     Pos2::new(row.center().x, row.max.y - label_h / 2.0 - 2.0),
                     egui::Align2::CENTER_CENTER,
-                    format!("{}", i + 1),
+                    // A page label (i, ii, A-1…) when the document has them, with the plain number beside it.
+                    match self.page_label(i) {
+                        Some(l) if l != (i + 1).to_string() => format!("{l}  ({})", i + 1),
+                        _ => format!("{}", i + 1),
+                    },
                     egui::FontId::proportional(12.0),
                     self.pal.text,
                 );
@@ -391,64 +395,6 @@ impl App {
                 self.tabs[ti].ui.thumb_anchor = Some(i);
             }
             self.go_to(i);
-        }
-    }
-
-    fn bookmarks(&mut self, ui: &mut egui::Ui) {
-        let ti = self.active;
-        let rev = self.tabs[ti].session.revision();
-        let need = !matches!(&self.tabs[ti].ui.bookmarks, Some((r, _)) if *r == rev);
-        if need {
-            let b = Arc::new(pdf_engine::nav::outlines(self.tabs[ti].session.doc()));
-            self.tabs[ti].ui.bookmarks = Some((rev, b));
-        }
-        let Some((_, marks)) = self.tabs[ti].ui.bookmarks.clone() else {
-            return;
-        };
-        if marks.is_empty() {
-            ui.add_space(12.0);
-            ui.label(RichText::new(tr("This document has no bookmarks.")).color(self.pal.text_dim));
-            return;
-        }
-        let mut goto: Option<usize> = None;
-        egui::ScrollArea::both()
-            .auto_shrink([false, false])
-            .show(ui, |ui| {
-                fn node(
-                    ui: &mut egui::Ui,
-                    b: &pdf_engine::nav::Bookmark,
-                    goto: &mut Option<usize>,
-                    id: egui::Id,
-                ) {
-                    let title = if b.title.is_empty() {
-                        tr("(untitled)")
-                    } else {
-                        b.title.as_str()
-                    };
-                    if b.children.is_empty() {
-                        if ui.selectable_label(false, title).clicked() {
-                            *goto = b.page;
-                        }
-                    } else {
-                        let h = egui::CollapsingHeader::new(title)
-                            .id_salt(id)
-                            .default_open(b.open)
-                            .show(ui, |ui| {
-                                for (n, c) in b.children.iter().enumerate() {
-                                    node(ui, c, goto, id.with(n));
-                                }
-                            });
-                        if h.header_response.clicked() {
-                            *goto = b.page;
-                        }
-                    }
-                }
-                for (n, b) in marks.iter().enumerate() {
-                    node(ui, b, &mut goto, egui::Id::new(("bm", n)));
-                }
-            });
-        if let Some(p) = goto {
-            self.go_to(p);
         }
     }
 

@@ -455,6 +455,37 @@ impl App {
             Dialog::FillField(st) => {
                 keep = self.dialog_fill_field(ctx, st);
             }
+            Dialog::HeaderFooter(st) => {
+                keep = self.dialog_header_footer(ctx, st);
+            }
+            Dialog::Watermark(st) => {
+                keep = self.dialog_watermark(ctx, st);
+            }
+            Dialog::RemoveMarks(st) => {
+                keep = self.dialog_remove_marks(ctx, st);
+            }
+            Dialog::PageLabels(st) => {
+                keep = self.dialog_page_labels(ctx, st);
+            }
+            Dialog::Crop(st) => {
+                keep = self.dialog_crop(ctx, st);
+            }
+            Dialog::FieldProps(st) => {
+                keep = self.dialog_field_props(ctx, st);
+            }
+            Dialog::ScriptsAsk(p) => {
+                let p = p.clone();
+                keep = self.dialog_scripts_ask(ctx, &p);
+            }
+            Dialog::Scripts(st) => {
+                keep = self.dialog_scripts(ctx, st);
+            }
+            Dialog::DocJs(st) => {
+                keep = self.dialog_document_js(ctx, st);
+            }
+            Dialog::Compare(st) => {
+                keep = self.dialog_compare(ctx, st);
+            }
             Dialog::FormPolicy(st) => {
                 keep = self.dialog_form_policy(ctx, st);
             }
@@ -964,7 +995,7 @@ impl App {
 }
 
 /// The frame every dialog shares: generous padding, large rounded corners.
-fn dialog_frame(ctx: &egui::Context) -> egui::Frame {
+pub(crate) fn dialog_frame(ctx: &egui::Context) -> egui::Frame {
     egui::Frame::window(&ctx.global_style())
         .inner_margin(egui::Margin::same(24))
         .corner_radius(egui::CornerRadius::same(14))
