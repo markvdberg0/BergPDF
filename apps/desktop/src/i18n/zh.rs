@@ -1014,8 +1014,8 @@ pub static ENTRIES: &[(&str, &str)] = &[
         "离线优先。无需账户，无遥测，核心编辑功能无需联网。",
     ),
     (
-        "One click installs them: BergPDF will connect to {}, download the two model files (about 12 MB) and check them against built-in checksums. Nothing else is sent. After that OCR works offline.",
-        "一键即可安装：BergPDF 将连接到 {}，下载两个模型文件（约 12 MB），并使用内置校验和进行校验。不会发送其他任何内容。之后 OCR 可离线使用。",
+        "One click installs them: BergPDF will connect to {}, download the two model files (about 10 MB) and check them against built-in checksums. Nothing else is sent. After that OCR works offline.",
+        "一键即可安装：BergPDF 将连接到 {}，下载两个模型文件（约 10 MB），并使用内置校验和进行校验。不会发送其他任何内容。之后 OCR 可离线使用。",
     ),
     (
         "Only this text run is edited — there is no paragraph reflow.",

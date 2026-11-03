@@ -25,7 +25,7 @@ a legal notice bundle. This file covers what a human has to look at.
 | thiserror, tracing, tracing-subscriber | | errors, logging (local stderr only) | |
 | proptest, tempfile, png | | tests | dev-dependencies |
 | cms 0.2, x509-cert 0.2, der 0.7, spki 0.7 | | build the PKCS#7/CMS signature | RustCrypto "formats"; `cms` 0.2 is the stable line |
-| rsa 0.9, p256 0.13, sha2 0.10, pkcs8 0.10 | | RSA/ECDSA signing, SHA-256 | **rsa 0.9 has RUSTSEC-2023-0071 (Marvin), no fixed release** — see below |
+| rsa 0.9, p256 0.13, sha2 0.10, pkcs8 0.10 | | RSA/ECDSA signing, SHA-256 | **rsa 0.9 has RUSTSEC-2023-0071 (Marvin), no fixed release; p256 0.13 brings crypto-bigint 0.5 (RUSTSEC-2026-0387)** — see below |
 | p12-keystore 0.3 | | read PKCS#12 (.p12/.pfx) incl. legacy 3DES | pulls pre-release `cms 0.3.0-pre`, `pkcs12 0.2.0-pre`, `x509-parser`, newer `der`/`sha2` (duplicate versions of RustCrypto crates in the tree) |
 | ocrs 0.13, rten 0.26 (+ `onnx_format`), rten-tensor, rten-imageproc | | offline OCR: `ocrs` finds the text, `rten` runs the Latin recognition model (ONNX) | pure Rust; **models are separate files; optional download or opt-in bundling, see D-023, D-039** |
 | serde_json, png, sha2 | | xtask (licence report, icons, model checksum) | tooling only |
@@ -62,12 +62,27 @@ a legal notice bundle. This file covers what a human has to look at.
    only. The project builds with no C/C++ compiler requirement for first-party code; some
    transitive crates (platform bindings) are `-sys` style FFI wrappers.
 6. **Advisories.** `cargo deny check` (v0.20.2) was run in the authoring sandbox against the
-   live advisory database: advisories, bans, licenses and sources pass **with two documented
-   ignores** (the second is RUSTSEC-2023-0071 for `rsa`, see below) — RUSTSEC-2026-0192: `ttf-parser` 0.25.1 is *unmaintained* (no known vulnerability).
+   live advisory database: advisories, bans, licenses and sources passed **with two documented
+   ignores** (six since 2026-11-03, see the update below) (the second is RUSTSEC-2023-0071 for `rsa`, see below) — RUSTSEC-2026-0192: `ttf-parser` 0.25.1 is *unmaintained* (no known vulnerability).
    It is used directly by `pdf-engine` (glyph availability in bundled **and document-embedded**
    fonts) and transitively by winit/egui, so removing our own use reduces but does not eliminate
    it. Follow-up: migrate `fontembed`/`textfont` to `skrifa`/`read-fonts` (already in the tree
    via hayro). `cargo audit` was not run separately (cargo-deny covers the same database).
+
+   **Update 2026-11-03.** New advisories made the check fail. Fixed by `cargo update` within
+   semver: rustls 0.23.45 → 0.23.46 (RUSTSEC-2026-0346 to 0349), rustls-webpki 0.103.15 → 0.103.16
+   (RUSTSEC-2026-0382), webpki-roots / webpki-root-certs 1.0.9 → 1.0.11 (emSign roots,
+   RUSTSEC-2026-0381 and 0383) and ctutils 0.4.2 → 0.4.8 (RUSTSEC-2026-0385). Four more are
+   ignored with a written reason in `deny.toml`, because no compatible fix exists:
+   * **RUSTSEC-2026-0387, crypto-bigint 0.5** (some "constant-time" operations may branch on
+     secret values). It comes in only through `p256` 0.13 in `pdf-sign`, and the fix is only in
+     crypto-bigint 0.7. The reasoning is the same as for `rsa` below: signing happens locally, on
+     request, with no service an attacker could time. Follow-up: move to `p256` 0.14, which needs
+     the newer `cms`/`der` 0.8 crates as well.
+   * **RUSTSEC-2026-0370, 0371, 0372: zvariant, zbus_names and zvariant_derive 5 are
+     unmaintained** (merged into zbus 6; no known vulnerability). They come in only through
+     eframe → accesskit (Linux screen-reader support). Follow-up: drop the ignores when an eframe
+     release uses zbus 6.
 
 ## Signing and OCR specifics (added 2026-10-05)
 

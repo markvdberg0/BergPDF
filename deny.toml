@@ -13,6 +13,10 @@ yanked = "deny"
 ignore = [
     { id = "RUSTSEC-2023-0071", reason = "rsa 0.9 (Marvin timing side channel, no fixed release). Used only by pdf-sign to create RSA signatures locally, on the user's own machine, on request; there is no network service or other oracle an attacker could time (the advisory's scenario). Re-evaluate when RustCrypto/RSA ships a fix; see docs/DEPENDENCIES.md." },
     { id = "RUSTSEC-2026-0192", reason = "ttf-parser is unmaintained (no known vulnerability). Used by pdf-engine for glyph-availability checks and, transitively, by winit/egui. Migration to skrifa/read-fonts is tracked in docs/PLAN.md remaining work." },
+    { id = "RUSTSEC-2026-0387", reason = "crypto-bigint 0.5 (operations meant to be constant-time may branch on secrets; fixed only in 0.7.6). Reached only through p256 0.13, which pdf-sign uses to create ECDSA signatures locally, on the user's own machine, on request, and to check signatures (public data). As with RUSTSEC-2023-0071 there is no network service or other oracle to time. Goes away with the move to p256 0.14 (needs the cms/der 0.8 stack); see docs/DEPENDENCIES.md." },
+    { id = "RUSTSEC-2026-0370", reason = "zvariant 5 is unmaintained (merged into zbus 6; no known vulnerability). Comes only through eframe -> accesskit_unix -> atspi (Linux screen-reader support); BergPDF does not use it directly. Goes away when eframe/accesskit move to zbus 6; see docs/DEPENDENCIES.md." },
+    { id = "RUSTSEC-2026-0371", reason = "zbus_names 4 is unmaintained (merged into zbus 6; no known vulnerability). Same path and follow-up as RUSTSEC-2026-0370." },
+    { id = "RUSTSEC-2026-0372", reason = "zvariant_derive 5 is unmaintained (merged into zbus 6; no known vulnerability). Same path and follow-up as RUSTSEC-2026-0370." },
 ]
 
 [licenses]
