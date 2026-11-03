@@ -790,7 +790,7 @@ impl App {
                             ui.checkbox(&mut p.reset_form, tr("Clicking it resets the form"));
                         }
                         NewField::Signature => {
-                            ui.label(RichText::new(tr("An empty field that shows where to sign. Sign ▸ Sign Document can put a digital signature in it.")).size(12.0).color(dim));
+                            ui.label(RichText::new(tr("An empty field that shows where to sign. Sign ▸ Sign with certificate can put a digital signature in it.")).size(12.0).color(dim));
                         }
                     }
                     ui.add_space(4.0);
@@ -850,7 +850,7 @@ impl App {
                     });
                 }
                 PropsTab::Calculate => {
-                    ui.label(RichText::new(tr("These are run only when you allow scripts for the document (Forms ▸ Form Scripts).")).size(12.0).color(dim));
+                    ui.label(RichText::new(tr("These are run only when you allow scripts for the document (Forms ▸ Form scripts).")).size(12.0).color(dim));
                     crate::ui_kit::form_row(ui, tr("Value"), |ui| {
                         egui::ComboBox::from_id_salt("calc_mode")
                             .selected_text(match st.calc {

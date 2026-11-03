@@ -68,7 +68,7 @@ impl App {
         let mut go = false;
         let mut cancel = false;
         modal(ctx, "optimize", |ui| {
-            ui.heading(tr("Save As Optimized"));
+            ui.heading(tr("Save as optimized"));
             ui.label(tf!("Writes a smaller copy of this document (now about {}). The open document and its file are not changed.", human_size(st.size)));
             ui.add_space(6.0);
             for (p, title, text) in [

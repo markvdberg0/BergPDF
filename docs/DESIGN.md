@@ -648,6 +648,23 @@ Differences, on purpose:
 * **Done** on the inline-edit chip uses `primary.bg` for contrast.
 * **Dark theme**: the mock-up of direction C is light only; the dark values here are new and checked for contrast.
 
+Differences in the implementation (0.4, 2026-11-03):
+
+* **Bold 700** is drawn with Inter SemiBold: only Regular, Medium and SemiBold are bundled so far.
+* **Tabular figures** (§8.3) are not done: making the `tnum` copy of Inter needs `pyftfeatfreeze`, which was not
+  available. Numbers use Inter's default figures.
+* **Title bar**: the native title bar stays (§8.4, recommended first step); the 40-high row under it carries the logo,
+  quick access and the centred command search.
+* **Recent files**: the last-opened times are kept as `recent_opened` (path → time) next to the existing
+  `recent_files` list instead of `{ path, opened_at }` entries; old preference files read unchanged.
+* **Segmented controls** keep equal segments when the labels fit; when a translation is too long they become as wide
+  as their labels and the text steps down to 10.5 px rather than being cut off. The side-panel hide button stays next
+  to the switcher.
+* **Start screen in a tab**: "+" shows the start screen as a *Start* tab after the open documents; the ribbon and
+  status bar are hidden while it is shown.
+* **Single-line ribbon notes**: the explanations the classic ribbon prints next to some groups (Forms, Sign, Redact,
+  Copilot, Edit) become an info button with a tooltip.
+
 Still to decide:
 
 * Custom title bar, and on which platforms (section 8.4).

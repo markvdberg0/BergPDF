@@ -422,7 +422,7 @@ impl App {
         }
         if caps.has_javascript {
             lines.push(
-                tr("This document contains JavaScript. BergPDF never runs document scripts.")
+                tr("This document contains JavaScript. Form scripts run only when you allow them (Forms ▸ Form scripts); other scripts never run.")
                     .into(),
             );
         }
@@ -437,6 +437,7 @@ impl App {
     }
 
     pub fn add_tab(&mut self, session: DocumentSession) {
+        self.show_start = false;
         let mut session = session;
         match self.prefs.default_zoom {
             editor_core::prefs::DefaultZoom::FitPage => session.view.zoom_mode = ZoomMode::FitPage,
@@ -480,6 +481,7 @@ impl App {
             Ok(()) => {
                 let name = tab.session.title.clone();
                 self.notify(tf!("Saved {}", name));
+                self.save_thumbnail(i);
                 true
             }
             Err(e) => {
@@ -513,6 +515,7 @@ impl App {
                     self.prefs.push_recent(&dest.to_string_lossy());
                     self.prefs_dirty = true;
                     self.notify(tf!("Saved {}", dest.display()));
+                    self.save_thumbnail(i);
                 }
                 Err(e) => {
                     self.dialog = Some(Dialog::Error {
@@ -537,6 +540,8 @@ impl App {
         if i >= self.tabs.len() {
             return;
         }
+        // The start screen shows the first page of recent files.
+        self.save_thumbnail(i);
         let t = self.tabs.remove(i);
         self.hub.close(t.session.id);
         platform::recovery::remove(

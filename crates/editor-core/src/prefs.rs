@@ -126,6 +126,16 @@ pub enum UpdateCheck {
     Off,
 }
 
+/// How the ribbon is drawn (docs/DESIGN.md §4.2–4.3).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum RibbonStyle {
+    /// One calm row: icon and label side by side, no group captions, overflow in "More".
+    #[default]
+    SingleLine,
+    /// Large icon above the label, with group captions.
+    Classic,
+}
+
 /// Whether the JavaScript of forms (calculations, formats, checks, buttons) may run.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum ScriptPolicy {
@@ -354,6 +364,13 @@ pub struct Preferences {
     pub ai_consent_provider: Option<AiProvider>,
     /// Running form scripts.
     pub form_scripts: ScriptPolicy,
+    /// Single-line or classic ribbon.
+    pub ribbon_style: RibbonStyle,
+    /// When each recent file was last opened (seconds since 1970), by path. Files opened before this
+    /// was kept have no entry.
+    pub recent_opened: std::collections::BTreeMap<String, u64>,
+    /// Pinned files on the start screen, listed first.
+    pub pinned_files: Vec<String>,
 }
 
 impl Default for Preferences {
@@ -378,7 +395,7 @@ impl Default for Preferences {
             tool_defaults: ToolDefaults::default(),
             show_left_sidebar: true,
             show_right_sidebar: true,
-            left_sidebar_width: 190.0,
+            left_sidebar_width: 220.0,
             right_sidebar_width: 300.0,
             render_cache_mb: 384,
             graphics: GraphicsPrefs::default(),
@@ -390,6 +407,9 @@ impl Default for Preferences {
             ai: AiSettings::default(),
             ai_consent_provider: None,
             form_scripts: ScriptPolicy::default(),
+            ribbon_style: RibbonStyle::default(),
+            recent_opened: std::collections::BTreeMap::new(),
+            pinned_files: Vec::new(),
         }
     }
 }
@@ -405,11 +425,61 @@ impl Preferences {
         toml::to_string_pretty(self).map_err(|e| e.to_string())
     }
 
-    /// Record a file as most-recent (deduplicated, capped).
+    /// Record a file as most-recent (deduplicated, capped), with the time it was opened.
     pub fn push_recent(&mut self, path: &str) {
         self.recent_files.retain(|p| p != path);
         self.recent_files.insert(0, path.to_string());
         self.recent_files.truncate(12);
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_or(0, |d| d.as_secs());
+        self.recent_opened.insert(path.to_string(), now);
+        self.forget_stale_recent();
+    }
+
+    /// Drop the times (and pins) of files that are no longer in the list or pinned.
+    fn forget_stale_recent(&mut self) {
+        let keep: std::collections::BTreeSet<&String> = self
+            .recent_files
+            .iter()
+            .chain(self.pinned_files.iter())
+            .collect();
+        self.recent_opened.retain(|p, _| keep.contains(p));
+    }
+
+    /// Take a file off the recent list (and unpin it).
+    pub fn remove_recent(&mut self, path: &str) {
+        self.recent_files.retain(|p| p != path);
+        self.pinned_files.retain(|p| p != path);
+        self.forget_stale_recent();
+    }
+
+    /// Empty the recent list; pinned files stay.
+    pub fn clear_recent(&mut self) {
+        self.recent_files.clear();
+        self.forget_stale_recent();
+    }
+
+    /// Pin or unpin a file.
+    pub fn toggle_pin(&mut self, path: &str) {
+        if let Some(i) = self.pinned_files.iter().position(|p| p == path) {
+            self.pinned_files.remove(i);
+        } else {
+            self.pinned_files.insert(0, path.to_string());
+            self.pinned_files.truncate(24);
+        }
+        self.forget_stale_recent();
+    }
+
+    /// Pinned files first, then the other recent files, without repeats.
+    pub fn start_files(&self) -> Vec<String> {
+        let mut out: Vec<String> = self.pinned_files.clone();
+        for p in &self.recent_files {
+            if !out.contains(p) {
+                out.push(p.clone());
+            }
+        }
+        out
     }
 
     /// Record a tool as recently used.
@@ -422,12 +492,14 @@ impl Preferences {
     /// Clamp values to sane ranges after loading a possibly hand-edited file.
     pub fn sanitize(&mut self) {
         self.ui_scale = self.ui_scale.clamp(0.75, 2.5);
-        self.left_sidebar_width = self.left_sidebar_width.clamp(120.0, 480.0);
-        self.right_sidebar_width = self.right_sidebar_width.clamp(160.0, 520.0);
+        self.left_sidebar_width = self.left_sidebar_width.clamp(180.0, 360.0);
+        self.right_sidebar_width = self.right_sidebar_width.clamp(260.0, 420.0);
         self.render_cache_mb = self.render_cache_mb.clamp(64, 4096);
         self.tool_defaults.opacity = self.tool_defaults.opacity.clamp(0.05, 1.0);
         self.tool_defaults.stroke_width = self.tool_defaults.stroke_width.clamp(0.0, 50.0);
         self.tool_defaults.font_size = self.tool_defaults.font_size.clamp(4.0, 200.0);
+        self.pinned_files.truncate(24);
+        self.forget_stale_recent();
     }
 }
 
@@ -608,5 +680,20 @@ mod tests {
             ..Preferences::default()
         };
         assert!(!p.dark_page_filter);
+    }
+
+    #[test]
+    fn recent_files_keep_their_time_and_pins_come_first() {
+        // An older preferences file has no times and no pins.
+        let mut p = Preferences::from_toml("recent_files = [\"/a.pdf\", \"/b.pdf\"]").unwrap();
+        assert!(p.recent_opened.is_empty() && p.pinned_files.is_empty());
+        p.push_recent("/c.pdf");
+        assert!(p.recent_opened.contains_key("/c.pdf"));
+        p.toggle_pin("/b.pdf");
+        assert_eq!(p.start_files(), vec!["/b.pdf", "/c.pdf", "/a.pdf"]);
+        p.clear_recent();
+        assert_eq!(p.start_files(), vec!["/b.pdf"]);
+        p.remove_recent("/b.pdf");
+        assert!(p.start_files().is_empty() && p.recent_opened.is_empty());
     }
 }

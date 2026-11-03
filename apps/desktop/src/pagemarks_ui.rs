@@ -451,7 +451,7 @@ impl App {
             ui.set_max_width(520.0);
             ui.heading(tr("Watermark"));
             ui.label(
-                RichText::new(tr("A text or a picture across the pages. It becomes part of the pages; Remove Headers, Footers and Watermarks takes it off again."))
+                RichText::new(tr("A text or a picture across the pages. It becomes part of the pages; Remove headers, footers and watermarks takes it off again."))
                     .size(12.0)
                     .color(dim),
             );
@@ -914,7 +914,7 @@ impl App {
             .show(ctx, |ui| {
                 ui.set_max_width(380.0);
                 ui.label(
-                    RichText::new(tr("Margins to cut away, on the page as you see it. The blue frame shows what stays. Nothing is deleted: Remove Crop shows the whole page again."))
+                    RichText::new(tr("Margins to cut away, on the page as you see it. The blue frame shows what stays. Nothing is deleted: Remove crop shows the whole page again."))
                         .size(12.0)
                         .color(dim),
                 );

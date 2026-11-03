@@ -46,6 +46,10 @@ a legal notice bundle. This file covers what a human has to look at.
      binary and subset-embedded into user PDFs. Licence file: `crates/pdf-engine/assets/fonts/
      LICENSE-DejaVu.txt`. The Vera licence restricts *modified* fonts to being renamed; whether
      subset embedding counts needs a decision by the owner (D-010).
+   * **Inter** Regular, Medium and SemiBold (**SIL OFL 1.1**, notice in `apps/desktop/assets/fonts/LICENSE-Inter.txt`)
+     are the interface font since the 0.4 style (docs/DESIGN.md §2.2). They are compiled into the application only
+     and never embedded into PDFs. Bold (700) is drawn with SemiBold until the Bold file is added. The copies come
+     from the owner's other projects (Inter 4.x, `rsms/inter`).
    * **Liberation Sans / Serif / Mono** (12 faces, regular/bold/italic/bold-italic; metric-compatible with
      Arial, Times New Roman and Courier New) and **DejaVu Serif** (regular/bold) were added on 2026-10-05
      so users can choose a font for new and replaced text. Liberation is **SIL OFL 1.1** (notice in

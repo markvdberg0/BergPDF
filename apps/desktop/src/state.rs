@@ -382,6 +382,14 @@ pub struct App {
     pub last_radio_group: Option<String>,
     /// A running comparison.
     pub compare_job: Option<crate::compare_ui::CompareJob>,
+    /// The start screen is shown although documents are open (its "+" tab).
+    pub show_start: bool,
+    /// What is being typed in the status bar's page field.
+    pub page_input: Option<String>,
+    /// The page of the start screen.
+    pub start_page: crate::start_ui::StartPage,
+    /// Pictures of recent files, by path (`None`: there is none).
+    pub start_thumbs: HashMap<String, Option<egui::TextureHandle>>,
     /// What the right-click menu was opened on.
     pub ctx_target: Option<crate::ctxmenu::CtxTarget>,
     /// Snap-to-geometry indexes.

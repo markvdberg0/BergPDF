@@ -865,9 +865,10 @@ impl App {
                 if let Err(reason) = &run.editable
                     && !run.replaceable
                 {
-                    ui.colored_label(
-                        self.pal.danger,
-                        tf!("This text can't be edited: {}.", reason),
+                    crate::ui_kit::note(
+                        ui,
+                        crate::ui_kit::NoteKind::Warning,
+                        &tf!("This text can't be edited: {}.", reason),
                     );
                 }
                 let mut apply = false;
@@ -933,11 +934,12 @@ impl App {
                     }
                     if let Some((err, msg)) = &d.message {
                         ui.add_space(4.0);
-                        ui.colored_label(
+                        crate::ui_kit::note(
+                            ui,
                             if *err {
-                                self.pal.danger
+                                crate::ui_kit::NoteKind::Danger
                             } else {
-                                self.pal.text_dim
+                                crate::ui_kit::NoteKind::Success
                             },
                             msg.as_str(),
                         );
@@ -945,7 +947,13 @@ impl App {
                     if let Some(r) = &d.report
                         && r.overlaps_following
                     {
-                        ui.colored_label(self.pal.danger, tr("The new text overlaps the text after it. Enable “Keep original width” or shorten the text."));
+                        crate::ui_kit::note(
+                            ui,
+                            crate::ui_kit::NoteKind::Warning,
+                            tr(
+                                "The new text overlaps the text after it. Enable “Keep original width” or shorten the text.",
+                            ),
+                        );
                     }
                 }
                 ui.add_space(6.0);

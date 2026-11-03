@@ -324,7 +324,7 @@ impl App {
             }
         }
         if !self.scripts_allowed() {
-            self.notify(tr("This button runs a script, and scripts are off for this document (Forms ▸ Form Scripts)."));
+            self.notify(tr("This button runs a script, and scripts are off for this document (Forms ▸ Form scripts)."));
             return;
         }
         self.run_scripts_event(&form, ScriptsPending::Click { field });
@@ -384,7 +384,7 @@ impl App {
             ui.label(tr("The form contains JavaScript for calculations, formats and checks. BergPDF runs it in a closed sandbox: the scripts can only fill in fields of this form and show messages. They cannot open files, links or the internet."));
             ui.checkbox(
                 &mut always,
-                tr("Always run form scripts (can be changed in Forms ▸ Form Scripts)"),
+                tr("Always run form scripts (can be changed in Forms ▸ Form scripts)"),
             );
             ui.add_space(6.0);
             ui.horizontal(|ui| {
