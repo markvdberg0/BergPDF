@@ -227,7 +227,7 @@ certificates and are not done.
 
 ## D-029 — The Windows installer asks about the OCR models
 The installer (cargo-packager's NSIS template plus one hidden section, `packaging/windows/installer.nsi`, pinned to
-cargo-packager 0.11.8) asks at the end of the installation whether to download the OCR models (≈12 MB, host named in
+cargo-packager 0.11.8) asks at the end of the installation whether to download the OCR models (≈10 MB, hosts named in
 the question). If yes it runs `bergpdf --download-ocr-models`, which uses the same verified download as the OCR
 dialog (https only, pinned SHA-256, nothing kept on a mismatch) and exits with a status; a failure only produces a
 message, the installation stays valid. Silent/passive installs skip the question. macOS and Linux packages have no
@@ -371,3 +371,22 @@ Own stamps (`editor_core::stamps`) are a text with its own wording and colour, o
 plus PNG files in `stamps/` next to it. Everything read back is validated (names, colours, file names without
 folders, counts). Cost: the picture is stored in every document it is placed in (a few tens of kB for a typical
 signature), and a text stamp is still the bundled bold font in a box.
+
+## D-039 — OCR reads accented letters: PaddleOCR's Latin model reads the lines (amends D-015, D-023)
+The stock `ocrs` recognition model has a 96-character ASCII alphabet, so é, ë, ü, ß could never come out of OCR,
+whatever the code did, which is a real defect for Dutch and German documents. Chosen: keep `ocrs` for *detection*
+(finding words and lines, unchanged) and read each line with PaddleOCR's `latin_PP-OCRv5_mobile_rec` (Apache-2.0,
+502 characters covering about 30 Latin-script languages), run by the same pure-Rust `rten` runtime with its ONNX
+reader (`onnx_format` feature, pure Rust as well). The line is cut out with a small margin, scaled to 48 px high,
+read, and decoded greedily (CTC); a word gets its *detected* box when the words read and the words detected match
+one to one, else a box estimated from where its letters were read. The character list (1.6 kB) is compiled in;
+the model file (7.5 MB) is downloaded like the detection model, verified against a pinned SHA-256, from a fixed
+commit of `huggingface.co/monkt/paddleocr-onnx`, a third-party `paddle2onnx` conversion of PaddleOCR's model (the
+official repository publishes Paddle files only, and converting them needs Python packages that were not available
+here). Result on 2026-11-02: every word of a Dutch and a German line read exactly; English recall unchanged
+(50/50 words); misses in a Scandinavian/Polish line (ï → î, å → à, Ł → L). Rejected: Tesseract (C++ at runtime,
+D-002); a dictionary that puts accents back afterwards (guesswork, per language). Consequences: a second download
+host (`huggingface.co`, named in the OCR dialog, the installer question and PRIVACY.md); existing installations are
+asked once more to download, and keep the detection file they have. **Open for the owner:** before bundling or
+hosting the file yourself, convert the official model with `paddle2onnx` once and compare, or host that
+conversion; Apache-2.0 allows redistribution with the NOTICE in `pdf_ocr::MODEL_NOTICE`.

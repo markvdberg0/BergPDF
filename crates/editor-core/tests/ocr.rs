@@ -112,8 +112,10 @@ fn a_scanned_page_becomes_searchable_and_the_text_sits_where_it_was_printed() {
 
     // Independent check 2: the invisible words are where the printed words are (±8 pt), using
     // poppler's own word boxes for both documents.
-    let tb = poppler_bbox(&original, 1).unwrap();
-    let gb = poppler_bbox(&bytes, 1).unwrap();
+    let (Some(tb), Some(gb)) = (poppler_bbox(&original, 1), poppler_bbox(&bytes, 1)) else {
+        assert!(!oracles_required(), "poppler's pdftotext -bbox required");
+        return;
+    };
     let mut checked = 0;
     for key in ["quarterly", "report", "brown", "workflow"] {
         let (Some(a), Some(b)) = (
@@ -143,6 +145,101 @@ fn a_scanned_page_becomes_searchable_and_the_text_sits_where_it_was_printed() {
             "invisible text must not change the picture"
         );
     }
+}
+
+/// Dutch, German and French text with the accents each language needs.
+const ACCENTED: &str = "De ideeën van België over één coördinatie zijn geëvalueerd.\n\
+Die Größe der Straße wurde für die Übersicht gemessen.\n\
+Le café de l'élève est très français et un peu naïf.\n\
+Skärgårdens søster läser på Dvořák och Łódź.";
+
+#[test]
+fn accented_letters_of_dutch_german_and_french_survive_ocr_at_the_right_place() {
+    let Some(engine) = engine() else { return };
+    let (original, _) = pdf_engine::textdoc::build_text_pdf(
+        "Overzicht",
+        "Übersicht",
+        &[("Één".into(), ACCENTED.into())],
+    )
+    .unwrap();
+    let mut scan = {
+        let doc = PdfDocument::open(original.clone(), &OpenOptions::default()).unwrap();
+        let g = doc.pages().unwrap()[0].geometry;
+        let png = with_session(Arc::new(original.clone()), |s| {
+            s.render_page(0, g, Rotation::R0, 300.0 / 72.0)?.to_png()
+        })
+        .unwrap();
+        PdfDocument::from_image(&png).unwrap()
+    };
+    let page = scan.page_ids().unwrap()[0];
+    let geometry = scan.pages().unwrap()[0].geometry;
+    let spec = OcrPageSpec {
+        page,
+        index: 0,
+        geometry,
+    };
+    let snap = Arc::new(scan.snapshot_bytes().unwrap());
+    let result = recognize_pages(&engine, snap, &[spec], &mut |_, _| true).unwrap();
+    scan.transact(|tx| add_ocr_text_layers(tx, &result))
+        .unwrap();
+    let bytes = scan.snapshot_bytes().unwrap();
+
+    // Read back with the engine's own text extraction (no OCR involved), from both files.
+    let text_of = |b: &[u8]| {
+        let g = PdfDocument::open(b.to_vec(), &OpenOptions::default())
+            .unwrap()
+            .pages()
+            .unwrap()[0]
+            .geometry;
+        with_session(Arc::new(b.to_vec()), |s| s.extract_text(0, &g)).unwrap()
+    };
+    let (truth, got) = (text_of(&original), text_of(&bytes));
+    let plain = got.plain_text();
+    eprintln!("OCR read:\n{plain}");
+    let accented: Vec<&str> = ACCENTED
+        .split_whitespace()
+        .map(|w| w.trim_matches(|c: char| !c.is_alphanumeric()))
+        .filter(|w| !w.is_ascii())
+        .collect();
+    let found: Vec<&&str> = accented
+        .iter()
+        .filter(|w| !got.search(w, true).is_empty())
+        .collect();
+    eprintln!("accented words found: {}/{}", found.len(), accented.len());
+    // Every word of the Dutch and German lines; most of the rest (on 2026-11-02 the misses were
+    // naïf → naîf, på → pà, Łódź → Lódž).
+    for w in ACCENTED.lines().take(2).flat_map(str::split_whitespace) {
+        let w = w.trim_matches(|c: char| !c.is_alphanumeric());
+        assert!(
+            !got.search(w, true).is_empty(),
+            "{w} not read; got:\n{plain}"
+        );
+    }
+    assert!(
+        found.len() * 10 >= accented.len() * 8,
+        "only {found:?} of {accented:?}"
+    );
+
+    // The recognised word sits where it was printed (±8 pt).
+    let mut checked = 0;
+    for w in ["ideeën", "Größe", "Straße", "élève", "français"] {
+        let (Some(a), Some(b)) = (
+            truth.search(w, true).first().map(|h| h.quads[0].bounds()),
+            got.search(w, true).first().map(|h| h.quads[0].bounds()),
+        ) else {
+            continue;
+        };
+        let (ca, cb) = (
+            ((a.x0 + a.x1) / 2.0, (a.y0 + a.y1) / 2.0),
+            ((b.x0 + b.x1) / 2.0, (b.y0 + b.y1) / 2.0),
+        );
+        assert!(
+            (ca.0 - cb.0).abs() < 8.0 && (ca.1 - cb.1).abs() < 8.0,
+            "{w}: printed {ca:?} vs recognised {cb:?}"
+        );
+        checked += 1;
+    }
+    assert!(checked >= 4, "only {checked} reference words matched");
 }
 
 fn scan_png_pdf_bytes(original: &[u8]) -> Vec<u8> {

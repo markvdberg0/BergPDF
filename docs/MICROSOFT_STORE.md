@@ -102,7 +102,7 @@ the automated tests the Store runs too.
   > uses installed fonts and the GPU through DirectX 12, and registers as a PDF handler. Everything core works
   > offline. The internet is used only on a button press: PDF Copilot / Translate (needs the tester's own API key,
   > not required to review the app) and the optional download of OCR models (a verified data download from
-  > ocrs-models.s3-accelerate.amazonaws.com; no executable code is downloaded). The Store copy has no update check of
+  > ocrs-models.s3-accelerate.amazonaws.com and huggingface.co; no executable code is downloaded). The Store copy has no update check of
   > its own. Source code: https://github.com/markvdberg0/BergPDF (GPL-3.0-or-later).
 
 * **Restricted capability `runFullTrust`:** Partner Center asks for a justification; the text above is the

@@ -560,7 +560,7 @@ SectionEnd
 Section "-OcrModels"
   IfSilent ocr_done
   ${IfThen} $PassiveMode == 1 ${|} Goto ocr_done ${|}
-  MessageBox MB_YESNO|MB_ICONQUESTION "BergPDF can recognise text in scanned pages (OCR).$\r$\nThis needs two model files (about 12 MB) that are downloaded once from the model author's server (ocrs-models.s3-accelerate.amazonaws.com) and checked before use.$\r$\n$\r$\nDownload them now?" IDNO ocr_done
+  MessageBox MB_YESNO|MB_ICONQUESTION "BergPDF can recognise text in scanned pages (OCR).$\r$\nThis needs two model files (about 10 MB) that are downloaded once from ocrs-models.s3-accelerate.amazonaws.com and huggingface.co and checked before use.$\r$\n$\r$\nDownload them now?" IDNO ocr_done
   DetailPrint "Downloading the OCR models..."
   ; An all-users install keeps the models next to the program, where every user's BergPDF finds them
   ; (an elevated installer would otherwise fill the wrong user's profile). A per-user install uses the

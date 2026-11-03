@@ -480,10 +480,10 @@ fn apply(app: &mut App, ctx: &egui::Context, name: &str) {
         "ocr_search" => {
             app.ribbon_tab = RibbonTab::Edit;
             app.open_ocr_dialog();
-            if let Some(Dialog::Ocr(st)) = app.dialog.take() {
-                if let Err(e) = app.start_ocr(&st) {
-                    eprintln!("OCR could not start: {e}");
-                }
+            if let Some(Dialog::Ocr(st)) = app.dialog.take()
+                && let Err(e) = app.start_ocr(&st)
+            {
+                eprintln!("OCR could not start: {e}");
             }
         }
         "measure_plan" | "measure_panel" => {

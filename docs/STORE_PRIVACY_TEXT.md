@@ -25,7 +25,7 @@ Uninstalling BergPDF removes this data.
 WHEN BERGPDF CONNECTS TO THE INTERNET
 Only in these cases, and only when you ask for it:
 - PDF Copilot and Translate (optional): when you press a button, and only after a one-time consent for the provider you chose (OpenAI, Anthropic, or a server address you typed yourself, for example a model on your own computer). The question and the text of the pages needed to answer it are sent with your own API key. The consent dialog states what is sent. What the provider does with it is governed by that provider's privacy policy and your agreement with them.
-- OCR models (optional): when you press Download in the OCR dialog, BergPDF downloads two data files from ocrs-models.s3-accelerate.amazonaws.com. Nothing about you or your documents is sent, apart from what any download request contains (such as your IP address). The files are checked against a fixed checksum and discarded if it does not match.
+- OCR models (optional): when you press Download in the OCR dialog, BergPDF downloads two data files, from ocrs-models.s3-accelerate.amazonaws.com and huggingface.co. Nothing about you or your documents is sent, apart from what any download request contains (such as your IP address). The files are checked against a fixed checksum and discarded if it does not match.
 - Links: when you click a link in a document and confirm, it opens in your web browser.
 The Microsoft Store version has no update check of its own; the Microsoft Store handles updates.
 
@@ -60,7 +60,7 @@ Als je BergPDF verwijdert, verdwijnen deze gegevens ook.
 WANNEER BERGPDF VERBINDING MAAKT MET HET INTERNET
 Alleen in deze gevallen, en alleen als je erom vraagt:
 - PDF Copilot en Vertalen (optioneel): als je op een knop drukt, en pas na een eenmalige toestemming voor de aanbieder die je koos (OpenAI, Anthropic of een serveradres dat je zelf invoert, bijvoorbeeld een model op je eigen computer). De vraag en de tekst van de pagina's die nodig zijn voor het antwoord worden verstuurd met je eigen API-sleutel. In het toestemmingsvenster staat wat er wordt verstuurd. Wat de aanbieder ermee doet, valt onder het privacybeleid van die aanbieder en je overeenkomst met hen.
-- OCR-modellen (optioneel): als je in het OCR-venster op Downloaden drukt, haalt BergPDF twee gegevensbestanden op van ocrs-models.s3-accelerate.amazonaws.com. Er wordt niets over jou of je documenten verstuurd, behalve wat bij elk downloadverzoek hoort (zoals je IP-adres). De bestanden worden gecontroleerd met een vaste controlesom en weggegooid als die niet klopt.
+- OCR-modellen (optioneel): als je in het OCR-venster op Downloaden drukt, haalt BergPDF twee gegevensbestanden op van ocrs-models.s3-accelerate.amazonaws.com en huggingface.co. Er wordt niets over jou of je documenten verstuurd, behalve wat bij elk downloadverzoek hoort (zoals je IP-adres). De bestanden worden gecontroleerd met een vaste controlesom en weggegooid als die niet klopt.
 - Links: als je op een link in een document klikt en bevestigt, opent die in je webbrowser.
 De Microsoft Store-versie heeft geen eigen updatecontrole; de Microsoft Store zorgt voor updates.
 
