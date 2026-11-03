@@ -11,7 +11,10 @@ use crate::dialogs::modal;
 use crate::i18n::tr;
 use crate::state::*;
 use crate::tf;
-use editor_core::stamps::{MAX_LABEL, MAX_NAME, StampDef, StampKind, StampLibrary};
+use editor_core::stamps::{
+    MAX_DETAIL, MAX_LABEL, MAX_NAME, StampDef, StampKind, StampLibrary, StampValues,
+    expand_placeholders,
+};
 use editor_core::tools::Tool;
 use egui::{Color32, RichText, Sense, Stroke, Vec2};
 use pdf_engine::annot::{AnnotationKind, AnnotationSpec, Rgb};
@@ -157,11 +160,75 @@ impl PictureState {
     }
 }
 
+/// The second line of the standard dynamic stamps.
+const DYNAMIC_DETAIL: &str = "{author} · {date} {time}";
+
+/// The local date (`2026-11-03`) and time (`14:05`) now; UTC when the local offset is unknown.
+pub(crate) fn local_date_time() -> (String, String) {
+    let now = time::OffsetDateTime::now_utc();
+    let now = time::UtcOffset::current_local_offset()
+        .map(|o| now.to_offset(o))
+        .unwrap_or(now);
+    (
+        format!(
+            "{:04}-{:02}-{:02}",
+            now.year(),
+            u8::from(now.month()),
+            now.day()
+        ),
+        format!("{:02}:{:02}", now.hour(), now.minute()),
+    )
+}
+
+/// The stamps that come with BergPDF: words people stamp most, three of them with the name and the
+/// time of stamping.
+pub(crate) fn standard_stamps() -> Vec<StampDef> {
+    let t = |name: &str, label: &str, color: [f32; 3], dynamic: bool| StampDef {
+        name: name.to_string(),
+        kind: StampKind::Text {
+            label: label.to_string(),
+            color,
+            detail: if dynamic {
+                DYNAMIC_DETAIL.to_string()
+            } else {
+                String::new()
+            },
+        },
+    };
+    let green = [0.1, 0.5, 0.2];
+    let blue = [0.1, 0.3, 0.7];
+    let red = [0.78, 0.1, 0.1];
+    vec![
+        t(
+            tr("Approved, with name and time"),
+            tr("APPROVED"),
+            green,
+            true,
+        ),
+        t(
+            tr("Reviewed, with name and time"),
+            tr("REVIEWED"),
+            blue,
+            true,
+        ),
+        t(
+            tr("Received, with name and time"),
+            tr("RECEIVED"),
+            blue,
+            true,
+        ),
+        t(tr("Draft"), tr("DRAFT"), red, false),
+        t(tr("Final"), tr("FINAL"), green, false),
+        t(tr("Confidential"), tr("CONFIDENTIAL"), red, false),
+    ]
+}
+
 /// The "New stamp" dialog.
 pub struct NewStampState {
     name: String,
     picture_mode: bool,
     label: String,
+    detail: String,
     color: [f32; 3],
     picture: Option<PictureState>,
     error: Option<String>,
@@ -191,6 +258,7 @@ impl Default for NewStampState {
             name: String::new(),
             picture_mode: false,
             label: String::new(),
+            detail: String::new(),
             color: [0.78, 0.1, 0.1],
             picture: None,
             error: None,
@@ -228,10 +296,39 @@ impl App {
         Some(img)
     }
 
-    /// The stamp chosen in the stamp tool's panel.
+    /// The stamp chosen in the stamp tool's panel: one of the user's own, or a standard one.
     pub fn current_stamp_def(&self) -> Option<StampDef> {
         let name = self.current_stamp.as_ref()?;
-        self.stamps.stamps.iter().find(|d| &d.name == name).cloned()
+        self.stamps
+            .stamps
+            .iter()
+            .find(|d| &d.name == name)
+            .cloned()
+            .or_else(|| standard_stamps().into_iter().find(|d| &d.name == name))
+    }
+
+    /// What a dynamic stamp shows now: the author from Preferences and the local date and time.
+    pub(crate) fn stamp_values(&self) -> StampValues {
+        let (date, time) = local_date_time();
+        StampValues {
+            author: self.prefs.author.trim().to_string(),
+            date,
+            time,
+        }
+    }
+
+    /// The text of a text stamp as placed: its word, and its second line with the placeholders filled in.
+    pub(crate) fn stamp_text(&self, label: &str, detail: &str) -> String {
+        let v = self.stamp_values();
+        let first = expand_placeholders(label, &v);
+        let second = expand_placeholders(detail, &v);
+        // Without a name in Preferences, "{author} · {date}" must not start with a lone dot.
+        let second = second.trim_matches(|c: char| c == '·' || c == ',' || c.is_whitespace());
+        if second.is_empty() {
+            first
+        } else {
+            format!("{first}\n{second}")
+        }
     }
 
     // ---- keeping ---------------------------------------------------------------------------
@@ -373,9 +470,15 @@ impl App {
                 };
                 self.place_picture(page, img, rect, &def.name, tr("Add stamp"));
             }
-            StampKind::Text { label, color } => {
+            StampKind::Text {
+                label,
+                color,
+                detail,
+            } => {
+                let label = self.stamp_text(&label, &detail);
+                let tall = label.contains('\n');
                 let rect = if tiny {
-                    Self::screen_box_at(vc, page_index, at, 140.0, 36.0)
+                    Self::screen_box_at(vc, page_index, at, 160.0, if tall { 50.0 } else { 36.0 })
                 } else {
                     r
                 };
@@ -454,7 +557,7 @@ impl App {
                     self.handwriting = Default::default();
                     self.signature_image = Some(img);
                     self.notify(tr(
-                        "Signature saved. Use Place Signature to put it on a page.",
+                        "Signature saved. Use Place signature to put it on a page.",
                     ));
                     self.set_tool(Tool::PlaceSignature);
                     return false;
@@ -515,6 +618,34 @@ impl App {
                     );
                     ui.color_edit_button_rgb(&mut st.color);
                 });
+                ui.add(
+                    crate::ui_kit::singleline(&mut st.detail)
+                        .hint_text(tr("Second line (optional), e.g. {author} · {date} {time}"))
+                        .char_limit(MAX_DETAIL)
+                        .desired_width(f32::INFINITY),
+                );
+                ui.horizontal_wrapped(|ui| {
+                    ui.label(
+                        RichText::new(tr("Filled in when you place the stamp:"))
+                            .size(12.0)
+                            .color(self.pal.text_dim),
+                    );
+                    for ph in ["{author}", "{date}", "{time}"] {
+                        if ui.small_button(ph).clicked() {
+                            if !st.detail.is_empty() && !st.detail.ends_with(' ') {
+                                st.detail.push(' ');
+                            }
+                            st.detail.push_str(ph);
+                        }
+                    }
+                });
+                if st.detail.contains("{author}") && self.prefs.author.trim().is_empty() {
+                    ui.label(
+                        RichText::new(tr("Set your name in Preferences ▸ General (Author) to show it on the stamp."))
+                            .size(12.0)
+                            .color(self.pal.text_dim),
+                    );
+                }
                 let (rect, _) = ui.allocate_exact_size(Vec2::new(420.0, 64.0), Sense::hover());
                 ui.painter().rect_filled(rect, 4.0, Color32::WHITE);
                 if !st.label.trim().is_empty() {
@@ -523,11 +654,10 @@ impl App {
                         (st.color[1] * 255.0) as u8,
                         (st.color[2] * 255.0) as u8,
                     );
-                    let galley = ui.painter().layout_no_wrap(
-                        st.label.trim().to_string(),
-                        egui::FontId::proportional(24.0),
-                        c,
-                    );
+                    let shown = self.stamp_text(st.label.trim(), st.detail.trim());
+                    let galley =
+                        ui.painter()
+                            .layout_no_wrap(shown, egui::FontId::proportional(20.0), c);
                     let boxr = egui::Rect::from_center_size(
                         rect.center(),
                         galley.size() + Vec2::splat(16.0),
@@ -590,6 +720,7 @@ impl App {
                 StampKind::Text {
                     label: st.label.clone(),
                     color: st.color,
+                    detail: st.detail.clone(),
                 },
                 None,
             )
@@ -664,6 +795,26 @@ impl App {
                         .size(12.0)
                         .color(self.pal.text_dim),
                 );
+            }
+        });
+        ui.add_space(4.0);
+        ui.label(RichText::new(tr("Standard stamps")).strong());
+        crate::ui_kit::card(ui, |ui| {
+            for d in standard_stamps() {
+                let dynamic =
+                    matches!(&d.kind, StampKind::Text { detail, .. } if !detail.is_empty());
+                let r = ui.selectable_label(
+                    self.current_stamp.as_deref() == Some(d.name.as_str()),
+                    d.name.clone(),
+                );
+                let r = if dynamic {
+                    r.on_hover_text(tr("Adds your name (Preferences ▸ Author) and the date and time when you place it."))
+                } else {
+                    r
+                };
+                if r.clicked() {
+                    choose = Some(Some(d.name.clone()));
+                }
             }
         });
         if let Some(c) = choose {

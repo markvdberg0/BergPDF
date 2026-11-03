@@ -10,6 +10,37 @@ pub const MAX_STAMPS: usize = 60;
 pub const MAX_NAME: usize = 40;
 /// Longest stamp text, in characters.
 pub const MAX_LABEL: usize = 40;
+/// Longest second line of a dynamic stamp, in characters.
+pub const MAX_DETAIL: usize = 80;
+
+/// What a dynamic stamp's placeholders stand for when it is placed.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct StampValues {
+    /// `{author}`: the name in Preferences.
+    pub author: String,
+    /// `{date}`: e.g. `2026-11-03`.
+    pub date: String,
+    /// `{time}`: e.g. `14:05`.
+    pub time: String,
+}
+
+/// Fill in `{author}`, `{date}`, `{time}` and `{datetime}`.
+pub fn expand_placeholders(template: &str, v: &StampValues) -> String {
+    template
+        .replace("{datetime}", &format!("{} {}", v.date, v.time))
+        .replace("{author}", &v.author)
+        .replace("{date}", &v.date)
+        .replace("{time}", &v.time)
+        .trim()
+        .to_string()
+}
+
+/// Whether a text has placeholders that are filled in when the stamp is placed.
+pub fn is_dynamic(text: &str) -> bool {
+    ["{author}", "{date}", "{time}", "{datetime}"]
+        .iter()
+        .any(|p| text.contains(p))
+}
 
 /// What a stamp shows.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -21,6 +52,10 @@ pub enum StampKind {
         label: String,
         /// Colour of the box and the text.
         color: [f32; 3],
+        /// A smaller second line, usually with placeholders: a dynamic stamp such as
+        /// "{author} · {date} {time}".
+        #[serde(default)]
+        detail: String,
     },
     /// A picture kept in `file` (a PNG in the stamps folder).
     Image {
@@ -69,7 +104,7 @@ impl StampLibrary {
     pub fn from_toml(s: &str) -> Option<Self> {
         let mut v: Self = toml::from_str(s).ok()?;
         v.stamps.retain(|d| match &d.kind {
-            StampKind::Text { label, color } => {
+            StampKind::Text { label, color, .. } => {
                 !label.trim().is_empty() && color.iter().all(|c| c.is_finite())
             }
             StampKind::Image { file } => is_safe_image_name(file),
@@ -77,8 +112,18 @@ impl StampLibrary {
         v.stamps.truncate(MAX_STAMPS);
         for d in &mut v.stamps {
             d.name = d.name.chars().take(MAX_NAME).collect();
-            if let StampKind::Text { label, color } = &mut d.kind {
+            if let StampKind::Text {
+                label,
+                color,
+                detail,
+            } = &mut d.kind
+            {
                 *label = label.chars().take(MAX_LABEL).collect();
+                *detail = detail
+                    .chars()
+                    .filter(|c| !c.is_control())
+                    .take(MAX_DETAIL)
+                    .collect();
                 for c in color.iter_mut() {
                     *c = c.clamp(0.0, 1.0);
                 }
@@ -94,11 +139,17 @@ impl StampLibrary {
             return Err("give the stamp a name".into());
         }
         match &mut def.kind {
-            StampKind::Text { label, .. } => {
+            StampKind::Text { label, detail, .. } => {
                 *label = label.trim().chars().take(MAX_LABEL).collect();
                 if label.is_empty() {
                     return Err("the stamp has no text".into());
                 }
+                *detail = detail
+                    .trim()
+                    .chars()
+                    .filter(|c| !c.is_control())
+                    .take(MAX_DETAIL)
+                    .collect();
             }
             StampKind::Image { file } => {
                 if !is_safe_image_name(file) {
@@ -146,6 +197,7 @@ mod tests {
             kind: StampKind::Text {
                 label: label.into(),
                 color: [0.8, 0.0, 0.0],
+                detail: String::new(),
             },
         }
     }
@@ -203,5 +255,35 @@ mod tests {
             lib.add(text(&format!("s{i}"), "X")).unwrap();
         }
         assert!(lib.add(text("one more", "X")).is_err());
+    }
+
+    #[test]
+    fn dynamic_stamps_fill_in_name_date_and_time() {
+        let v = StampValues {
+            author: "Mark".into(),
+            date: "2026-11-03".into(),
+            time: "14:05".into(),
+        };
+        assert_eq!(
+            expand_placeholders("{author} · {date} {time}", &v),
+            "Mark · 2026-11-03 14:05"
+        );
+        assert_eq!(
+            expand_placeholders("on {datetime}", &v),
+            "on 2026-11-03 14:05"
+        );
+        assert!(is_dynamic("by {author}") && !is_dynamic("PAID"));
+        // Older stamp files have no second line.
+        let lib = StampLibrary::from_toml(
+            "[[stamps]]
+name = \"Paid\"
+[stamps.kind]
+kind = \"Text\"
+label = \"PAID\"
+color = [1.0, 0.0, 0.0]
+",
+        )
+        .unwrap();
+        assert!(matches!(&lib.stamps[0].kind, StampKind::Text { detail, .. } if detail.is_empty()));
     }
 }

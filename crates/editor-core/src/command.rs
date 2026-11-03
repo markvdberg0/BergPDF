@@ -113,6 +113,26 @@ pub enum CommandId {
     PageMoveUp,
     PageMoveDown,
     DocumentMerge,
+    PageHeaderFooter,
+    PageBates,
+    PageWatermark,
+    PageRemoveMarks,
+    PageLabels,
+    PageCrop,
+    ToolCrop,
+    BookmarkAdd,
+    DocumentCompare,
+    ToolFieldText,
+    ToolFieldCheckbox,
+    ToolFieldRadio,
+    ToolFieldCombo,
+    ToolFieldList,
+    ToolFieldButton,
+    ToolFieldSignature,
+    ToolFormDesign,
+    FormScripts,
+    FormCalculateNow,
+    DocumentJavaScript,
     NextTab,
     PreviousTab,
     Escape,
@@ -351,7 +371,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::FileProperties,
-        "Document Properties…",
+        "Document properties…",
         "View and edit title, author, subject and keywords",
         C::File,
         "metadata info title author",
@@ -359,7 +379,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::FileExportImage,
-        "Export Page as Image…",
+        "Export page as image…",
         "Save the current page as a PNG picture",
         C::File,
         "png picture screenshot render",
@@ -367,7 +387,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::FormFlatten,
-        "Flatten Form Fields…",
+        "Flatten form fields…",
         "Turn all form fields into plain page content",
         C::Forms,
         "bake lock fill static acroform",
@@ -375,7 +395,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::FileSaveAs,
-        "Save As…",
+        "Save as…",
         "Save a copy under a new name",
         C::File,
         "export copy",
@@ -383,7 +403,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::FileClose,
-        "Close Document",
+        "Close document",
         "Close the current tab",
         C::File,
         "tab",
@@ -432,7 +452,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::EditSelectAll,
-        "Select All",
+        "Select all",
         "Select all text on the page",
         C::Edit,
         "",
@@ -467,7 +487,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::FindNext,
-        "Find Next",
+        "Find next",
         "Jump to the next search result",
         C::Edit,
         "search",
@@ -478,7 +498,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::FindPrevious,
-        "Find Previous",
+        "Find previous",
         "Jump to the previous search result",
         C::Edit,
         "search",
@@ -489,7 +509,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::CommandPalette,
-        "Search Commands…",
+        "Search commands…",
         "Find and run any command, tool or setting",
         C::Help,
         "palette actions",
@@ -509,7 +529,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::ShortcutReference,
-        "Keyboard Shortcuts",
+        "Keyboard shortcuts",
         "Show every keyboard shortcut",
         C::Help,
         "keys hotkeys",
@@ -525,7 +545,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::CheckForUpdates,
-        "Check for Updates…",
+        "Check for updates…",
         "Look for a newer published version of BergPDF",
         C::Help,
         "update upgrade new version release",
@@ -533,7 +553,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::ViewZoomIn,
-        "Zoom In",
+        "Zoom in",
         "Increase the zoom level",
         C::View,
         "bigger magnify",
@@ -544,7 +564,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::ViewZoomOut,
-        "Zoom Out",
+        "Zoom out",
         "Decrease the zoom level",
         C::View,
         "smaller",
@@ -552,7 +572,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::ViewZoomActual,
-        "Actual Size (100%)",
+        "Actual size (100%)",
         "Show the page at 100%",
         C::View,
         "reset zoom",
@@ -560,7 +580,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::ViewFitPage,
-        "Fit Page",
+        "Fit page",
         "Fit the whole page in the window",
         C::View,
         "zoom",
@@ -568,7 +588,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::ViewFitWidth,
-        "Fit Width",
+        "Fit width",
         "Fit the page width to the window",
         C::View,
         "zoom",
@@ -576,7 +596,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::ViewModeContinuous,
-        "Continuous Scrolling",
+        "Continuous scrolling",
         "Show pages in a continuous column",
         C::View,
         "scroll layout",
@@ -584,7 +604,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::ViewModeSingle,
-        "Single Page",
+        "Single page",
         "Show one page at a time",
         C::View,
         "layout",
@@ -592,7 +612,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::ViewModeFacing,
-        "Facing Pages",
+        "Facing pages",
         "Show two pages side by side",
         C::View,
         "two-up spread layout",
@@ -600,7 +620,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::ViewRotateClockwise,
-        "Rotate View Clockwise",
+        "Rotate view clockwise",
         "Rotate the display only; the document is not changed",
         C::View,
         "orientation",
@@ -608,7 +628,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::ViewRotateCounterClockwise,
-        "Rotate View Counter-clockwise",
+        "Rotate view counter-clockwise",
         "Rotate the display only; the document is not changed",
         C::View,
         "orientation",
@@ -616,7 +636,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::ViewToggleLeftSidebar,
-        "Toggle Navigation Panel",
+        "Toggle navigation panel",
         "Show or hide thumbnails, bookmarks and results",
         C::View,
         "sidebar thumbnails",
@@ -624,7 +644,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::ViewToggleRightSidebar,
-        "Toggle Properties Panel",
+        "Toggle properties panel",
         "Show or hide properties and comments",
         C::View,
         "sidebar",
@@ -632,7 +652,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::ViewDarkPages,
-        "Dark Page View",
+        "Dark page view",
         "Comfortable dark reading filter (display only)",
         C::View,
         "night mode invert accessibility",
@@ -640,7 +660,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::GoNextPage,
-        "Next Page",
+        "Next page",
         "Go to the next page",
         C::Navigate,
         "forward",
@@ -651,7 +671,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::GoPreviousPage,
-        "Previous Page",
+        "Previous page",
         "Go to the previous page",
         C::Navigate,
         "back",
@@ -662,7 +682,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::GoFirstPage,
-        "First Page",
+        "First page",
         "Go to the first page",
         C::Navigate,
         "",
@@ -670,7 +690,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::GoLastPage,
-        "Last Page",
+        "Last page",
         "Go to the last page",
         C::Navigate,
         "",
@@ -678,7 +698,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::GoToPage,
-        "Go to Page…",
+        "Go to page…",
         "Jump to a page number",
         C::Navigate,
         "page number",
@@ -686,7 +706,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::ToolSelect,
-        "Select Tool",
+        "Select tool",
         "Select and move annotations",
         C::Comment,
         "pointer arrow",
@@ -694,7 +714,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::ToolHand,
-        "Hand Tool",
+        "Hand tool",
         "Drag to pan the page",
         C::View,
         "pan grab",
@@ -702,7 +722,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::ToolTextSelect,
-        "Select Text",
+        "Select text",
         "Select and copy page text",
         C::Edit,
         "text cursor",
@@ -710,7 +730,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::ToolHighlight,
-        "Highlight Text",
+        "Highlight text",
         "Highlight selected text",
         C::Comment,
         "markup",
@@ -718,7 +738,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::ToolUnderline,
-        "Underline Text",
+        "Underline text",
         "Underline selected text",
         C::Comment,
         "markup",
@@ -726,7 +746,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::ToolStrikeOut,
-        "Strikethrough Text",
+        "Strikethrough text",
         "Strike out selected text",
         C::Comment,
         "markup strikeout",
@@ -734,7 +754,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::ToolNote,
-        "Sticky Note",
+        "Sticky note",
         "Add a sticky note comment",
         C::Comment,
         "comment",
@@ -742,7 +762,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::ToolFreeText,
-        "Text Box",
+        "Text box",
         "Add a free-text annotation",
         C::Comment,
         "typewriter free text",
@@ -830,7 +850,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::ToolEditText,
-        "Edit Text",
+        "Edit text",
         "Edit existing page text",
         C::Content,
         "modify content",
@@ -838,7 +858,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::ToolAddText,
-        "Add Text",
+        "Add text",
         "Add new text to the page content",
         C::Content,
         "type insert",
@@ -846,7 +866,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::ToolAddImage,
-        "Add Image",
+        "Add image",
         "Place an image on the page",
         C::Content,
         "picture insert",
@@ -854,7 +874,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::ToolFillForm,
-        "Fill Form Fields",
+        "Fill form fields",
         "Click form fields to fill them in",
         C::Forms,
         "form acroform field checkbox radio text",
@@ -862,7 +882,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::ToolMeasureDistance,
-        "Measure Distance",
+        "Measure distance",
         "Measure a straight distance at the calibrated scale",
         C::Measure,
         "length ruler dimension",
@@ -870,7 +890,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::ToolMeasurePerimeter,
-        "Measure Length (Path)",
+        "Measure length (path)",
         "Measure the length of a multi-segment path",
         C::Measure,
         "perimeter polyline run cable pipe",
@@ -878,7 +898,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::ToolMeasureArea,
-        "Measure Area",
+        "Measure area",
         "Measure the area of a polygon",
         C::Measure,
         "polygon room floor",
@@ -886,7 +906,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::ToolMeasureRect,
-        "Measure Rectangle",
+        "Measure rectangle",
         "Measure a rectangle's area and perimeter",
         C::Measure,
         "area box",
@@ -894,7 +914,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::ToolMeasureRadius,
-        "Measure Radius",
+        "Measure radius",
         "Measure a circle by centre and edge",
         C::Measure,
         "diameter circle circumference",
@@ -902,7 +922,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::ToolMeasureAngle,
-        "Measure Angle",
+        "Measure angle",
         "Measure the angle between two arms",
         C::Measure,
         "degrees",
@@ -918,7 +938,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::ToolCalibrate,
-        "Calibrate Scale",
+        "Calibrate scale",
         "Set the drawing scale from a known length",
         C::Measure,
         "scale ratio units set",
@@ -926,7 +946,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::ToggleSnap,
-        "Snap to Drawing Geometry",
+        "Snap to drawing geometry",
         "Snap measurements to line ends, corners, intersections and midpoints in the page",
         C::Measure,
         "snap magnet corner endpoint intersection midpoint cad drawing osnap",
@@ -934,7 +954,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::FileSaveOptimized,
-        "Save As Optimized…",
+        "Save as optimized…",
         "Save a smaller copy: removes unused objects, compresses streams, optionally shrinks images",
         C::File,
         "optimize optimise reduce compress file size shrink",
@@ -958,7 +978,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::FileProtection,
-        "Password Protection…",
+        "Password protection…",
         "Protect the document with a password, or remove or change its protection",
         C::File,
         "password protect encrypt decrypt lock unlock secure owner permissions",
@@ -966,7 +986,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::ToolRedact,
-        "Mark Area for Redaction",
+        "Mark area for redaction",
         "Drag over what must be removed; nothing is deleted until you apply the redactions",
         C::Content,
         "redact redaction black out blackout censor remove sensitive confidential hide",
@@ -974,7 +994,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::RedactMarkSelection,
-        "Mark Selected Text for Redaction",
+        "Mark selected text for redaction",
         "Mark the selected text for removal; nothing is deleted until you apply the redactions",
         C::Content,
         "redact redaction black out censor remove sensitive confidential selection text",
@@ -982,7 +1002,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::RedactApply,
-        "Apply Redactions…",
+        "Apply redactions…",
         "Permanently remove what lies under the redaction marks (the pages are replaced by pictures; cannot be undone)",
         C::Content,
         "redact redaction apply remove permanently sanitize black out censor",
@@ -998,7 +1018,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::CopilotSummarize,
-        "Copilot: Summarize Document",
+        "Copilot: summarize document",
         "Concise summary with page references and highlights",
         C::Content,
         "ai summary summarise main points",
@@ -1006,7 +1026,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::CopilotSummarizeAnnotations,
-        "Copilot: Summarize Annotations",
+        "Copilot: summarize annotations",
         "Summarize all comments and markup in this document",
         C::Content,
         "ai comments review annotations summary",
@@ -1014,7 +1034,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::TranslateDocument,
-        "Translate Document…",
+        "Translate document…",
         "Detect the language and translate the text with your AI provider",
         C::Content,
         "translate translation language dutch english german french spanish",
@@ -1022,7 +1042,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::OcrDocument,
-        "Recognize Text (OCR)…",
+        "Recognize text (OCR)…",
         "Make scanned pages searchable by adding an invisible text layer",
         C::Content,
         "ocr scan scanned recognise recognize searchable text image",
@@ -1030,7 +1050,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::SignDocument,
-        "Sign with Certificate…",
+        "Sign with certificate…",
         "Digitally sign the document with a certificate file (.p12 / .pfx)",
         C::Sign,
         "digital signature certificate pkcs12 pfx cryptographic",
@@ -1046,7 +1066,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::DrawSignature,
-        "Draw Signature…",
+        "Draw signature…",
         "Draw your handwritten signature once and keep it for reuse",
         C::Sign,
         "handwritten sign draw ink autograph",
@@ -1054,7 +1074,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::SignFromImage,
-        "Signature from Picture…",
+        "Signature from picture…",
         "Use a scan or photo of your signature (PNG or JPEG) instead of drawing it",
         C::Sign,
         "signature image picture png jpg jpeg scan photo import upload",
@@ -1062,7 +1082,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::NewStamp,
-        "New Stamp…",
+        "New stamp…",
         "Make a stamp of your own from a text or a picture and keep it",
         C::Comment,
         "stamp custom logo picture image own create",
@@ -1070,7 +1090,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::ToolPlaceSignature,
-        "Place Signature",
+        "Place signature",
         "Place your saved handwritten signature on the page (a drawing, not a digital signature)",
         C::Sign,
         "handwritten sign stamp initials",
@@ -1078,7 +1098,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::ToolSignArea,
-        "Choose Signature Area",
+        "Choose signature area",
         "Drag the area where a digital signature will be shown",
         C::Sign,
         "visible signature box",
@@ -1086,7 +1106,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::ExportMeasurements,
-        "Export Measurements (CSV)…",
+        "Export measurements (CSV)…",
         "Save all measurements and counts as a CSV file",
         C::Measure,
         "takeoff spreadsheet export",
@@ -1094,7 +1114,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::PageRotateClockwise,
-        "Rotate Pages Clockwise",
+        "Rotate pages clockwise",
         "Rotate the selected pages in the document",
         C::Organize,
         "rotate page",
@@ -1102,7 +1122,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::PageRotateCounterClockwise,
-        "Rotate Pages Counter-clockwise",
+        "Rotate pages counter-clockwise",
         "Rotate the selected pages in the document",
         C::Organize,
         "rotate page",
@@ -1110,7 +1130,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::PageDelete,
-        "Delete Pages",
+        "Delete pages",
         "Delete the selected pages",
         C::Organize,
         "remove page",
@@ -1118,7 +1138,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::PageInsertBlank,
-        "Insert Blank Page",
+        "Insert blank page",
         "Insert an empty page after the current one",
         C::Organize,
         "new page add",
@@ -1126,7 +1146,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::PageInsertImage,
-        "Insert Image as Page…",
+        "Insert image as page…",
         "Add one or more pictures (PNG, JPEG) as new pages after the current page",
         C::Organize,
         "picture photo scan add page",
@@ -1134,7 +1154,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::PageDuplicate,
-        "Duplicate Pages",
+        "Duplicate pages",
         "Duplicate the selected pages",
         C::Organize,
         "copy page",
@@ -1142,7 +1162,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::PageExtract,
-        "Extract Pages…",
+        "Extract pages…",
         "Save the selected pages as a new document",
         C::Organize,
         "split",
@@ -1150,7 +1170,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::PageMoveUp,
-        "Move Pages Earlier",
+        "Move pages earlier",
         "Move the selected pages one position up",
         C::Organize,
         "reorder",
@@ -1158,7 +1178,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::PageMoveDown,
-        "Move Pages Later",
+        "Move pages later",
         "Move the selected pages one position down",
         C::Organize,
         "reorder",
@@ -1166,15 +1186,175 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::DocumentMerge,
-        "Merge Documents…",
+        "Merge documents…",
         "Append pages from other PDF files",
         C::Organize,
         "combine join",
         []
     ),
     cmd!(
+        Id::PageHeaderFooter,
+        "Header & footer…",
+        "Add page numbers, dates or other text at the top and bottom of pages",
+        C::Organize,
+        "header footer page number numbering date running head",
+        []
+    ),
+    cmd!(
+        Id::PageBates,
+        "Bates numbering…",
+        "Number every page with a prefix and a running number, for legal and archive files",
+        C::Organize,
+        "bates legal number stamp exhibit",
+        []
+    ),
+    cmd!(
+        Id::PageWatermark,
+        "Watermark…",
+        "Put a text or a picture across pages, behind or on top of the content",
+        C::Organize,
+        "watermark confidential draft background logo",
+        []
+    ),
+    cmd!(
+        Id::PageRemoveMarks,
+        "Remove headers, footers and watermarks…",
+        "Take the headers, footers, Bates numbers and watermarks added with BergPDF off the pages again",
+        C::Organize,
+        "delete header footer watermark bates remove",
+        []
+    ),
+    cmd!(
+        Id::PageLabels,
+        "Page labels…",
+        "Number pages i, ii, iii or A-1, A-2 as readers show them, without changing the pages",
+        C::Organize,
+        "page labels numbering roman prefix",
+        []
+    ),
+    cmd!(
+        Id::PageCrop,
+        "Crop pages…",
+        "Cut away the margins of pages; nothing is deleted and it can be undone",
+        C::Organize,
+        "crop trim margins cropbox",
+        []
+    ),
+    cmd!(
+        Id::ToolCrop,
+        "Crop tool",
+        "Drag the area of the page to keep",
+        C::Organize,
+        "crop trim drag area",
+        []
+    ),
+    cmd!(
+        Id::BookmarkAdd,
+        "Add bookmark",
+        "Add a bookmark to the current page",
+        C::Navigate,
+        "bookmark outline add new chapter",
+        [(None, Shortcut::cmd(Key::Char('B')))]
+    ),
+    cmd!(
+        Id::DocumentCompare,
+        "Compare documents…",
+        "Find what changed between two versions of a document: inserted, deleted and replaced text",
+        C::File,
+        "compare diff difference versions changes revision",
+        []
+    ),
+    cmd!(
+        Id::ToolFieldText,
+        "Text field",
+        "Draw a text field that people can type in",
+        C::Forms,
+        "form field create text input",
+        []
+    ),
+    cmd!(
+        Id::ToolFieldCheckbox,
+        "Check box",
+        "Draw a check box",
+        C::Forms,
+        "form field create checkbox tick",
+        []
+    ),
+    cmd!(
+        Id::ToolFieldRadio,
+        "Radio button",
+        "Draw a radio button; buttons with the same name form one group",
+        C::Forms,
+        "form field create radio option group",
+        []
+    ),
+    cmd!(
+        Id::ToolFieldCombo,
+        "Drop-down list",
+        "Draw a drop-down list of choices",
+        C::Forms,
+        "form field create combo dropdown select choice",
+        []
+    ),
+    cmd!(
+        Id::ToolFieldList,
+        "List box",
+        "Draw a list of choices",
+        C::Forms,
+        "form field create list choice",
+        []
+    ),
+    cmd!(
+        Id::ToolFieldButton,
+        "Button",
+        "Draw a button, for example one that resets the form",
+        C::Forms,
+        "form field create push button reset",
+        []
+    ),
+    cmd!(
+        Id::ToolFieldSignature,
+        "Signature field",
+        "Draw an empty field where a digital signature can go",
+        C::Forms,
+        "form field create signature sign here",
+        []
+    ),
+    cmd!(
+        Id::ToolFormDesign,
+        "Edit fields",
+        "Select form fields to move them, change their properties or delete them",
+        C::Forms,
+        "form field edit design prepare move properties",
+        []
+    ),
+    cmd!(
+        Id::FormScripts,
+        "Form scripts…",
+        "Choose whether this document's calculations and checks may run, and see its scripts",
+        C::Forms,
+        "javascript script calculate validate format acrobat js",
+        []
+    ),
+    cmd!(
+        Id::FormCalculateNow,
+        "Calculate now",
+        "Run the form's calculations and formatting again",
+        C::Forms,
+        "javascript calculate recalculate totals",
+        []
+    ),
+    cmd!(
+        Id::DocumentJavaScript,
+        "Document JavaScript…",
+        "Write or change the scripts that belong to the whole document",
+        C::Forms,
+        "javascript document level script functions",
+        []
+    ),
+    cmd!(
         Id::NextTab,
-        "Next Tab",
+        "Next tab",
         "Switch to the next document tab",
         C::Navigate,
         "",
@@ -1213,7 +1393,7 @@ pub static REGISTRY: &[CommandInfo] = &[
     ),
     cmd!(
         Id::PreviousTab,
-        "Previous Tab",
+        "Previous tab",
         "Switch to the previous document tab",
         C::Navigate,
         "",

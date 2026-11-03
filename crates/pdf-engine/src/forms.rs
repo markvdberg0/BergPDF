@@ -1,8 +1,9 @@
 //! AcroForm support: reading, filling, flattening and field-aware page duplication/import.
 //!
 //! Scope: AcroForm text, checkbox, radio, combo/list and push-button *reading*, and filling of
-//! text, checkbox, radio and choice fields with generated appearance streams. XFA forms and
-//! calculation/format/validation JavaScript are **detected and reported, never executed**.
+//! text, checkbox, radio and choice fields with generated appearance streams. XFA forms are
+//! **detected and reported, never executed**. Form JavaScript is read by [`crate::formscripts`] and
+//! run (only when the person allows it) by the separate `pdf-js` sandbox; nothing here executes it.
 //!
 //! **Duplicated form pages.** Copying a page whose widgets belong to a field raises a real
 //! question the user must answer — [`FormPolicy`]:
@@ -104,7 +105,7 @@ pub struct FormInfo {
     pub has_scripts: bool,
 }
 
-fn acroform(doc: &Document) -> Option<&Dictionary> {
+pub(crate) fn acroform(doc: &Document) -> Option<&Dictionary> {
     let cat = doc
         .trailer
         .get(b"Root")
@@ -114,7 +115,11 @@ fn acroform(doc: &Document) -> Option<&Dictionary> {
     objutil::dict_dict(doc, cat, b"AcroForm")
 }
 
-fn inherited_field<'a>(doc: &'a Document, mut d: &'a Dictionary, key: &[u8]) -> Option<&'a Object> {
+pub(crate) fn inherited_field<'a>(
+    doc: &'a Document,
+    mut d: &'a Dictionary,
+    key: &[u8],
+) -> Option<&'a Object> {
     for _ in 0..MAX_FIELD_DEPTH {
         if let Ok(v) = d.get(key) {
             return objutil::deref(doc, v);
@@ -124,7 +129,7 @@ fn inherited_field<'a>(doc: &'a Document, mut d: &'a Dictionary, key: &[u8]) -> 
     None
 }
 
-fn text_of(doc: &Document, o: Option<&Object>) -> String {
+pub(crate) fn text_of(doc: &Document, o: Option<&Object>) -> String {
     match o.and_then(|o| objutil::deref(doc, o)) {
         Some(Object::String(s, _)) => objutil::decode_text_string(s),
         Some(Object::Name(n)) => String::from_utf8_lossy(n).into_owned(),
@@ -295,7 +300,7 @@ fn find_page_with_annot(
     })
 }
 
-fn on_state_of(d: &Document, wd: &Dictionary) -> Option<String> {
+pub(crate) fn on_state_of(d: &Document, wd: &Dictionary) -> Option<String> {
     let ap = objutil::dict_dict(d, wd, b"AP")?;
     let n = objutil::dict_dict(d, ap, b"N")?;
     n.iter()
@@ -341,7 +346,7 @@ fn field_attr(d: &Document, field: ObjectId, key: &[u8]) -> Option<Object> {
     inherited_field(d, fd, key).cloned()
 }
 
-fn widgets_of(d: &Document, field: ObjectId) -> Vec<ObjectId> {
+pub(crate) fn widgets_of(d: &Document, field: ObjectId) -> Vec<ObjectId> {
     let Ok(fd) = d.get_dictionary(field) else {
         return Vec::new();
     };
@@ -358,7 +363,7 @@ fn acroform_da(d: &Document) -> String {
 }
 
 /// Display text of a choice value (export value → option label).
-fn choice_display(d: &Document, field: ObjectId, value: &str) -> String {
+pub(crate) fn choice_display(d: &Document, field: ObjectId, value: &str) -> String {
     if let Some(Object::Array(opts)) = field_attr(d, field, b"Opt") {
         for o in opts {
             if let Some(Object::Array(p)) = objutil::deref(d, &o)
@@ -402,6 +407,19 @@ fn generate_missing_appearance(tx: &mut Tx<'_>, widget: ObjectId) -> Result<()> 
 
 /// Set a text/choice field value and regenerate the appearance of each of its widgets.
 pub fn set_text_value(tx: &mut Tx<'_>, field: ObjectId, value: &str) -> Result<()> {
+    set_text_value_as(tx, field, value, None, false)
+}
+
+/// Like [`set_text_value`], with the text shown in the field given separately (`shown`: what a form's
+/// format script made of the value). `by_script`: the value comes from the form's own calculation, so a
+/// read-only field or its maximum length does not stop it.
+pub fn set_text_value_as(
+    tx: &mut Tx<'_>,
+    field: ObjectId,
+    value: &str,
+    shown: Option<&str>,
+    by_script: bool,
+) -> Result<()> {
     let info = {
         let d = tx.doc();
         let fd = d
@@ -418,7 +436,7 @@ pub fn set_text_value(tx: &mut Tx<'_>, field: ObjectId, value: &str) -> Result<(
         let ff = inherited_field(d, fd, b"Ff")
             .and_then(|o| o.as_i64().ok())
             .unwrap_or(0);
-        if ff & 1 != 0 {
+        if ff & 1 != 0 && !by_script {
             return Err(EngineError::Unsupported("this field is read-only".into()));
         }
         let max_len = inherited_field(d, fd, b"MaxLen")
@@ -430,16 +448,17 @@ pub fn set_text_value(tx: &mut Tx<'_>, field: ObjectId, value: &str) -> Result<(
     let mut text = value.to_string();
     if let Some(m) = max_len
         && text.chars().count() > m
+        && !by_script
     {
         return Err(EngineError::InvalidArgument(format!(
             "the value is longer than the field's maximum of {m} characters"
         )));
     }
     // Choice fields store the export value; show the display text.
-    let display = if ft.as_deref() == Some(b"Ch") {
-        choice_display(tx.doc(), field, &text)
-    } else {
-        text.clone()
+    let display = match shown {
+        Some(s) => s.to_string(),
+        None if ft.as_deref() == Some(b"Ch") => choice_display(tx.doc(), field, &text),
+        None => text.clone(),
     };
     tx.dict_mut(field)?.set("V", text_obj(&text));
     text.clear();
@@ -450,7 +469,7 @@ pub fn set_text_value(tx: &mut Tx<'_>, field: ObjectId, value: &str) -> Result<(
     Ok(())
 }
 
-fn regenerate_text_appearance(
+pub(crate) fn regenerate_text_appearance(
     tx: &mut Tx<'_>,
     field: ObjectId,
     widget: ObjectId,
@@ -833,7 +852,7 @@ fn pick_state(d: &Document, states: &Dictionary, wd: &Dictionary) -> Option<Obje
 }
 
 /// Remove a widget/field from the AcroForm tree (and from its parent's `/Kids`).
-fn detach_field(tx: &mut Tx<'_>, id: ObjectId) -> Result<()> {
+pub(crate) fn detach_field(tx: &mut Tx<'_>, id: ObjectId) -> Result<()> {
     let d = tx.doc();
     let parent = d
         .get_dictionary(id)
@@ -895,7 +914,7 @@ fn detach_field(tx: &mut Tx<'_>, id: ObjectId) -> Result<()> {
 // Duplicating / importing pages with widgets
 // ------------------------------------------------------------------------------------------
 
-fn all_field_names(d: &Document) -> BTreeSet<String> {
+pub(crate) fn all_field_names(d: &Document) -> BTreeSet<String> {
     let mut names = BTreeSet::new();
     let Some(af) = acroform(d) else { return names };
     let Some(fields) = objutil::dict_array(d, af, b"Fields") else {
@@ -1274,7 +1293,7 @@ const FIELD_KEYS: [&[u8]; 10] = [
 ];
 
 /// The terminal field a widget belongs to (the widget itself when it is a merged field+widget).
-fn terminal_field(d: &Document, widget: ObjectId) -> ObjectId {
+pub(crate) fn terminal_field(d: &Document, widget: ObjectId) -> ObjectId {
     let mut cur = widget;
     for _ in 0..MAX_FIELD_DEPTH {
         let Ok(wd) = d.get_dictionary(cur) else {
@@ -1469,7 +1488,7 @@ pub fn import_widgets(
     Ok(out)
 }
 
-fn register_field(tx: &mut Tx<'_>, field: ObjectId) -> Result<()> {
+pub(crate) fn register_field(tx: &mut Tx<'_>, field: ObjectId) -> Result<()> {
     let cat = tx
         .doc()
         .trailer

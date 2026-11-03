@@ -60,6 +60,12 @@ impl InlineEdit {
     }
 }
 
+/// `10.5`, `12` (no trailing zeros).
+fn trim_pt(v: f64) -> String {
+    let s = format!("{v:.1}");
+    s.strip_suffix(".0").map(str::to_string).unwrap_or(s)
+}
+
 fn color(c: annot::Rgb) -> Color32 {
     let b = |v: f32| (v.clamp(0.0, 1.0) * 255.0).round() as u8;
     Color32::from_rgb(b(c.0), b(c.1), b(c.2))
@@ -76,7 +82,7 @@ impl App {
             return;
         };
         // Where the text is and how it looks. Gone (undo, delete, a changed page): nothing to edit any more.
-        let (rect, font_px, fill, ink, rows, single) = match ed.target {
+        let (rect, font_px, fill, ink, rows, single, font_label) = match ed.target {
             Target::Annotation(id) => {
                 let annots = self.annots_for(ed.page);
                 let Some(info) = annots.iter().find(|a| a.id == id) else {
@@ -90,6 +96,7 @@ impl App {
                     AnnotationKind::FreeText {
                         font_size,
                         text_color,
+                        font,
                         ..
                     } => {
                         let px = (*font_size as f32 * vc.px_per_pt as f32).clamp(10.0, 60.0);
@@ -101,9 +108,18 @@ impl App {
                             color(*text_color),
                             rows,
                             false,
+                            format!("{} · {} pt", font.family.title(), trim_pt(*font_size)),
                         )
                     }
-                    _ => (rect, 14.0, Color32::WHITE, Color32::BLACK, 3, false),
+                    _ => (
+                        rect,
+                        14.0,
+                        Color32::WHITE,
+                        Color32::BLACK,
+                        3,
+                        false,
+                        String::new(),
+                    ),
                 }
             }
             Target::Run(rid) => {
@@ -113,7 +129,8 @@ impl App {
                 };
                 let rect = Self::rect_screen(vc, i, run.quad.bounds());
                 let px = (run.size_pt as f32 * vc.px_per_pt as f32).clamp(9.0, 80.0);
-                (rect, px, Color32::WHITE, Color32::BLACK, 1, true)
+                let label = format!("{} · {} pt", run.base_font, trim_pt(run.size_pt));
+                (rect, px, Color32::WHITE, Color32::BLACK, 1, true, label)
             }
         };
         let width = if single {
@@ -127,25 +144,85 @@ impl App {
         if ctx.input_mut(|i| i.consume_key(egui::Modifiers::COMMAND, egui::Key::Enter)) {
             apply = true;
         }
-        egui::Area::new(egui::Id::new("inline_text_edit"))
+        // docs/DESIGN.md §4.8: a 1.5 px accent frame 6 8 outside the text, tinted with the accent at 4 %, and
+        // a chip 8 above it with the font, the size and Done.
+        let frame_pos = if single {
+            // The text of the field starts where the page's text starts.
+            rect.min + egui::vec2(-8.0, -6.0)
+        } else {
+            rect.min - egui::vec2(8.0, 6.0)
+        };
+        let pal = self.pal;
+        let chip_id = egui::Id::new("inline_text_chip");
+        let chip_h = ctx
+            .memory(|m| m.area_rect(chip_id))
+            .map_or(26.0, |r| r.height());
+        let chip = egui::Area::new(chip_id)
             .order(egui::Order::Foreground)
-            .fixed_pos(if single {
-                // The text of the field starts where the page's text starts.
-                rect.min + egui::vec2(-4.0, -7.0)
-            } else {
-                rect.min
-            })
+            .fixed_pos(frame_pos - egui::vec2(0.0, chip_h + 8.0))
             .show(ctx, |ui| {
                 egui::Frame::new()
-                    .fill(fill)
-                    .stroke(Stroke::new(2.0, accent))
-                    .corner_radius(egui::CornerRadius::same(4))
-                    .shadow(egui::Shadow {
-                        offset: [0, 3],
-                        blur: 12,
-                        spread: 0,
-                        color: Color32::from_black_alpha(60),
+                    .fill(crate::theme::Palette::OVERLAY_BG)
+                    .corner_radius(egui::CornerRadius::same(crate::theme::radius::MD))
+                    .inner_margin(egui::Margin {
+                        left: 10,
+                        right: 4,
+                        top: 3,
+                        bottom: 3,
                     })
+                    .shadow(egui::Shadow {
+                        offset: [0, 8],
+                        blur: 24,
+                        spread: 0,
+                        color: Color32::from_black_alpha(if pal.dark { 115 } else { 31 }),
+                    })
+                    .show(ui, |ui| {
+                        ui.horizontal(|ui| {
+                            ui.spacing_mut().item_spacing.x = 10.0;
+                            if !font_label.is_empty() {
+                                ui.add(
+                                    egui::Label::new(
+                                        egui::RichText::new(&font_label)
+                                            .size(11.5)
+                                            .color(crate::theme::Palette::OVERLAY_TEXT),
+                                    )
+                                    .selectable(false),
+                                );
+                            }
+                            let done = egui::Button::new(
+                                egui::RichText::new(tr("Done"))
+                                    .font(crate::theme::font(600, 11.0))
+                                    .color(pal.on_primary),
+                            )
+                            .fill(pal.primary)
+                            .stroke(Stroke::NONE)
+                            .corner_radius(egui::CornerRadius::same(crate::theme::radius::SM))
+                            .min_size(egui::vec2(0.0, 20.0));
+                            ui.spacing_mut().button_padding = egui::vec2(8.0, 2.0);
+                            ui.add(done)
+                                .on_hover_text(tr(if single {
+                                    "Enter or click outside to apply, Esc to cancel"
+                                } else {
+                                    "Ctrl+Enter or click outside to apply, Esc to cancel"
+                                }))
+                                .clicked()
+                        })
+                        .inner
+                    })
+                    .inner
+            });
+        if chip.inner {
+            apply = true;
+        }
+        egui::Area::new(egui::Id::new("inline_text_edit"))
+            .order(egui::Order::Foreground)
+            .fixed_pos(frame_pos)
+            .show(ctx, |ui| {
+                egui::Frame::new()
+                    .fill(fill.lerp_to_gamma(accent, 0.04))
+                    .stroke(Stroke::new(1.5, accent))
+                    .corner_radius(egui::CornerRadius::same(crate::theme::radius::XS))
+                    .inner_margin(egui::Margin::symmetric(8, 6))
                     .show(ui, |ui| {
                         ui.set_width(width);
                         let field = if single {
@@ -165,28 +242,9 @@ impl App {
                             if r.has_focus() {
                                 ed.focused = true;
                             }
-                        } else if !r.has_focus() {
+                        } else if !r.has_focus() && !chip.response.hovered() {
                             apply = true;
                         }
-                    });
-                ui.add_space(4.0);
-                egui::Frame::new()
-                    .fill(Color32::from_black_alpha(200))
-                    .corner_radius(egui::CornerRadius::same(4))
-                    .inner_margin(egui::Margin::symmetric(8, 3))
-                    .show(ui, |ui| {
-                        ui.add(
-                            egui::Label::new(
-                                egui::RichText::new(tr(if single {
-                                    "Enter or click outside to apply, Esc to cancel"
-                                } else {
-                                    "Ctrl+Enter or click outside to apply, Esc to cancel"
-                                }))
-                                .size(11.0)
-                                .color(Color32::WHITE),
-                            )
-                            .extend(),
-                        );
                     });
             });
         if cancel {

@@ -83,7 +83,18 @@ impl App {
             | C::PageDuplicate
             | C::PageMoveUp
             | C::PageMoveDown
-            | C::DocumentMerge => has && can_edit,
+            | C::DocumentMerge
+            | C::PageHeaderFooter
+            | C::PageBates
+            | C::PageWatermark
+            | C::PageRemoveMarks
+            | C::PageLabels
+            | C::PageCrop
+            | C::BookmarkAdd
+            | C::FormCalculateNow
+            | C::DocumentJavaScript => has && can_edit,
+            C::FormScripts => has,
+            C::DocumentCompare => true,
             C::PageExtract => has,
             C::FileProperties
             | C::FileExportImage
@@ -298,6 +309,17 @@ impl App {
             C::PageMoveUp => self.move_pages_by(-1),
             C::PageMoveDown => self.move_pages_by(1),
             C::DocumentMerge => self.merge_documents(),
+            C::PageHeaderFooter => self.open_header_footer(false),
+            C::PageBates => self.open_header_footer(true),
+            C::PageWatermark => self.open_watermark(),
+            C::PageRemoveMarks => self.open_remove_marks(),
+            C::PageLabels => self.open_page_labels(),
+            C::PageCrop => self.open_crop(None),
+            C::BookmarkAdd => self.add_bookmark_here(),
+            C::FormScripts => self.open_scripts_dialog(),
+            C::DocumentCompare => self.open_compare(),
+            C::FormCalculateNow => self.calculate_now(),
+            C::DocumentJavaScript => self.open_document_js(),
             C::NextTab => {
                 if !self.tabs.is_empty() {
                     self.active = (self.active + 1) % self.tabs.len();
@@ -400,7 +422,7 @@ impl App {
         }
         if caps.has_javascript {
             lines.push(
-                tr("This document contains JavaScript. BergPDF never runs document scripts.")
+                tr("This document contains JavaScript. Form scripts run only when you allow them (Forms ▸ Form scripts); other scripts never run.")
                     .into(),
             );
         }
@@ -415,6 +437,7 @@ impl App {
     }
 
     pub fn add_tab(&mut self, session: DocumentSession) {
+        self.show_start = false;
         let mut session = session;
         match self.prefs.default_zoom {
             editor_core::prefs::DefaultZoom::FitPage => session.view.zoom_mode = ZoomMode::FitPage,
@@ -458,6 +481,7 @@ impl App {
             Ok(()) => {
                 let name = tab.session.title.clone();
                 self.notify(tf!("Saved {}", name));
+                self.save_thumbnail(i);
                 true
             }
             Err(e) => {
@@ -491,6 +515,7 @@ impl App {
                     self.prefs.push_recent(&dest.to_string_lossy());
                     self.prefs_dirty = true;
                     self.notify(tf!("Saved {}", dest.display()));
+                    self.save_thumbnail(i);
                 }
                 Err(e) => {
                     self.dialog = Some(Dialog::Error {
@@ -515,6 +540,8 @@ impl App {
         if i >= self.tabs.len() {
             return;
         }
+        // The start screen shows the first page of recent files.
+        self.save_thumbnail(i);
         let t = self.tabs.remove(i);
         self.hub.close(t.session.id);
         platform::recovery::remove(

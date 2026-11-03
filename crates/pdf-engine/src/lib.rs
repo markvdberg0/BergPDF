@@ -7,11 +7,14 @@
 
 pub mod annot;
 pub mod caps;
+pub mod compare;
 pub mod content;
 pub mod doc;
 pub mod error;
 pub mod fontembed;
+pub mod formedit;
 pub mod forms;
+pub mod formscripts;
 pub mod geom;
 pub mod icc;
 pub mod imagedoc;
@@ -22,7 +25,10 @@ pub mod meta;
 pub mod nav;
 pub mod objutil;
 pub mod optimize;
+pub mod outline;
 pub mod pagecontent;
+pub mod pagelabels;
+pub mod pagemarks;
 pub mod pageops;
 pub mod pdfa;
 pub mod protect;

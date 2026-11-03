@@ -1,8 +1,9 @@
 //! Form filling: click handling, field highlighting, the fill dialog and the dialog that asks
 //! how form fields are treated when pages are duplicated, extracted or merged.
 //!
-//! Field values are written with the engine's form functions as ordinary undoable commands.
-//! No field action, calculation or script is ever executed.
+//! Field values are written with the engine's form functions as ordinary undoable commands. When the
+//! person allowed the document's scripts, a change first goes through the form's JavaScript
+//! (`scripts_ui`), and everything the scripts changed is written in the same step.
 
 use crate::canvas::ViewCtx;
 use crate::dialogs::modal;
@@ -11,7 +12,6 @@ use crate::state::*;
 use crate::tf;
 use editor_core::tools::Tool;
 use egui::{Color32, Pos2, RichText, Stroke};
-use pdf_engine::EngineError;
 use pdf_engine::forms::{self, FieldKind, FormField, FormInfo, WidgetInfo};
 use pdf_engine::pageops::FormPolicy;
 use std::sync::Arc;
@@ -66,7 +66,6 @@ impl App {
             self.notify(tf!("“{}” is read-only.", f.name));
             return;
         }
-        let ti = self.active;
         match &f.kind {
             FieldKind::Text {
                 multiline,
@@ -99,17 +98,18 @@ impl App {
             }
             FieldKind::Checkbox => {
                 let on = !matches!(f.value.as_str(), "" | "Off");
-                let id = f.id;
-                let r = self.tabs[ti].session.execute(
-                    if on {
-                        tr("Uncheck box")
-                    } else {
-                        tr("Check box")
-                    },
-                    |tx| forms::set_checkbox(tx, id, !on),
-                );
-                if let Err(e) = r {
-                    self.notify_error(e.to_string());
+                let new = if on {
+                    "Off".to_string()
+                } else {
+                    w.on_state.clone().unwrap_or_else(|| "Yes".into())
+                };
+                let label = if on {
+                    tr("Uncheck box")
+                } else {
+                    tr("Check box")
+                };
+                if let Err(e) = self.commit_field_value(f.id, &new, label) {
+                    self.notify_error(e);
                 }
             }
             FieldKind::Radio => {
@@ -117,19 +117,11 @@ impl App {
                     self.notify(tr("This radio button has no selectable state."));
                     return;
                 };
-                let id = f.id;
-                let r = self.tabs[ti]
-                    .session
-                    .execute(tr("Select option"), |tx| forms::set_radio(tx, id, &state));
-                if let Err(e) = r {
-                    self.notify_error(e.to_string());
+                if let Err(e) = self.commit_field_value(f.id, &state, tr("Select option")) {
+                    self.notify_error(e);
                 }
             }
-            FieldKind::PushButton => {
-                self.notify(tr(
-                    "Buttons that run actions are not executed: BergPDF never runs scripts.",
-                ));
-            }
+            FieldKind::PushButton => self.click_button(f.id),
             FieldKind::Signature => {
                 self.notify(tr(
                     "Signature fields can be viewed, but signing is not supported.",
@@ -246,20 +238,10 @@ impl App {
             Some(false) => false,
             Some(true) => {
                 let (id, value) = (st.field, st.value.clone());
-                let r = self.tabs[self.active]
-                    .session
-                    .execute(tr("Fill field"), |tx| forms::set_text_value(tx, id, &value));
-                match r {
+                match self.commit_field_value(id, &value, tr("Fill field")) {
                     Ok(()) => false,
-                    Err(EngineError::MissingGlyphs { chars, .. }) => {
-                        st.error = Some(tf!(
-                            "The bundled font cannot show these characters: {}. Remove or replace them.",
-                            chars
-                        ));
-                        true
-                    }
                     Err(e) => {
-                        st.error = Some(e.to_string());
+                        st.error = Some(e);
                         true
                     }
                 }

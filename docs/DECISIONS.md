@@ -396,7 +396,49 @@ asked once more to download, and keep the detection file they have. **Open for t
 hosting the file yourself, convert the official model with `paddle2onnx` once and compare, or host that
 conversion; Apache-2.0 allows redistribution with the NOTICE in `pdf_ocr::MODEL_NOTICE`.
 
-## D-040 — OCR detection model: the author's ONNX file instead of the `.rten` file (amends D-023, D-039)
+## D-040 — Form JavaScript runs, in a sandbox and only when allowed (amends the "runs no document code" rule)
+Forms made with Acrobat rely on JavaScript for totals, number and date formats, input checks and buttons; without
+it such forms show empty totals and accept anything, which is the main reason people keep a second PDF program.
+Chosen: run *form* scripts (field keystroke, validate, calculate and format scripts, button actions and the
+document-level scripts they call) in the separate `pdf-js` crate, on [Boa](https://boajs.dev) 0.22 (pure Rust,
+MIT/Unlicense, built without `intl` and without the browser bindings). The engine gets **no host functions**: the
+Acrobat objects (`this.getField`, `event`, `app.alert`, `util.printf/printd/scand`, the `AF…` functions) are plain
+JavaScript in `prelude.js` working on a JSON copy of the field values, and the result is JSON again. So a script can
+change field values, their hidden/read-only/required flags and show messages, nothing else; `submitForm`,
+`app.launchURL`, `mailDoc`, `print`, timers, opening documents and so on do nothing and are reported. Every run starts
+a fresh engine; loops (2,000,000 iterations each) and recursion (400) are limited, and a run that hits a limit
+changes nothing. When scripts run is the person's choice: *Ask* (default: once per document, the first time a field
+of a form with scripts is changed or a scripted button is clicked), *Always* or *Never* (`prefs.form_scripts`,
+Forms ▸ Form Scripts). What the scripts change is written as one undoable step together with the value typed.
+Not run, still: page/document open actions, annotation actions, links with JavaScript, XFA. Rejected: QuickJS
+(`rquickjs`, a C library at runtime, against D-002); executing scripts unasked (a document is untrusted input).
+Cost: a larger binary and a longer build (Boa is a full engine); a hostile script can still use some CPU before a
+limit stops it.
+
+## D-041 — Page marks are separate, tagged content streams; bookmarks and labels are rewritten whole
+Headers, footers, Bates numbers and watermarks (`pdf_engine::pagemarks`) are drawn as real page content so every
+reader and printer shows them, but in content streams of their own, marked with a private `/BergMark` key and wrapped
+in `/Artifact` marked content (`/Pagination`, subtype `Header`/`Footer`/`Watermark`, as Acrobat writes them). The page
+becomes `[marks behind] [q] [its own streams] [Q…] [marks on top]`, each mark balanced and starting in the page's
+initial graphics state, so marks can be added and removed in any order and the page's own streams are never
+touched. Only marks made by BergPDF can be removed again. Positions use the page as shown (crop box and `/Rotate`).
+Page labels (`pagelabels`) and bookmarks (`outline`) are written back as a whole: one flat `/Nums` array, and a new
+outline tree with correct `Count`s; a bookmark whose destination was not changed keeps its original `/Dest` or `/A`
+object. The old objects stay in the file until it is saved optimized.
+
+## D-042 — Making forms, dynamic stamps and comparing documents
+Fields made in BergPDF (`formedit`) are standard AcroForm fields: merged field/widget dictionaries, radio buttons as
+one parent field with a widget per button, a `/DA` naming Helvetica in the form's `/DR` for readers that rebuild
+appearances, and appearances BergPDF draws itself with the bundled DejaVu Sans. The calculation, format and
+validation builders write the standard `AFSimple_Calculate`, `AFNumber_Format`, `AFDate_FormatEx`,
+`AFRange_Validate` calls, so the forms work in Acrobat and other readers too. Dynamic stamps are text stamps with a
+second line whose `{author}`, `{date}` and `{time}` are filled in when the stamp is placed (local time via the `time`
+crate; UTC when the local offset cannot be found); the placed stamp is static, as in a paper stamp. Compare
+(`compare`) works on text: the words of both versions in reading order are diffed (Myers via the `similar` crate, 20 s
+deadline) and the changes are marked on a copy of the newer version with highlights and notes. Not done: comparing
+pictures or layout, style changes, side-by-side view.
+
+## D-043 — OCR detection model: the author's ONNX file instead of the `.rten` file (amends D-023, D-039)
 On 2026-11-03 the `ocrs` author's host (`ocrs-models.s3-accelerate.amazonaws.com`) started answering HTTP 403 for
 every `.rten` file, so the in-app download and `cargo xtask fetch-ocr-models` failed. `ocrs` is phasing out the
 `.rten` format; the same host still serves the detection model as `text-detection.onnx`. The pinned `.rten` file

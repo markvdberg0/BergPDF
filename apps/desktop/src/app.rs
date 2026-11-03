@@ -90,6 +90,12 @@ impl App {
             stamps: App::load_stamp_library(),
             stamp_images: Default::default(),
             current_stamp: None,
+            last_radio_group: None,
+            compare_job: None,
+            show_start: false,
+            page_input: None,
+            start_page: Default::default(),
+            start_thumbs: Default::default(),
             ctx_target: None,
             snaps: crate::snap_ui::SnapService::new(),
             ai: crate::copilot_ui::AiRuntime::default(),
@@ -399,6 +405,7 @@ impl eframe::App for App {
         self.handle_drops_and_pending(ctx);
         self.handle_worker_results(ctx);
         self.poll_exports(ctx);
+        self.poll_compare(ctx);
         self.poll_ocr(ctx);
         self.poll_ai(ctx);
         self.poll_update(ctx);
@@ -470,37 +477,56 @@ impl eframe::App for App {
             }
             self.applied_present = Some(self.prefs.graphics.present);
         }
+        if self.tabs.is_empty() {
+            self.show_start = false;
+        }
+        let start = self.on_start_screen();
+        let m = crate::theme::metrics(self.prefs.density);
+        // docs/DESIGN.md §3: title row, ribbon tabs + ribbon, document tabs, body, status bar.
         egui::Panel::top("quick_access")
-            .frame(
-                egui::Frame::new()
-                    .fill(self.pal.chrome)
-                    .inner_margin(egui::Margin::symmetric(8, 4)),
-            )
-            .show(ui, |ui| self.quick_access_bar(ui, &ctx));
-        egui::Panel::top("ribbon")
-            .frame(
-                egui::Frame::new()
-                    .fill(self.pal.chrome)
-                    .inner_margin(egui::Margin::symmetric(8, 2)),
-            )
-            .show(ui, |ui| self.ribbon(ui, &ctx));
-        egui::Panel::top("tabs")
+            .exact_size(m.title_h)
+            .show_separator_line(false)
             .frame(egui::Frame::new().fill(self.pal.chrome))
-            .show(ui, |ui| self.tab_bar(ui, &ctx));
-        egui::Panel::bottom("status")
-            .frame(
-                egui::Frame::new()
-                    .fill(self.pal.chrome)
-                    .inner_margin(egui::Margin::symmetric(10, 3)),
-            )
-            .show(ui, |ui| self.status_bar(ui, &ctx));
-        if self.prefs.show_left_sidebar && !self.tabs.is_empty() {
+            .show(ui, |ui| self.quick_access_bar(ui, &ctx));
+        if !start {
+            let single = self.prefs.ribbon_style == editor_core::prefs::RibbonStyle::SingleLine;
+            let row = if single {
+                m.ribbon_h
+            } else if m.show_labels {
+                m.ribbon_button.y + 32.0
+            } else {
+                m.button_h + 18.0
+            };
+            egui::Panel::top("ribbon")
+                .exact_size(m.ribbon_tabs_h + row)
+                .show_separator_line(false)
+                .frame(egui::Frame::new().fill(self.pal.chrome))
+                .show(ui, |ui| self.ribbon(ui, &ctx));
+        }
+        if !self.tabs.is_empty() {
+            egui::Panel::top("tabs")
+                .exact_size(m.doc_tabs_h)
+                .show_separator_line(false)
+                .frame(egui::Frame::new().fill(self.pal.chrome))
+                .show(ui, |ui| self.tab_bar(ui, &ctx));
+        }
+        if !start {
+            egui::Panel::bottom("status")
+                .exact_size(m.status_h)
+                .frame(
+                    egui::Frame::new()
+                        .fill(self.pal.chrome)
+                        .inner_margin(egui::Margin::symmetric(12, 0)),
+                )
+                .show(ui, |ui| self.status_bar(ui, &ctx));
+        }
+        if self.prefs.show_left_sidebar && !start {
             let w = self.prefs.left_sidebar_width;
             let r = egui::Panel::left("left_sidebar")
                 .resizable(true)
                 .default_size(w)
-                .size_range(130.0..=480.0)
-                .frame(self.side_frame())
+                .size_range(180.0..=360.0)
+                .frame(self.side_frame(true))
                 .show(ui, |ui| self.left_sidebar(ui, &ctx));
             let nw = r.response.rect.width();
             if (nw - self.prefs.left_sidebar_width).abs() > 1.0 {
@@ -508,13 +534,13 @@ impl eframe::App for App {
                 self.prefs_dirty = true;
             }
         }
-        if self.prefs.show_right_sidebar && !self.tabs.is_empty() {
+        if self.prefs.show_right_sidebar && !start {
             let w = self.prefs.right_sidebar_width;
             let r = egui::Panel::right("right_sidebar")
                 .resizable(true)
                 .default_size(w)
-                .size_range(170.0..=520.0)
-                .frame(self.side_frame())
+                .size_range(260.0..=420.0)
+                .frame(self.side_frame(false))
                 .show(ui, |ui| self.right_sidebar(ui, &ctx));
             let nw = r.response.rect.width();
             if (nw - self.prefs.right_sidebar_width).abs() > 1.0 {
@@ -522,16 +548,20 @@ impl eframe::App for App {
                 self.prefs_dirty = true;
             }
         }
-        if !self.prefs.show_left_sidebar && !self.tabs.is_empty() {
+        if !self.prefs.show_left_sidebar && !start {
             self.collapsed_rail(ui, true);
         }
-        if !self.prefs.show_right_sidebar && !self.tabs.is_empty() {
+        if !self.prefs.show_right_sidebar && !start {
             self.collapsed_rail(ui, false);
         }
         egui::CentralPanel::default()
-            .frame(egui::Frame::new().fill(self.pal.canvas))
+            .frame(egui::Frame::new().fill(if start {
+                self.pal.chrome
+            } else {
+                self.pal.canvas
+            }))
             .show(ui, |ui| {
-                if self.tabs.is_empty() {
+                if start {
                     self.welcome(ui, &ctx);
                 } else {
                     self.canvas(ui, &ctx);

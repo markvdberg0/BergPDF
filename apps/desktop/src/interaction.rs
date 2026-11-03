@@ -574,6 +574,15 @@ impl App {
             Tool::FillForm => self.form_click(response, vc, pos),
             Tool::PlaceSignature => self.place_signature_tool(response, vc, pos),
             Tool::SignArea => self.sign_area_tool(response, vc, pos),
+            Tool::Crop => self.crop_tool(response, vc, pos),
+            Tool::FieldText
+            | Tool::FieldCheckbox
+            | Tool::FieldRadio
+            | Tool::FieldCombo
+            | Tool::FieldList
+            | Tool::FieldButton
+            | Tool::FieldSignature
+            | Tool::FormDesign => self.form_design_tool(response, vc, pos, tool, mods),
             Tool::MeasureDistance
             | Tool::MeasurePerimeter
             | Tool::MeasureArea
@@ -1099,6 +1108,8 @@ impl App {
     pub fn paint_overlays(&mut self, painter: &egui::Painter, vc: &ViewCtx) {
         self.paint_content_overlays(painter, vc);
         self.paint_form_overlays(painter, vc);
+        self.paint_crop_preview(painter, vc);
+        self.paint_form_design(painter, vc);
         self.paint_measure_overlays(painter, vc);
         let ti = self.active;
         let doc = self.tabs[ti].session.id;
@@ -1206,6 +1217,14 @@ impl App {
                     | Tool::Stamp
                     | Tool::Redact
                     | Tool::SignArea
+                    | Tool::Crop
+                    | Tool::FieldText
+                    | Tool::FieldCheckbox
+                    | Tool::FieldRadio
+                    | Tool::FieldCombo
+                    | Tool::FieldList
+                    | Tool::FieldButton
+                    | Tool::FieldSignature
                         if sp.len() >= 2 =>
                     {
                         let r = Rect::from_two_pos(sp[0], sp[sp.len() - 1]);

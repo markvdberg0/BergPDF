@@ -17,6 +17,7 @@ getrandom = "0.4"
 md-5 = "0.11"
 pdf-base14-metrics = "0.0.2"
 pdfboss-encoding = "2"
+similar = { version = "2.7", default-features = false }
 subsetter = "0.2"
 thiserror.workspace = true
 tracing.workspace = true

@@ -491,7 +491,7 @@ impl App {
                     self.signature_image = None;
                     self.handwriting = sig;
                     self.notify(tr(
-                        "Signature saved. Use Place Signature to put it on a page.",
+                        "Signature saved. Use Place signature to put it on a page.",
                     ));
                     self.set_tool(Tool::PlaceSignature);
                     false

@@ -5,9 +5,13 @@ audit. No external security review and no fuzzing campaign has been done (see â€
 
 ## What the application never does
 
-* **Runs no document code.** No JavaScript, no XFA, no form calculations, no launch/URI/import
-  actions on its own. Such content is *detected* and reported when a file opens (`caps.rs`,
-  `forms::read_form`), never executed.
+* **Runs no document code on its own.** No XFA, no launch/URI/import actions, no open or page
+  actions. Such content is *detected* and reported when a file opens (`caps.rs`, `forms::read_form`).
+  The one exception is **form JavaScript** (calculations, formats, checks, buttons), and only after the
+  person allowed it for the document or chose "always" (D-040). It runs in the `pdf-js` sandbox: a fresh
+  pure-Rust JavaScript engine per run with no host functions at all, so a script can only change the
+  form's field values and flags and show messages; submitting, e-mailing, printing, links, timers and
+  other documents are blocked and reported; loops and recursion are limited.
 * **Makes no network requests** in core flows and has **no telemetry**. The one exception is the
   optional AI features (PDF Copilot, Translate), which exist only in the `ai-client` crate, run only
   after a button press and a one-time consent per provider, and use the user's own key (see D-020 /

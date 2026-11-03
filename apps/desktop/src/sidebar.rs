@@ -2,7 +2,6 @@
 
 use crate::chrome::command_icon;
 use crate::i18n::tr;
-use crate::icons::Icon;
 use crate::state::*;
 use crate::tf;
 use editor_core::command::CommandId as C;
@@ -24,11 +23,11 @@ fn thumb_bucket(w: f32) -> f32 {
 }
 
 impl App {
-    /// Frame shared by both side panels: fill plus breathing room so nothing touches the edges.
-    pub fn side_frame(&self) -> egui::Frame {
+    /// Frame of a side panel: the left one on `bg.panel`, the right one on `bg.surface`.
+    pub fn side_frame(&self, left: bool) -> egui::Frame {
         egui::Frame::new()
-            .fill(self.pal.panel)
-            .inner_margin(egui::Margin::symmetric(12, 8))
+            .fill(if left { self.pal.panel } else { self.pal.card })
+            .inner_margin(egui::Margin::same(10))
     }
 
     /// The button that hides a side panel: a clearly visible square with a chevron.
@@ -36,43 +35,25 @@ impl App {
         crate::ui_kit::chevron_button(ui, pointing_left, tip).clicked()
     }
 
-    /// The row of tabs at the top of a side panel. It scrolls sideways when the panel is narrow, so the
-    /// panel never grows to fit its tabs.
-    fn tab_strip<T: Copy + PartialEq>(
+    /// The switcher at the top of a side panel: a segmented control, and the button that hides the panel.
+    /// Returns whether the panel should be hidden.
+    fn panel_switcher<T: Copy + PartialEq>(
         ui: &mut egui::Ui,
-        id: &str,
         current: &mut T,
-        tabs: &[(T, crate::icons::Icon, &str)],
-    ) {
-        // The name of the selected tab is shown only when it fits next to the other icons.
-        let font = egui::FontId::proportional(13.5);
-        let label_w = tabs
-            .iter()
-            .find(|(t, _, _)| *current == *t)
-            .map_or(0.0, |(_, _, l)| {
-                ui.painter()
-                    .layout_no_wrap((*l).to_string(), font.clone(), egui::Color32::WHITE)
-                    .size()
-                    .x
-                    + 7.0
+        tabs: &[(T, &str)],
+        left: bool,
+        hide_tip: &str,
+    ) -> bool {
+        let mut hide = false;
+        ui.horizontal(|ui| {
+            ui.spacing_mut().item_spacing.x = 4.0;
+            let w = (ui.available_width() - 22.0).max(60.0);
+            ui.allocate_ui(Vec2::new(w, 32.0), |ui| {
+                crate::ui_kit::segmented(ui, current, tabs);
             });
-        let icons_w = tabs.len() as f32 * (18.0 + 24.0 + 2.0);
-        let show_label = icons_w + label_w <= ui.available_width() - 4.0;
-        egui::ScrollArea::horizontal()
-            .id_salt(id)
-            .scroll_bar_visibility(egui::scroll_area::ScrollBarVisibility::AlwaysHidden)
-            .show(ui, |ui| {
-                ui.horizontal(|ui| {
-                    ui.spacing_mut().item_spacing.x = 2.0;
-                    for (t, icon, label) in tabs {
-                        if crate::ui_kit::icon_tab(ui, *icon, label, *current == *t, show_label)
-                            .clicked()
-                        {
-                            *current = *t;
-                        }
-                    }
-                });
-            });
+            hide = Self::collapse_button(ui, left, hide_tip);
+        });
+        hide
     }
 
     /// Thin strip shown instead of a hidden side panel; one click brings the panel back.
@@ -109,33 +90,24 @@ impl App {
     }
 
     pub fn left_sidebar(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
-        let mut hide = false;
-        egui::Sides::new().shrink_left().show(
+        let mut tab = self.left_tab;
+        let hide = Self::panel_switcher(
             ui,
-            |ui| {
-                let mut tab = self.left_tab;
-                Self::tab_strip(
-                    ui,
-                    "left_tabs",
-                    &mut tab,
-                    &[
-                        (LeftTab::Thumbnails, Icon::Page, tr("Pages")),
-                        (LeftTab::Bookmarks, Icon::Bookmark, tr("Bookmarks")),
-                        (LeftTab::Search, Icon::Find, tr("Search")),
-                    ],
-                );
-                self.left_tab = tab;
-            },
-            |ui| {
-                hide =
-                    Self::collapse_button(ui, true, tr("Hide the page panel (View ▸ Left panel)"));
-            },
+            &mut tab,
+            &[
+                (LeftTab::Thumbnails, tr("Pages")),
+                (LeftTab::Bookmarks, tr("Bookmarks")),
+                (LeftTab::Search, tr("Search")),
+            ],
+            true,
+            tr("Hide the page panel (View ▸ Left panel)"),
         );
+        self.left_tab = tab;
         if hide {
             self.prefs.show_left_sidebar = false;
             self.prefs_dirty = true;
         }
-        ui.separator();
+        ui.add_space(8.0);
         match self.left_tab {
             LeftTab::Thumbnails => self.thumbnails(ui, ctx),
             LeftTab::Bookmarks => self.bookmarks(ui),
@@ -151,13 +123,13 @@ impl App {
         };
         let (doc, revision) = (self.tabs[ti].session.id, self.tabs[ti].session.revision());
         let avail_w = ui.available_width();
-        let thumb_w = (avail_w - 28.0).max(60.0);
-        let label_h = 18.0;
+        let thumb_w = (avail_w - 44.0).clamp(60.0, 110.0);
+        let label_h = 22.0;
         let heights: Vec<f32> = pages
             .iter()
             .map(|p| {
                 let s = p.geometry.view_size(Rotation::R0);
-                (thumb_w * (s.height / s.width) as f32).min(thumb_w * 2.0) + label_h + 10.0
+                (thumb_w * (s.height / s.width) as f32).min(thumb_w * 2.0) + label_h + 24.0
             })
             .collect();
         let mut offsets = Vec::with_capacity(heights.len());
@@ -200,26 +172,32 @@ impl App {
                 let th = (thumb_w * (size.height / size.width) as f32).min(thumb_w * 2.0);
                 let tw = th * (size.width / size.height) as f32;
                 let img = Rect::from_min_size(
-                    Pos2::new(row.center().x - tw / 2.0, row.min.y + 5.0),
+                    Pos2::new(row.center().x - tw / 2.0, row.min.y + 12.0),
                     Vec2::new(tw, th),
                 );
                 let resp = ui.interact(row, ui.id().with(("thumb", i)), Sense::click_and_drag());
                 let is_sel = selection.contains(&page.id);
-                if is_sel {
-                    painter.rect_filled(
-                        row.shrink2(Vec2::new(2.0, 1.0)),
-                        5.0,
-                        self.pal.accent_soft,
-                    );
+                // The current or selected page sits in an accent.soft wrapper (padding 8 22, radius 10).
+                let wrap = Rect::from_min_max(
+                    img.min - Vec2::new(22.0, 8.0),
+                    Pos2::new(img.max.x + 22.0, img.max.y + label_h + 4.0),
+                )
+                .intersect(row);
+                if is_sel || i == current {
+                    painter.rect_filled(wrap, crate::theme::radius::XL, self.pal.accent_soft);
                 } else if resp.hovered() {
-                    painter.rect_filled(row.shrink2(Vec2::new(2.0, 1.0)), 5.0, self.pal.hover);
+                    painter.rect_filled(wrap, crate::theme::radius::XL, self.pal.hover);
                 }
-                painter.rect_filled(
-                    img.translate(Vec2::new(1.0, 2.0)),
-                    1.0,
-                    self.pal.page_shadow,
+                painter.add(
+                    egui::epaint::Shadow {
+                        offset: [0, 1],
+                        blur: 3,
+                        spread: 0,
+                        color: Color32::from_black_alpha(if self.pal.dark { 128 } else { 36 }),
+                    }
+                    .as_shape(img, crate::theme::radius::XS),
                 );
-                painter.rect_filled(img, 0.0, Color32::WHITE);
+                painter.rect_filled(img, crate::theme::radius::XS, Color32::WHITE);
                 // Thumbnail bitmap (whole-page tile at a bucketed scale).
                 let bw = thumb_bucket(tw);
                 let scale = f64::from(bw * ppp) / size.width;
@@ -277,20 +255,21 @@ impl App {
                     };
                     self.request_tile(key, plan, i, page, 10, doc, revision);
                 }
-                if i == current {
-                    painter.rect_stroke(
-                        img.expand(2.0),
-                        1.0,
-                        egui::Stroke::new(2.0, self.pal.accent),
-                        egui::StrokeKind::Middle,
-                    );
-                }
+                let (num_font, num_col) = if i == current {
+                    (crate::theme::font(600, 11.5), self.pal.accent_text)
+                } else {
+                    (egui::FontId::proportional(11.5), self.pal.text_muted)
+                };
                 painter.text(
-                    Pos2::new(row.center().x, row.max.y - label_h / 2.0 - 2.0),
+                    Pos2::new(row.center().x, img.max.y + label_h / 2.0 + 1.0),
                     egui::Align2::CENTER_CENTER,
-                    format!("{}", i + 1),
-                    egui::FontId::proportional(12.0),
-                    self.pal.text,
+                    // A page label (i, ii, A-1…) when the document has them, with the plain number beside it.
+                    match self.page_label(i) {
+                        Some(l) if l != (i + 1).to_string() => format!("{l}  ({})", i + 1),
+                        _ => format!("{}", i + 1),
+                    },
+                    num_font,
+                    num_col,
                 );
                 resp.widget_info(|| {
                     egui::WidgetInfo::labeled(egui::WidgetType::Button, true, tf!("Page {}", i + 1))
@@ -391,64 +370,6 @@ impl App {
                 self.tabs[ti].ui.thumb_anchor = Some(i);
             }
             self.go_to(i);
-        }
-    }
-
-    fn bookmarks(&mut self, ui: &mut egui::Ui) {
-        let ti = self.active;
-        let rev = self.tabs[ti].session.revision();
-        let need = !matches!(&self.tabs[ti].ui.bookmarks, Some((r, _)) if *r == rev);
-        if need {
-            let b = Arc::new(pdf_engine::nav::outlines(self.tabs[ti].session.doc()));
-            self.tabs[ti].ui.bookmarks = Some((rev, b));
-        }
-        let Some((_, marks)) = self.tabs[ti].ui.bookmarks.clone() else {
-            return;
-        };
-        if marks.is_empty() {
-            ui.add_space(12.0);
-            ui.label(RichText::new(tr("This document has no bookmarks.")).color(self.pal.text_dim));
-            return;
-        }
-        let mut goto: Option<usize> = None;
-        egui::ScrollArea::both()
-            .auto_shrink([false, false])
-            .show(ui, |ui| {
-                fn node(
-                    ui: &mut egui::Ui,
-                    b: &pdf_engine::nav::Bookmark,
-                    goto: &mut Option<usize>,
-                    id: egui::Id,
-                ) {
-                    let title = if b.title.is_empty() {
-                        tr("(untitled)")
-                    } else {
-                        b.title.as_str()
-                    };
-                    if b.children.is_empty() {
-                        if ui.selectable_label(false, title).clicked() {
-                            *goto = b.page;
-                        }
-                    } else {
-                        let h = egui::CollapsingHeader::new(title)
-                            .id_salt(id)
-                            .default_open(b.open)
-                            .show(ui, |ui| {
-                                for (n, c) in b.children.iter().enumerate() {
-                                    node(ui, c, goto, id.with(n));
-                                }
-                            });
-                        if h.header_response.clicked() {
-                            *goto = b.page;
-                        }
-                    }
-                }
-                for (n, b) in marks.iter().enumerate() {
-                    node(ui, b, &mut goto, egui::Id::new(("bm", n)));
-                }
-            });
-        if let Some(p) = goto {
-            self.go_to(p);
         }
     }
 
@@ -561,37 +482,39 @@ impl App {
     // ---- right sidebar ---------------------------------------------------------------
 
     pub fn right_sidebar(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
-        let mut hide = false;
-        egui::Sides::new().shrink_left().show(
+        let mut tab = self.right_tab;
+        // Measure is a segment only where the Measure tab is offered.
+        let measure = self.prefs.workspace != editor_core::prefs::Workspace::Essential
+            || self.tool_is_measure();
+        let mut tabs = vec![
+            (RightTab::Properties, tr("Properties")),
+            (RightTab::Comments, tr("Comments")),
+        ];
+        if measure {
+            tabs.push((RightTab::Measure, tr("Measure")));
+        } else if tab == RightTab::Measure {
+            tab = RightTab::Properties;
+        }
+        tabs.push((RightTab::Copilot, tr("Copilot")));
+        let hide = Self::panel_switcher(
             ui,
-            |ui| {
-                let mut tab = self.right_tab;
-                Self::tab_strip(
-                    ui,
-                    "right_tabs",
-                    &mut tab,
-                    &[
-                        (RightTab::Properties, Icon::Sliders, tr("Properties")),
-                        (RightTab::Comments, Icon::Note, tr("Comments")),
-                        (RightTab::Measure, Icon::Ruler, tr("Measure")),
-                        (RightTab::Copilot, Icon::Sparkle, tr("Copilot")),
-                    ],
-                );
-                self.right_tab = tab;
-            },
-            |ui| {
-                hide = Self::collapse_button(
-                    ui,
-                    false,
-                    tr("Hide the properties panel (View ▸ Right panel)"),
-                );
-            },
+            &mut tab,
+            &tabs,
+            false,
+            tr("Hide the properties panel (View ▸ Right panel)"),
         );
+        self.right_tab = tab;
         if hide {
             self.prefs.show_right_sidebar = false;
             self.prefs_dirty = true;
         }
-        ui.separator();
+        let (r, _) = ui.allocate_exact_size(Vec2::new(ui.available_width(), 9.0), Sense::hover());
+        ui.painter().hline(
+            (r.left() - 10.0)..=(r.right() + 10.0),
+            r.center().y,
+            egui::Stroke::new(1.0, self.pal.border_subtle),
+        );
+        ui.add_space(6.0);
         if self.right_tab == RightTab::Copilot {
             // The chat has its own scroll area and a fixed input row.
             self.copilot_panel(ui, ctx);
