@@ -19,19 +19,20 @@ use rten_tensor::{AsView, Layout, NdTensor, NdTensorView};
 use std::path::{Path, PathBuf};
 
 /// File names expected in the model directory: `(detection, recognition)`.
-pub const MODEL_FILES: (&str, &str) = ("text-detection.rten", "latin-recognition.onnx");
+pub const MODEL_FILES: (&str, &str) = ("text-detection.onnx", "latin-recognition.onnx");
 
 /// `(file name, address, expected SHA-256 in lower-case hex)` of each model file. Everything that
 /// fetches or bundles the models (the app's download button, `cargo xtask fetch-ocr-models`,
 /// `cargo xtask dist --with-ocr-models`) uses this one list and refuses a file whose hash differs.
-/// The detection model is the `ocrs` author's (downloaded 2026-10-05); the recognition model is
+/// The detection model is the `ocrs` author's, as ONNX (downloaded 2026-11-03; the author no longer
+/// serves the `.rten` file and warns that these addresses may change); the recognition model is
 /// PaddleOCR's `latin_PP-OCRv5_mobile_rec` as ONNX, from a fixed commit of a Hugging Face
 /// repository that converted PaddleOCR's models with `paddle2onnx` (downloaded 2026-11-02).
 pub const MODEL_SOURCES: [(&str, &str, &str); 2] = [
     (
-        "text-detection.rten",
-        "https://ocrs-models.s3-accelerate.amazonaws.com/text-detection.rten",
-        "f15cfb56bd02c4bf478a20343986504a1f01e1665c2b3a0ad66340f054b1b5ca",
+        "text-detection.onnx",
+        "https://ocrs-models.s3-accelerate.amazonaws.com/text-detection.onnx",
+        "a917b23dbd9524b465df7e922641b3ff2981623df4ded5a0234004ef2fee7cfe",
     ),
     (
         "latin-recognition.onnx",
@@ -53,7 +54,7 @@ pub fn model_hosts() -> Vec<&'static str> {
 /// Attribution text shipped next to bundled or downloaded models.
 pub const MODEL_NOTICE: &str = "OCR models for BergPDF\n\
 ======================\n\n\
-text-detection.rten is the stock text-detection model of the `ocrs` project\n\
+text-detection.onnx is the stock text-detection model of the `ocrs` project\n\
 (https://github.com/robertknight/ocrs, engine under MIT / Apache-2.0), published at\n\
 https://github.com/robertknight/ocrs-models. According to that project it was trained\n\
 exclusively on the HierText dataset (https://github.com/google-research-datasets/hiertext),\n\
@@ -368,6 +369,7 @@ impl Rgb<'_> {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unwrap_used)]
     use super::*;
 
     #[test]
@@ -428,5 +430,15 @@ mod tests {
         let d = std::env::temp_dir().join("berg-no-models-here");
         assert!(!models_present(&d));
         assert!(matches!(Engine::load(&d), Err(OcrError::MissingModel(_))));
+    }
+
+    #[test]
+    fn an_install_with_only_the_old_rten_detection_file_is_offered_the_download() {
+        let d = std::env::temp_dir().join(format!("berg-old-ocr-models-{}", std::process::id()));
+        std::fs::create_dir_all(&d).unwrap();
+        std::fs::write(d.join("text-detection.rten"), b"old").unwrap();
+        std::fs::write(d.join(MODEL_FILES.1), b"rec").unwrap();
+        assert!(!models_present(&d));
+        std::fs::remove_dir_all(&d).unwrap();
     }
 }

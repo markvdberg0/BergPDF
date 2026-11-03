@@ -437,3 +437,21 @@ crate; UTC when the local offset cannot be found); the placed stamp is static, a
 (`compare`) works on text: the words of both versions in reading order are diffed (Myers via the `similar` crate, 20 s
 deadline) and the changes are marked on a copy of the newer version with highlights and notes. Not done: comparing
 pictures or layout, style changes, side-by-side view.
+
+## D-043 — OCR detection model: the author's ONNX file instead of the `.rten` file (amends D-023, D-039)
+On 2026-11-03 the `ocrs` author's host (`ocrs-models.s3-accelerate.amazonaws.com`) started answering HTTP 403 for
+every `.rten` file, so the in-app download and `cargo xtask fetch-ocr-models` failed. `ocrs` is phasing out the
+`.rten` format; the same host still serves the detection model as `text-detection.onnx`. The pinned `.rten` file
+(SHA-256 `f15cfb56…`) was no longer on any host the author runs (only in third-party repositories), and the
+author's Hugging Face repository holds only an older model with another hash. Chosen by the owner: download
+`text-detection.onnx` from the same host, pinned at SHA-256
+`a917b23dbd9524b465df7e922641b3ff2981623df4ded5a0234004ef2fee7cfe` (2,499,479 bytes, downloaded 2026-11-03), read
+by `rten`'s ONNX reader that D-039 already uses. Checked with the real models: the OCR tests give the same results
+as before (recall 50/50 printed words, 17/20 accented words). Rejected: hosting our own copy of the old file
+(redistribution is still the owner's open point from D-023); a third-party mirror (not the author's). Consequences:
+the download host is unchanged, so the OCR dialog, the installer question, PRIVACY.md and the Store texts stay as
+they are; the file is named `text-detection.onnx`, so existing installations that have only the old `.rten` file
+are asked once more to download (the old file is left where it is). **Risk:** the author warns that these
+addresses may change (the author's note of 2026-10-27 in `ocrs`, after an S3 billing alarm; Hugging Face may become the
+main host) and advises tools to bundle or host their own copy. If the address breaks again, the choice is the same
+as here: a new pin from the author's new host, or hosting the files ourselves once D-023's licence point is settled.
