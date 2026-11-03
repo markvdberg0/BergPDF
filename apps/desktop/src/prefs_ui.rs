@@ -236,7 +236,7 @@ impl App {
                     &pal,
                     tr("Language"),
                     tr(
-                        "Interface language: English, Nederlands or Deutsch (or follow the system).",
+                        "Interface language: English, Nederlands, Deutsch or 简体中文 (or follow the system).",
                     ),
                     |ui| {
                         let shown = match self.prefs.language {
@@ -244,6 +244,7 @@ impl App {
                             Language::English => "English",
                             Language::Dutch => "Nederlands",
                             Language::German => "Deutsch",
+                            Language::Chinese => "简体中文",
                         };
                         egui::ComboBox::from_id_salt("language")
                             .selected_text(shown)
@@ -274,6 +275,13 @@ impl App {
                                         &mut self.prefs.language,
                                         Language::German,
                                         "Deutsch",
+                                    )
+                                    .changed();
+                                *changed |= ui
+                                    .selectable_value(
+                                        &mut self.prefs.language,
+                                        Language::Chinese,
+                                        "简体中文",
                                     )
                                     .changed();
                             });

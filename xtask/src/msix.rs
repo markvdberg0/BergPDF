@@ -176,6 +176,7 @@ pub fn manifest(id: &Identity, version: &str) -> String {
     <Resource Language="en-us" />
     <Resource Language="nl-nl" />
     <Resource Language="de-de" />
+    <Resource Language="zh-cn" />
   </Resources>
   <Applications>
     <Application Id="BergPDF" Executable="{EXE}" EntryPoint="Windows.FullTrustApplication">

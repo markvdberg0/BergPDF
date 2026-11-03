@@ -248,16 +248,21 @@ never block a start. `--new-instance` or `BERG_MULTI_INSTANCE=1` starts a separa
 flash the taskbar instead of raising the window (focus-stealing rules; no `AllowSetForegroundWindow` without unsafe
 code); macOS "open with" events are not handled yet (they arrive as Apple events, not as arguments).
 
-## D-032 — Interface languages: English, Dutch, German
-The English text in the code is the key into per-language catalogs (`apps/desktop/src/i18n/nl.rs`, `de.rs`). `tr("…")`
+## D-032 — Interface languages: English, Dutch, German, Simplified Chinese
+The English text in the code is the key into per-language catalogs (`apps/desktop/src/i18n/nl.rs`, `de.rs`, `zh.rs`). `tr("…")`
 returns `&'static str` (so it drops into any place a literal was, with no allocation), `tf!("… {} …", args)` fills
 `{}` holes in order; a text without an entry is shown in English. A language is chosen in Preferences ▸ Language
 (default: the system language via `sys-locale`; English when we have no catalog for it). Texts that live in other
 crates (command registry, settings, tool hints) are translated where they are displayed, and command-palette search
 matches both the English and the translated title. A test scans the source and the registries and fails when a text
-has no Dutch or German entry or when the `{}` holes differ. Not translated on purpose: error messages that come from
+has no Dutch, German or Chinese entry or when the `{}` holes differ. Not translated on purpose: error messages that come from
 the PDF engine, the operating system or an AI provider; the prompts sent to AI providers; language names. The German
-text was written without a native reviewer. Adding a language: see DEVELOPING.md.
+and Chinese texts were written without a native reviewer. Chinese (simplified characters; every `zh-*` system
+language, Traditional included, gets it) needs glyphs the bundled DejaVu Sans lacks. Bundling a CJK font would add
+10–20 MB, so an installed one is used: after the background font scan, the first of Microsoft YaHei, PingFang SC,
+Noto Sans CJK SC, … (or any installed font that covers Chinese) is added as the last fallback of the interface fonts.
+It applies in every interface language, so Chinese file names and bookmarks also show; until the scan is done (or
+on a system without such a font) Chinese is drawn as boxes. Adding a language: see DEVELOPING.md.
 
 ## D-033 — Update check: a notice and a link, nothing is installed by the program
 Auto-update of the installed program was weighed against the privacy promise (no network for core use) and the fact that

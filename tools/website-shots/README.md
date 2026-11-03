@@ -1,6 +1,6 @@
 # Screens for the website's feature pages
 
-`run.mjs` starts a **debug** build of the app once per screen, in English and Dutch, light and dark, and writes
+`run.mjs` starts a **debug** build of the app once per screen, in English and Dutch (Chinese with `zh-Light` / `zh-Dark`), light and dark, and writes
 `out/<lang>-<Theme>/<name>.png` (2380 x 1540 on a 175 % display, the size of the other website screens). The
 scenarios are in `apps/desktop/src/debug_shots.rs` (`BERG_SHOTS`, see DEVELOPING.md); this folder only drives them.
 

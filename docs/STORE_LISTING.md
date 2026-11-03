@@ -28,7 +28,7 @@ quoted passages highlighted, or translate a document in place into a new copy. T
 (OpenAI, Anthropic or a local server) and send text only when you press a button. Nothing else in BergPDF uses the
 internet, apart from the optional download of the OCR models.
 
-The interface is available in English, Dutch and German. BergPDF is free software under the GNU General Public
+The interface is available in English, Dutch, German and Simplified Chinese. BergPDF is free software under the GNU General Public
 License v3; the source code is on GitHub.
 
 Also included: open and create password-protected PDFs, permanently redact (black out) sensitive text and images, and print. Good to know: signature certificates are not checked for trust yet.
@@ -60,7 +60,7 @@ Also included: open and create password-protected PDFs, permanently redact (blac
 * Print whole documents, single pages or a page range
 * No account, no telemetry; your documents stay on your PC
 * Optional PDF Copilot and in-place translation with your own AI key, only when you press a button
-* Interface in English, Dutch and German; free software under the GPL v3
+* Interface in English, Dutch, German and Simplified Chinese; free software under the GPL v3
 
 ## Nederlands (nl-nl)
 
@@ -87,7 +87,7 @@ gemarkeerde citaten, of vertaal een document ter plekke in een nieuwe kopie. Hie
 (OpenAI, Anthropic of een lokale server); er wordt alleen tekst verstuurd als je op een knop drukt. Verder gebruikt
 BergPDF het internet niet, behalve voor het optionele downloaden van de OCR-modellen.
 
-De interface is beschikbaar in het Nederlands, Engels en Duits. BergPDF is vrije software onder de GNU General Public
+De interface is beschikbaar in het Nederlands, Engels, Duits en vereenvoudigd Chinees. BergPDF is vrije software onder de GNU General Public
 License v3; de broncode staat op GitHub.
 
 Ook inbegrepen: met een wachtwoord beveiligde pdf's openen en maken, gevoelige tekst en afbeeldingen definitief zwartlakken en afdrukken. Goed om te weten: de betrouwbaarheid van handtekeningcertificaten wordt nog niet gecontroleerd.
@@ -119,7 +119,7 @@ Ook inbegrepen: met een wachtwoord beveiligde pdf's openen en maken, gevoelige t
 * Hele documenten, losse pagina's of een paginabereik afdrukken
 * Geen account, geen telemetrie; je documenten blijven op je pc
 * Optioneel PDF Copilot en vertalen ter plekke met je eigen AI-sleutel, alleen als je op een knop drukt
-* Interface in het Nederlands, Engels en Duits; vrije software onder de GPL v3
+* Interface in het Nederlands, Engels, Duits en vereenvoudigd Chinees; vrije software onder de GPL v3
 
 ## Deutsch (de-de)
 
@@ -149,7 +149,7 @@ benötigen Sie Ihren eigenen Schlüssel (OpenAI, Anthropic oder einen lokalen Se
 auf eine Schaltfläche klicken. Ansonsten nutzt BergPDF das Internet nicht, außer für den optionalen Download der
 OCR-Modelle.
 
-Die Oberfläche gibt es auf Deutsch, Englisch und Niederländisch. BergPDF ist freie Software unter der GNU General
+Die Oberfläche gibt es auf Deutsch, Englisch, Niederländisch und vereinfachtem Chinesisch. BergPDF ist freie Software unter der GNU General
 Public License v3; der Quellcode liegt auf GitHub.
 
 Außerdem enthalten: passwortgeschützte PDFs öffnen und erstellen, vertrauliche Texte und Bilder endgültig schwärzen und drucken. Gut zu wissen: Signaturzertifikate werden noch nicht auf Vertrauenswürdigkeit geprüft.
@@ -181,4 +181,4 @@ Außerdem enthalten: passwortgeschützte PDFs öffnen und erstellen, vertraulich
 * Ganze Dokumente, einzelne Seiten oder einen Seitenbereich drucken
 * Kein Konto, keine Telemetrie; Ihre Dokumente bleiben auf Ihrem PC
 * Optional PDF Copilot und Übersetzung direkt im Dokument mit Ihrem eigenen KI-Schlüssel, nur auf Knopfdruck
-* Oberfläche auf Deutsch, Englisch und Niederländisch; freie Software unter der GPL v3
+* Oberfläche auf Deutsch, Englisch, Niederländisch und vereinfachtem Chinesisch; freie Software unter der GPL v3

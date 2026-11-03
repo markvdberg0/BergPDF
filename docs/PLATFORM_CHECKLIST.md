@@ -82,7 +82,7 @@ on that OS (with notes), nothing in `FEATURE_MATRIX.md` may be marked “Verifie
 - [ ] Windows installer offers "just me" / "all users"; an all-users install puts OCR models in `Program Files\BergPDF\ocr-models`, finds them in BergPDF, and the uninstaller removes them
 - [ ] With BergPDF open, double-clicking a PDF in Explorer opens it as a tab in the running window (no second window); check that the window comes to the front or at least flashes; `--new-instance` starts a separate one
 - [ ] macOS: opening a PDF with BergPDF already running (Finder/Dock "Open With") — not handled yet, expected to need Apple-event support
-- [ ] Language: Preferences ▸ Language switches the interface at once; with "System" a Dutch / German Windows or macOS shows Dutch / German; check dialogs and the installer-launched first start for text that is cut off or still English
+- [ ] Language: Preferences ▸ Language switches the interface at once; with "System" a Dutch / German / Chinese Windows or macOS shows Dutch / German / Chinese; Chinese characters are drawn (no boxes) in English and Chinese, including in the Language list; check dialogs and the installer-launched first start for text that is cut off or still English
 - [ ] Updates: after the first release is *published*, File ▸ Check for Updates… on the installed older version says a newer one exists (and "latest version" on the newest); the one-time question appears once; behind a company proxy the check fails quietly
 
 ## Passwords, redaction, printing (D-035, D-036, D-037; the engines are tested, the dialogs were not driven)

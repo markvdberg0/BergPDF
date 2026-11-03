@@ -1,9 +1,9 @@
-//! Interface language: English (the source text), Dutch and German.
+//! Interface language: English (the source text), Dutch, German and Chinese (Simplified).
 //!
 //! Every text shown to the user is written in English in the code and passed through [`tr`] (a plain
 //! text) or [`tf!`](crate::tf) (a text with `{}` holes for values). The English text is the key into the
-//! catalogs in `nl.rs` and `de.rs`; a text that has no entry is shown in English, so an untranslated
-//! string is never blank or broken. A test checks that every text used in the code is in both catalogs
+//! catalogs in `nl.rs`, `de.rs` and `zh.rs`; a text that has no entry is shown in English, so an untranslated
+//! string is never blank or broken. A test checks that every text used in the code is in every catalog
 //! and that the `{}` holes match.
 
 use std::collections::HashMap;
@@ -13,6 +13,7 @@ use std::sync::atomic::{AtomicU8, Ordering};
 
 mod de;
 mod nl;
+mod zh;
 
 /// An interface language.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -20,6 +21,8 @@ pub enum Lang {
     En,
     Nl,
     De,
+    /// Chinese, simplified characters.
+    Zh,
 }
 
 static CURRENT: AtomicU8 = AtomicU8::new(0);
@@ -31,6 +34,7 @@ pub fn set(lang: Lang) {
             Lang::En => 0,
             Lang::Nl => 1,
             Lang::De => 2,
+            Lang::Zh => 3,
         },
         Ordering::Relaxed,
     );
@@ -41,6 +45,7 @@ pub fn current() -> Lang {
     match CURRENT.load(Ordering::Relaxed) {
         1 => Lang::Nl,
         2 => Lang::De,
+        3 => Lang::Zh,
         _ => Lang::En,
     }
 }
@@ -52,6 +57,8 @@ pub fn system_language() -> Lang {
         Lang::Nl
     } else if loc.starts_with("de") {
         Lang::De
+    } else if loc.starts_with("zh") {
+        Lang::Zh
     } else {
         Lang::En
     }
@@ -65,6 +72,7 @@ pub fn apply(pref: editor_core::prefs::Language) {
         P::English => Lang::En,
         P::Dutch => Lang::Nl,
         P::German => Lang::De,
+        P::Chinese => Lang::Zh,
     });
 }
 
@@ -74,17 +82,20 @@ pub(crate) fn catalog(lang: Lang) -> &'static [(&'static str, &'static str)] {
         Lang::En => &[],
         Lang::Nl => nl::ENTRIES,
         Lang::De => de::ENTRIES,
+        Lang::Zh => zh::ENTRIES,
     }
 }
 
 fn table(lang: Lang) -> &'static HashMap<&'static str, &'static str> {
     static NL: OnceLock<HashMap<&str, &str>> = OnceLock::new();
     static DE: OnceLock<HashMap<&str, &str>> = OnceLock::new();
+    static ZH: OnceLock<HashMap<&str, &str>> = OnceLock::new();
     static EN: OnceLock<HashMap<&str, &str>> = OnceLock::new();
     let (cell, entries) = match lang {
         Lang::En => (&EN, catalog(Lang::En)),
         Lang::Nl => (&NL, catalog(Lang::Nl)),
         Lang::De => (&DE, catalog(Lang::De)),
+        Lang::Zh => (&ZH, catalog(Lang::Zh)),
     };
     cell.get_or_init(|| entries.iter().copied().collect())
 }
@@ -133,7 +144,7 @@ mod tests {
 
     #[test]
     fn catalogs_have_unique_keys_matching_holes_and_no_empty_translations() {
-        for lang in [Lang::Nl, Lang::De] {
+        for lang in [Lang::Nl, Lang::De, Lang::Zh] {
             let mut seen = std::collections::HashSet::new();
             for (k, v) in catalog(lang) {
                 assert!(seen.insert(*k), "{lang:?}: duplicate key {k:?}");
@@ -314,14 +325,14 @@ mod tests {
         v
     }
 
-    /// Prints the texts that miss from a catalog (`BERG_DUMP_MISSING=nl|de`), one JSON string per line.
+    /// Prints the texts that miss from a catalog (`BERG_DUMP_MISSING=nl|de|zh`), one JSON string per line.
     #[test]
-    fn every_text_in_the_application_has_a_dutch_and_a_german_translation() {
+    fn every_text_in_the_application_has_a_dutch_german_and_chinese_translation() {
         let mut texts: Vec<String> = texts_in_source();
         texts.extend(texts_in_core().into_iter().map(str::to_string));
         texts.sort();
         texts.dedup();
-        for (name, lang) in [("nl", Lang::Nl), ("de", Lang::De)] {
+        for (name, lang) in [("nl", Lang::Nl), ("de", Lang::De), ("zh", Lang::Zh)] {
             let have: std::collections::HashSet<&str> =
                 catalog(lang).iter().map(|(k, _)| *k).collect();
             let missing: Vec<&String> = texts

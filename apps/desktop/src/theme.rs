@@ -120,6 +120,65 @@ pub fn install_fonts(ctx: &egui::Context) {
     ctx.set_fonts(fonts);
 }
 
+/// Installed fonts with Chinese characters, best first: simplified Chinese designs before the
+/// Japanese and Korean ones that share the characters but draw them differently.
+const CJK_FAMILIES: &[&str] = &[
+    "Microsoft YaHei",
+    "Microsoft YaHei UI",
+    "PingFang SC",
+    "Hiragino Sans GB",
+    "Noto Sans CJK SC",
+    "Noto Sans SC",
+    "Source Han Sans SC",
+    "WenQuanYi Micro Hei",
+    "WenQuanYi Zen Hei",
+    "Heiti SC",
+    "STHeiti",
+    "DengXian",
+    "SimHei",
+    "SimSun",
+    "Droid Sans Fallback",
+];
+
+/// Add an installed Chinese font behind the interface fonts, so the Chinese interface (and Chinese
+/// file names, bookmarks or form values in any language) is not drawn as empty boxes. Call after the
+/// installed fonts were scanned. Returns whether a font was found.
+pub fn install_cjk_fallback(ctx: &egui::Context) -> bool {
+    use pdf_engine::sysfonts;
+    let probe = ['中', '文', '简', '体'];
+    let face_data = |id: u32| {
+        sysfonts::with_family(id, |fam| {
+            let face = fam.face(false, false)?;
+            Some((face.data()?, face.index))
+        })
+        .flatten()
+    };
+    let found = CJK_FAMILIES
+        .iter()
+        .filter_map(|name| sysfonts::find_by_name(name))
+        .find_map(face_data)
+        .or_else(|| sysfonts::family_covering(&probe).and_then(face_data));
+    let Some((data, index)) = found else {
+        tracing::info!("no installed font with Chinese characters found");
+        return false;
+    };
+    let mut font = FontData::from_static(data);
+    font.index = index;
+    ctx.add_font(egui::epaint::text::FontInsert::new(
+        "cjk",
+        font,
+        [FontFamily::Proportional, FontFamily::Monospace]
+            .into_iter()
+            .map(|family| egui::epaint::text::InsertFontFamily {
+                family,
+                priority: egui::epaint::text::FontPriority::Lowest,
+            })
+            .collect(),
+    ));
+    ctx.request_repaint();
+    true
+}
+
 /// Apply theme, density and scale to the context.
 pub fn apply(ctx: &egui::Context, prefs: &Preferences, pal: &Palette) {
     let mut v = if pal.dark {

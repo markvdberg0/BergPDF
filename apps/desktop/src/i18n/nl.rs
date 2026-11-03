@@ -843,8 +843,8 @@ pub static ENTRIES: &[(&str, &str)] = &[
     ),
     ("Interface density", "Dichtheid van de interface"),
     (
-        "Interface language: English, Nederlands or Deutsch (or follow the system).",
-        "Taal van de interface: English, Nederlands of Deutsch (of de taal van het systeem volgen).",
+        "Interface language: English, Nederlands, Deutsch or 简体中文 (or follow the system).",
+        "Taal van de interface: English, Nederlands, Deutsch of 简体中文 (of de taal van het systeem volgen).",
     ),
     ("Interface scale", "Schaal van de interface"),
     ("Italic", "Cursief"),
