@@ -90,6 +90,10 @@ cargo run -p bergpdf -- tests/fixtures/report-chromium.pdf
 The scenarios are in `apps/desktop/src/debug_shots.rs`; the process writes `<scenario>.png` for each and exits.
 Put `theme = "Dark"` (or `"Light"`) in `preferences.toml` of a scratch profile (`APPDATA`) to see both themes.
 
+Two scripts drive these scenarios in every language and theme with a scratch profile:
+[`tools/website-shots`](tools/website-shots/README.md) for the website and `tools/store-shots/run.mjs` for the
+Microsoft Store (the order and captions are in [`docs/STORE_LISTING.md`](docs/STORE_LISTING.md)).
+
 ## Trying the AI features without an account
 
 ```

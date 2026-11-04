@@ -504,18 +504,7 @@ fn apply(app: &mut App, ctx: &egui::Context, name: &str) {
         "forms_policy" => {
             app.ribbon_tab = RibbonTab::Home;
             // A form that has been filled in, as it would be when someone copies its pages.
-            let form = app.form_for();
-            if let Some(t) = app.tabs.first_mut() {
-                for f in &form.fields {
-                    let (id, name) = (f.id, f.name.as_str());
-                    let _ = t.session.execute("Fill field", |tx| match name {
-                        "name" => pdf_engine::forms::set_text_value(tx, id, "Anna de Vries"),
-                        "address.city" => pdf_engine::forms::set_text_value(tx, id, "Utrecht"),
-                        "agree" => pdf_engine::forms::set_checkbox(tx, id, true),
-                        _ => Ok(()),
-                    });
-                }
-            }
+            fill_demo_form(app);
 
             app.dialog = Some(Dialog::FormPolicy(FormPolicyState {
                 op: FormOp::Duplicate,
@@ -556,19 +545,8 @@ fn apply(app: &mut App, ctx: &egui::Context, name: &str) {
         }
         "store_forms" => {
             app.ribbon_tab = RibbonTab::Forms;
-            let form = app.form_for();
-            if let Some(t) = app.tabs.first_mut()
-                && t.session.revision() == 0
-            {
-                for f in &form.fields {
-                    let (id, name) = (f.id, f.name.as_str());
-                    let _ = t.session.execute("Fill field", |tx| match name {
-                        "name" => pdf_engine::forms::set_text_value(tx, id, "Anna de Vries"),
-                        "address.city" => pdf_engine::forms::set_text_value(tx, id, "Utrecht"),
-                        "agree" => pdf_engine::forms::set_checkbox(tx, id, true),
-                        _ => Ok(()),
-                    });
-                }
+            if app.tabs.first().is_some_and(|t| t.session.revision() == 0) {
+                fill_demo_form(app);
             }
             app.set_tool(editor_core::tools::Tool::FormDesign);
         }
@@ -802,6 +780,23 @@ fn store_contracts() -> (NamedPdf, NamedPdf) {
         ("contract-v1.pdf", build(old)),
         ("contract-v2.pdf", build(new)),
     )
+}
+
+/// Fill in the name, city and "agree" fields of `form_rich.pdf`.
+fn fill_demo_form(app: &mut App) {
+    let form = app.form_for();
+    let Some(t) = app.tabs.first_mut() else {
+        return;
+    };
+    for f in &form.fields {
+        let (id, name) = (f.id, f.name.as_str());
+        let _ = t.session.execute("Fill field", |tx| match name {
+            "name" => pdf_engine::forms::set_text_value(tx, id, "Anna de Vries"),
+            "address.city" => pdf_engine::forms::set_text_value(tx, id, "Utrecht"),
+            "agree" => pdf_engine::forms::set_checkbox(tx, id, true),
+            _ => Ok(()),
+        });
+    }
 }
 
 /// Open the Copilot panel on the right.

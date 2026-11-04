@@ -176,3 +176,23 @@ fn place(vb: egui::ViewportBuilder) -> egui::ViewportBuilder {
         vb
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::plain_path;
+    use std::path::PathBuf;
+
+    #[test]
+    fn verbatim_drive_paths_lose_their_prefix_and_others_stay() {
+        let p = |s: &str| plain_path(PathBuf::from(s));
+        assert_eq!(p(r"\\?\C:\Docs\a.pdf"), PathBuf::from(r"C:\Docs\a.pdf"));
+        // Network shares and ordinary paths are left alone.
+        let unc = r"\\?\UNC\server\share\a.pdf";
+        assert_eq!(p(unc), PathBuf::from(unc));
+        assert_eq!(p(r"C:\Docs\a.pdf"), PathBuf::from(r"C:\Docs\a.pdf"));
+        assert_eq!(p("/home/anna/a.pdf"), PathBuf::from("/home/anna/a.pdf"));
+        // Too long for Windows without the prefix: it stays.
+        let long = format!(r"\\?\C:\{}\a.pdf", "x".repeat(300));
+        assert_eq!(p(&long), PathBuf::from(&long));
+    }
+}
