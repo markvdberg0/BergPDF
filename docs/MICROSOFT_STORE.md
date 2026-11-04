@@ -85,9 +85,10 @@ the automated tests the Store runs too.
 * **Age ratings:** answer the questionnaire (no user-generated content shared between users, no purchases, no
   location; the AI features send text to a provider chosen by the user).
 * **Packages:** upload the `.msix`. Partner Center reads the manifest and shows the languages.
-* **Store listing** (per language; Dutch and German match the interface languages; there is no Chinese listing text yet): name, description, 1-3 screenshots
-  (at least 1366×768; `docs/screenshots/` has candidates), the logo is taken from the package. Suggested description
-  (English):
+* **Store listing** (per language: English, Dutch, German and Chinese, matching the interface languages): name,
+  description, short description, *What's new*, product features and screenshots with captions; the logo is taken
+  from the package. The texts and the screenshot order are in [STORE_LISTING.md](STORE_LISTING.md); the screenshots
+  (at least 1366×768) are made with `tools/store-shots/run.mjs`. A shorter description for other places (English):
 
   > BergPDF is a fast, offline PDF editor. Edit existing text and images in place, add text in the fonts you have
   > installed, annotate, fill in and sign forms, reorganise pages, measure on drawings, search scanned pages with OCR,

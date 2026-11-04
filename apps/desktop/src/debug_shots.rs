@@ -112,6 +112,7 @@ impl DebugShots {
                 false
             }
             "translate_inline" => matches!(app.dialog, Some(Dialog::Translate(_))),
+            "store_compare" => app.compare_job.is_some(),
             _ => false,
         }
     }
@@ -539,8 +540,268 @@ fn apply(app: &mut App, ctx: &egui::Context, name: &str) {
                 },
             ]));
         }
+        // ---- Microsoft Store screens (tools/store-shots) ---------------------------------------
+        "store_start" => {
+            // Closing the tabs makes the pictures of page 1 the start screen shows.
+            while !app.tabs.is_empty() {
+                app.close_tab(0);
+            }
+        }
+        "store_annotate" => {
+            if let Some(page) = page {
+                store_annotations(app, page);
+                app.ribbon_tab = RibbonTab::Comment;
+                app.right_tab = RightTab::Comments;
+            }
+        }
+        "store_forms" => {
+            app.ribbon_tab = RibbonTab::Forms;
+            let form = app.form_for();
+            if let Some(t) = app.tabs.first_mut()
+                && t.session.revision() == 0
+            {
+                for f in &form.fields {
+                    let (id, name) = (f.id, f.name.as_str());
+                    let _ = t.session.execute("Fill field", |tx| match name {
+                        "name" => pdf_engine::forms::set_text_value(tx, id, "Anna de Vries"),
+                        "address.city" => pdf_engine::forms::set_text_value(tx, id, "Utrecht"),
+                        "agree" => pdf_engine::forms::set_checkbox(tx, id, true),
+                        _ => Ok(()),
+                    });
+                }
+            }
+            app.set_tool(editor_core::tools::Tool::FormDesign);
+        }
+        "store_marks" => {
+            store_page_marks(app);
+            app.ribbon_tab = RibbonTab::Organize;
+        }
+        "store_compare" => {
+            let (older, newer) = store_contracts();
+            let dir = std::env::temp_dir().join("bergpdf-store-shots");
+            let _ = std::fs::create_dir_all(&dir);
+            let (o, n) = (dir.join(older.0), dir.join(newer.0));
+            if std::fs::write(&o, older.1).is_ok()
+                && std::fs::write(&n, newer.1).is_ok()
+                && let Err(e) = app.debug_compare(o, n)
+            {
+                eprintln!("compare: {e}");
+            }
+        }
         _ => {}
     }
+}
+
+/// Words of the Store screens in the interface language: (comment, stamp, draft, page n of m).
+fn store_words() -> (&'static str, &'static str, &'static str, &'static str) {
+    match crate::i18n::current() {
+        crate::i18n::Lang::Nl => (
+            "Klopt dit bedrag?",
+            "GOEDGEKEURD",
+            "CONCEPT",
+            "Pagina {page} van {pages}",
+        ),
+        crate::i18n::Lang::De => (
+            "Stimmt dieser Betrag?",
+            "GENEHMIGT",
+            "ENTWURF",
+            "Seite {page} von {pages}",
+        ),
+        crate::i18n::Lang::Zh => (
+            "这个金额对吗？",
+            "APPROVED",
+            "草稿",
+            "第 {page} 页，共 {pages} 页",
+        ),
+        crate::i18n::Lang::En => (
+            "Is this amount right?",
+            "APPROVED",
+            "DRAFT",
+            "Page {page} of {pages}",
+        ),
+    }
+}
+
+/// A font that can show `text`: the bundled one, or for Chinese an installed font that has the characters.
+fn store_font(text: &str) -> pdf_engine::fontembed::FontStyle {
+    use pdf_engine::fontembed::{FontFamily, FontStyle};
+    if text.is_ascii() {
+        return FontStyle::default();
+    }
+    let chars: Vec<char> = text.chars().filter(|c| !c.is_ascii()).collect();
+    pdf_engine::sysfonts::family_covering(&chars)
+        .map(|id| FontStyle::new(FontFamily::System(id), false, false))
+        .unwrap_or_default()
+}
+
+/// Markup, a comment, a dynamic stamp and a signature on page 1 of the report.
+fn store_annotations(app: &mut App, page: pdf_engine::doc::PageId) {
+    use pdf_engine::annot::{AnnotationKind, Rgb};
+    use pdf_engine::geom::Rect;
+    if app.tabs.first().is_none_or(|t| t.session.revision() != 0) {
+        return;
+    }
+    let (comment, approved, _, _) = store_words();
+    // The first line of the report, highlighted; the second paragraph in a cloud with a comment.
+    let hl = app.new_spec(AnnotationKind::Highlight {
+        quads: vec![pdf_engine::geom::Quad::from_rect(Rect::new(
+            75.0, 697.0, 327.0, 712.0,
+        ))],
+    });
+    app.add_annotation(page, hl, "demo");
+    let cloud = app.new_spec(AnnotationKind::Cloud {
+        rect: Rect::new(66.0, 604.0, 520.0, 664.0),
+    });
+    app.add_annotation(page, cloud, "demo");
+    // Chinese needs an installed font that has the characters (the bundled ones do not).
+    let family = app.prefs.tool_defaults.font_family.clone();
+    app.prefs.tool_defaults.font_family = store_font(comment).family.key().to_string();
+    app.commit_text_entry(
+        page,
+        editor_core::tools::Tool::FreeText,
+        Rect::new(70.0, 552.0, 290.0, 590.0),
+        comment.into(),
+        None,
+    );
+    app.prefs.tool_defaults.font_family = family;
+    // (Stamps only have the bundled font, so the Chinese screens use the English word.)
+    let label = app.stamp_text(approved, "{author} · {date} {time}");
+    let mut stamp = app.new_spec(AnnotationKind::StampText {
+        rect: Rect::new(320.0, 500.0, 520.0, 590.0),
+        label,
+    });
+    stamp.color = Rgb(0.1, 0.5, 0.2);
+    app.add_annotation(page, stamp, "demo");
+    if let Ok(p) = crate::stamp_ui::PictureState::from_bytes(demo_signature_png(), "x".into())
+        && let Some(img) = p.image()
+    {
+        app.place_picture(
+            page,
+            img,
+            Rect::new(330.0, 420.0, 510.0, 480.0),
+            "Signature",
+            "demo",
+        );
+    }
+    if let Some(t) = app.tabs.first_mut() {
+        t.session.selection.annotations.clear();
+    }
+}
+
+/// A header, a footer with page numbers and a "draft" watermark on every page.
+fn store_page_marks(app: &mut App) {
+    use pdf_engine::pagemarks::{self, HeaderFooter, MarkContext, Watermark, WatermarkContent};
+    let (_, _, draft, page_of) = store_words();
+    let Some(t) = app.tabs.first_mut() else {
+        return;
+    };
+    if t.session.revision() != 0 {
+        return;
+    }
+    let Ok(pages) = t.session.pages() else { return };
+    let ids: Vec<_> = pages.iter().map(|p| p.id).collect();
+    let mut hf = HeaderFooter {
+        font: store_font(page_of),
+        size: 9.0,
+        color: (0.35, 0.35, 0.4),
+        ..Default::default()
+    };
+    hf.slots[0] = "{file}".into();
+    hf.slots[2] = "{date}".into();
+    hf.slots[4] = page_of.into();
+    let ctx = MarkContext {
+        date: crate::pagemarks_ui::today(),
+        file: t.session.title.clone(),
+        labels: Vec::new(),
+    };
+    if let Err(e) = t.session.execute("Header", |tx| {
+        pagemarks::add_header_footer(tx, &ids, &hf, &ctx)
+    }) {
+        eprintln!("header: {e}");
+    }
+    let wm = Watermark {
+        content: WatermarkContent::Text {
+            text: draft.into(),
+            font: store_font(draft),
+            size: 0.0,
+            color: (0.85, 0.2, 0.2),
+        },
+        opacity: 0.18,
+        rotation: 45.0,
+        behind: false,
+    };
+    if let Err(e) = t
+        .session
+        .execute("Watermark", |tx| pagemarks::add_watermark(tx, &ids, &wm))
+    {
+        eprintln!("watermark: {e}");
+    }
+}
+
+/// A file name and its bytes.
+type NamedPdf = (&'static str, Vec<u8>);
+
+/// Two versions of a short contract, in the interface language where the bundled font has the letters.
+fn store_contracts() -> (NamedPdf, NamedPdf) {
+    use pdf_engine::textdoc::build_text_pdf;
+    let (title, s, old, new) = match crate::i18n::current() {
+        crate::i18n::Lang::Nl => (
+            "Huurovereenkomst",
+            ["Huur", "Betaling", "Onderhoud"],
+            [
+                "De huurder betaalt de huur op de eerste dag van elke maand. De huur bedraagt 1.150 euro per maand, exclusief servicekosten.",
+                "Betaling gebeurt binnen dertig dagen per bankoverschrijving. Bij te late betaling is de wettelijke rente verschuldigd.",
+                "De verhuurder repareert het dak. De huurder houdt de tuin bij en meldt gebreken direct.",
+            ],
+            [
+                "De huurder betaalt de huur op de vijfde dag van elke maand. De huur bedraagt 1.195 euro per maand, exclusief servicekosten.",
+                "Betaling gebeurt binnen veertien dagen per bankoverschrijving. Bij te late betaling is de wettelijke rente verschuldigd.",
+                "De verhuurder repareert het dak en de dakgoten. De huurder houdt de tuin bij en meldt gebreken direct.",
+            ],
+        ),
+        crate::i18n::Lang::De => (
+            "Mietvertrag",
+            ["Miete", "Zahlung", "Instandhaltung"],
+            [
+                "Der Mieter zahlt die Miete am ersten Tag jedes Monats. Die Miete beträgt 1.150 Euro monatlich, zuzüglich Nebenkosten.",
+                "Die Zahlung erfolgt innerhalb von dreißig Tagen per Überweisung. Bei verspäteter Zahlung fallen Verzugszinsen an.",
+                "Der Vermieter repariert das Dach. Der Mieter pflegt den Garten und meldet Mängel sofort.",
+            ],
+            [
+                "Der Mieter zahlt die Miete am fünften Tag jedes Monats. Die Miete beträgt 1.195 Euro monatlich, zuzüglich Nebenkosten.",
+                "Die Zahlung erfolgt innerhalb von vierzehn Tagen per Überweisung. Bei verspäteter Zahlung fallen Verzugszinsen an.",
+                "Der Vermieter repariert das Dach und die Dachrinnen. Der Mieter pflegt den Garten und meldet Mängel sofort.",
+            ],
+        ),
+        _ => (
+            "Tenancy agreement",
+            ["Rent", "Payment", "Maintenance"],
+            [
+                "The tenant pays the rent on the first day of each month. The rent is 1,150 euros per month, excluding service charges.",
+                "Payment is due within thirty days by bank transfer. Late payment incurs the statutory interest.",
+                "The landlord repairs the roof. The tenant looks after the garden and reports defects at once.",
+            ],
+            [
+                "The tenant pays the rent on the fifth day of each month. The rent is 1,195 euros per month, excluding service charges.",
+                "Payment is due within fourteen days by bank transfer. Late payment incurs the statutory interest.",
+                "The landlord repairs the roof and the gutters. The tenant looks after the garden and reports defects at once.",
+            ],
+        ),
+    };
+    let build = |body: [&str; 3]| {
+        let sections: Vec<(String, String)> = s
+            .iter()
+            .zip(body)
+            .map(|(h, b)| (h.to_string(), b.to_string()))
+            .collect();
+        build_text_pdf(title, "", &sections)
+            .map(|r| r.0)
+            .unwrap_or_default()
+    };
+    (
+        ("contract-v1.pdf", build(old)),
+        ("contract-v2.pdf", build(new)),
+    )
 }
 
 /// Open the Copilot panel on the right.

@@ -1044,6 +1044,13 @@ pub fn pretty_subtype(s: &str) -> String {
         "StrikeOut" => tr("Strikethrough").into(),
         "PolyLine" => tr("Polyline").into(),
         "Ink" => tr("Drawing").into(),
+        "Highlight" => tr("Highlight").into(),
+        "Underline" => tr("Underline").into(),
+        "Squiggly" => tr("Squiggly").into(),
+        "Line" => tr("Line").into(),
+        "Polygon" => tr("Polygon").into(),
+        "Stamp" => tr("Stamp").into(),
+        "Redact" => tr("Redact").into(),
         other => other.to_string(),
     }
 }
