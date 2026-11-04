@@ -195,7 +195,7 @@ pub struct RemoveMarksState {
 }
 
 /// Today's date as `YYYY-MM-DD` (UTC).
-fn today() -> String {
+pub(crate) fn today() -> String {
     let d = pdf_engine::annot::now_pdf_date();
     let digits: String = d.chars().filter(char::is_ascii_digit).take(8).collect();
     if digits.len() == 8 {

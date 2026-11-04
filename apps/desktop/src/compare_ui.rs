@@ -156,6 +156,15 @@ impl App {
         }
     }
 
+    /// Debug screenshots (`BERG_SHOTS`): compare two files without the file pickers.
+    pub(crate) fn debug_compare(&mut self, older: PathBuf, newer: PathBuf) -> Result<(), String> {
+        self.start_compare(&CompareState {
+            older: Some(older),
+            newer: Some(newer),
+            error: None,
+        })
+    }
+
     fn start_compare(&mut self, st: &CompareState) -> Result<(), String> {
         let Some(older) = &st.older else {
             return Err(tr("Choose the older version first.").into());
@@ -184,7 +193,11 @@ impl App {
             rx,
             cancel,
             newer,
-            title: format!("{} ↔ {}", title.trim_end_matches(".pdf"), file_name(older)),
+            title: format!(
+                "{} ↔ {}",
+                title.trim_end_matches(".pdf"),
+                file_name(older).trim_end_matches(".pdf")
+            ),
         });
         Ok(())
     }

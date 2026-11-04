@@ -75,7 +75,7 @@ fn main() -> eframe::Result {
                 || platform::dialogs::is_image_path(p)
         })
         // Absolute, because a running instance has another working directory.
-        .map(|p| std::fs::canonicalize(&p).unwrap_or(p))
+        .map(|p| std::fs::canonicalize(&p).map_or(p, plain_path))
         .collect();
     // One BergPDF at a time: a second start hands its files to the first and quits. `--new-instance`
     // (or BERG_MULTI_INSTANCE=1) skips this, e.g. for testing.
@@ -146,6 +146,23 @@ fn main() -> eframe::Result {
     result
 }
 
+/// `canonicalize` on Windows answers `\\?\C:\…`; the recent list, the pictures of the start screen
+/// and the title bar want the `C:\…` a file dialog gives, so the same file is not two files.
+/// Network paths (`\\?\UNC\…`) and paths too long without the prefix keep it.
+fn plain_path(p: PathBuf) -> PathBuf {
+    let s = p.to_string_lossy();
+    match s.strip_prefix(r"\\?\") {
+        Some(rest)
+            if rest.len() < 260
+                && rest.as_bytes().get(1) == Some(&b':')
+                && rest.as_bytes().first().is_some_and(u8::is_ascii_alphabetic) =>
+        {
+            PathBuf::from(rest)
+        }
+        _ => p,
+    }
+}
+
 /// Debug builds started with `BERG_SHOTS` draw named screens to files (see `debug_shots.rs`).
 fn debug_shots_on() -> bool {
     cfg!(debug_assertions) && std::env::var_os("BERG_SHOTS").is_some()
@@ -157,5 +174,25 @@ fn place(vb: egui::ViewportBuilder) -> egui::ViewportBuilder {
         vb.with_position([-12000.0, 0.0])
     } else {
         vb
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::plain_path;
+    use std::path::PathBuf;
+
+    #[test]
+    fn verbatim_drive_paths_lose_their_prefix_and_others_stay() {
+        let p = |s: &str| plain_path(PathBuf::from(s));
+        assert_eq!(p(r"\\?\C:\Docs\a.pdf"), PathBuf::from(r"C:\Docs\a.pdf"));
+        // Network shares and ordinary paths are left alone.
+        let unc = r"\\?\UNC\server\share\a.pdf";
+        assert_eq!(p(unc), PathBuf::from(unc));
+        assert_eq!(p(r"C:\Docs\a.pdf"), PathBuf::from(r"C:\Docs\a.pdf"));
+        assert_eq!(p("/home/anna/a.pdf"), PathBuf::from("/home/anna/a.pdf"));
+        // Too long for Windows without the prefix: it stays.
+        let long = format!(r"\\?\C:\{}\a.pdf", "x".repeat(300));
+        assert_eq!(p(&long), PathBuf::from(&long));
     }
 }
