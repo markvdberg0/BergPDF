@@ -35,12 +35,13 @@ Also included: open and create password-protected PDFs, permanently redact (blac
 
 ### What's new in this version
 
-* A calmer, more modern interface: clearer panels and dialogs, new icons
-* Your own stamps (a text in your colour, or a picture such as a logo) and your signature from a PNG or JPEG
-* A cloud tool for markup; double-click a text box, note, stamp or line of page text to edit it right there
-* Measuring by dragging, and a selection that shows the moment you click
-* Text in Type 3 fonts can now be replaced by text in another font
-* Typing in the font search no longer ends up in your text
+* A new, calmer interface: a single-line ribbon (the classic one is still a switch away) and a start screen with quick tasks and your recent files
+* Make forms: text fields, check boxes, radio buttons, lists, buttons and signature fields, with totals, number and date formats
+* Form calculations and checks (JavaScript) run when you allow them, in a closed sandbox that can only fill in the form
+* Headers, footers, Bates numbers and watermarks; page labels and cropping
+* Edit bookmarks, and compare two versions of a document with the changes marked
+* Dynamic stamps with your name, the date and the time
+* OCR now reads accented letters (é, ë, ü, ß)
 
 ### Product features
 
@@ -94,12 +95,13 @@ Ook inbegrepen: met een wachtwoord beveiligde pdf's openen en maken, gevoelige t
 
 ### Wat is er nieuw in deze versie
 
-* Een rustigere, modernere interface: duidelijkere panelen en dialogen, nieuwe iconen
-* Eigen stempels (een tekst in je kleur of een afbeelding zoals een logo) en je handtekening uit een PNG of JPEG
-* Een wolk-gereedschap voor opmerkingen; dubbelklik op een tekstvak, notitie, stempel of regel paginatekst om die ter plekke te bewerken
-* Meten door te slepen, en een selectie die zichtbaar is zodra je klikt
-* Tekst in Type 3-lettertypen kan nu worden vervangen door tekst in een ander lettertype
-* Wat je in het lettertype-zoekveld typt komt niet meer in je tekst terecht
+* Een nieuwe, rustigere interface: een lint op één regel (het klassieke lint staat één schakelaar verderop) en een startscherm met snelle taken en je recente bestanden
+* Formulieren maken: tekstvelden, selectievakjes, keuzerondjes, lijsten, knoppen en handtekeningvelden, met totalen en getal- en datumnotaties
+* Berekeningen en controles in formulieren (JavaScript) draaien als je dat toestaat, in een afgesloten omgeving die alleen het formulier kan invullen
+* Kop- en voetteksten, Bates-nummers en watermerken; paginalabels en bijsnijden
+* Bladwijzers bewerken, en twee versies van een document vergelijken met de wijzigingen gemarkeerd
+* Dynamische stempels met je naam, de datum en de tijd
+* OCR leest nu letters met accenten (é, ë, ü, ß)
 
 ### Productfuncties
 
@@ -156,12 +158,13 @@ Außerdem enthalten: passwortgeschützte PDFs öffnen und erstellen, vertraulich
 
 ### Neuigkeiten in dieser Version
 
-* Eine ruhigere, modernere Oberfläche: klarere Bereiche und Dialoge, neue Symbole
-* Eigene Stempel (ein Text in Ihrer Farbe oder ein Bild wie ein Logo) und Ihre Unterschrift aus einer PNG- oder JPEG-Datei
-* Ein Wolken-Werkzeug für Anmerkungen; Doppelklick auf Textfeld, Notiz, Stempel oder Textzeile zum direkten Bearbeiten
-* Messen durch Ziehen und eine Auswahl, die sofort beim Klicken sichtbar ist
-* Text in Type-3-Schriften kann jetzt durch Text in einer anderen Schrift ersetzt werden
-* Eingaben in der Schriftsuche landen nicht mehr in Ihrem Text
+* Eine neue, ruhigere Oberfläche: ein einzeiliges Menüband (das klassische ist einen Schalter entfernt) und ein Startbildschirm mit schnellen Aufgaben und Ihren zuletzt verwendeten Dateien
+* Formulare erstellen: Textfelder, Kontrollkästchen, Optionsfelder, Listen, Schaltflächen und Signaturfelder, mit Summen sowie Zahlen- und Datumsformaten
+* Berechnungen und Prüfungen in Formularen (JavaScript) laufen, wenn Sie es erlauben, in einer abgeschlossenen Umgebung, die nur das Formular ausfüllen kann
+* Kopf- und Fußzeilen, Bates-Nummern und Wasserzeichen; Seitenbeschriftungen und Zuschneiden
+* Lesezeichen bearbeiten und zwei Versionen eines Dokuments mit markierten Änderungen vergleichen
+* Dynamische Stempel mit Ihrem Namen, dem Datum und der Uhrzeit
+* OCR liest jetzt Buchstaben mit Akzenten (é, ë, ü, ß)
 
 ### Produktfunktionen
 
